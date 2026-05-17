@@ -4,6 +4,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:splitway_mobile/src/data/local/splitway_local_database.dart';
 import 'package:splitway_mobile/src/data/repositories/local_draft_repository.dart';
+import 'package:splitway_mobile/src/features/editor/draft_segment.dart';
 import 'package:splitway_mobile/src/features/editor/route_editor_controller.dart';
 
 Future<LocalDraftRepository> _makeRepo() async {
@@ -30,6 +31,83 @@ void main() {
     ctrl.handleMapTap(const GeoPoint(latitude: 40.0, longitude: -3.0));
     ctrl.handleMapTap(const GeoPoint(latitude: 40.0, longitude: -2.9));
     ctrl.handleMapTap(const GeoPoint(latitude: 40.0, longitude: -2.8));
+  });
+
+  group('segment-based drawing', () {
+    test('taps in appendPath mode create a SnappedSegment', () {
+      expect(ctrl.segments, hasLength(1));
+      expect(ctrl.segments.first, isA<SnappedSegment>());
+      expect((ctrl.segments.first as SnappedSegment).waypoints, hasLength(3));
+    });
+
+    test('draftPath concatenates all segment rendered paths', () {
+      expect(ctrl.draftPath, hasLength(3));
+    });
+
+    test('switching to freehand and adding points creates FreehandSegment', () {
+      ctrl.setInputMode(DrawInputMode.freehand);
+      ctrl.startFreehandStroke();
+      ctrl.addFreehandPoint(const GeoPoint(latitude: 40.0, longitude: -2.75));
+      ctrl.addFreehandPoint(const GeoPoint(latitude: 40.0, longitude: -2.70));
+      ctrl.endFreehandStroke();
+
+      expect(ctrl.segments, hasLength(2));
+      expect(ctrl.segments.last, isA<FreehandSegment>());
+    });
+
+    test('continuing appendPath after freehand creates new SnappedSegment', () {
+      ctrl.setInputMode(DrawInputMode.freehand);
+      ctrl.startFreehandStroke();
+      ctrl.addFreehandPoint(const GeoPoint(latitude: 40.0, longitude: -2.75));
+      ctrl.addFreehandPoint(const GeoPoint(latitude: 40.0, longitude: -2.70));
+      ctrl.endFreehandStroke();
+
+      ctrl.setInputMode(DrawInputMode.appendPath);
+      ctrl.handleMapTap(const GeoPoint(latitude: 40.0, longitude: -2.65));
+
+      expect(ctrl.segments, hasLength(3));
+      expect(ctrl.segments[0], isA<SnappedSegment>());
+      expect(ctrl.segments[1], isA<FreehandSegment>());
+      expect(ctrl.segments[2], isA<SnappedSegment>());
+    });
+  });
+
+  group('undo', () {
+    test('undoLastAction removes last waypoint from SnappedSegment', () {
+      ctrl.undoLastAction();
+      expect(ctrl.draftPath, hasLength(2));
+    });
+
+    test('undoLastAction removes empty SnappedSegment', () {
+      ctrl.undoLastAction(); // 2 waypoints
+      ctrl.undoLastAction(); // 1 waypoint
+      ctrl.undoLastAction(); // 0 -> segment removed
+      expect(ctrl.segments, isEmpty);
+    });
+
+    test('undoLastAction removes entire FreehandSegment', () {
+      ctrl.setInputMode(DrawInputMode.freehand);
+      ctrl.startFreehandStroke();
+      ctrl.addFreehandPoint(const GeoPoint(latitude: 40.0, longitude: -2.75));
+      ctrl.addFreehandPoint(const GeoPoint(latitude: 40.0, longitude: -2.70));
+      ctrl.endFreehandStroke();
+
+      ctrl.undoLastAction();
+      expect(ctrl.segments, hasLength(1));
+      expect(ctrl.segments.first, isA<SnappedSegment>());
+    });
+  });
+
+  group('draftCanSave', () {
+    test('true when total path has >= 2 points and name is set', () {
+      expect(ctrl.draftCanSave, isTrue);
+    });
+
+    test('false with fewer than 2 total path points', () {
+      ctrl.undoLastAction();
+      ctrl.undoLastAction();
+      expect(ctrl.draftCanSave, isFalse);
+    });
   });
 
   group('sectorPoint mode', () {

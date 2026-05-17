@@ -245,6 +245,7 @@ class _RouteDetail extends StatelessWidget {
               useMapbox: config.hasMapbox,
               route: route,
               showSectors: showSectors,
+              interactive: false,
             ),
           ),
         ),
@@ -769,7 +770,7 @@ class _DrawingViewState extends State<_DrawingView> {
                     OutlinedButton.icon(
                       onPressed: controller.draftPath.isEmpty
                           ? null
-                          : controller.undoLastPathPoint,
+                          : controller.undoLastAction,
                       icon: const Icon(Icons.undo, size: 18),
                       label: Text(l.editorUndoPoint),
                     ),
