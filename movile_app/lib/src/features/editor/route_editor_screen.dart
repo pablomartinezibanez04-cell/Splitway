@@ -639,6 +639,7 @@ class _DrawingViewState extends State<_DrawingView> {
   String _modeLabel(AppLocalizations l, DrawInputMode mode) => switch (mode) {
         DrawInputMode.appendPath => l.editorModeAppendPath,
         DrawInputMode.sectorPoint => l.editorModeSectorGate,
+        DrawInputMode.freehand => l.editorModeFreehand,
       };
 
   @override
@@ -715,6 +716,11 @@ class _DrawingViewState extends State<_DrawingView> {
                   draftWaypoints: controller.rawWaypoints,
                   draftSectorPoints: controller.draftSectorPoints,
                   onTap: controller.handleMapTap,
+                  freehandMode: controller.inputMode == DrawInputMode.freehand,
+                  draftSegments: controller.segments,
+                  onFreehandStart: controller.startFreehandStroke,
+                  onFreehandPoint: controller.addFreehandPoint,
+                  onFreehandEnd: controller.endFreehandStroke,
                 ),
                 Positioned(
                   right: 12,
@@ -767,6 +773,12 @@ class _DrawingViewState extends State<_DrawingView> {
                       onSelected: (_) =>
                           controller.setInputMode(DrawInputMode.sectorPoint),
                     ),
+                    ChoiceChip(
+                      label: Text(l.editorSegmentFreehand),
+                      selected: controller.inputMode == DrawInputMode.freehand,
+                      onSelected: (_) =>
+                          controller.setInputMode(DrawInputMode.freehand),
+                    ),
                     OutlinedButton.icon(
                       onPressed: controller.draftPath.isEmpty
                           ? null
@@ -799,8 +811,8 @@ class _DraftStatus extends StatelessWidget {
       children: [
         _StatusChip(
           icon: Icons.timeline,
-          label: l.editorPathPoints(controller.draftWaypointCount),
-          ok: controller.draftWaypointCount >= 2,
+          label: l.editorPathPoints(controller.draftPath.length),
+          ok: controller.draftPath.length >= 2,
         ),
         const SizedBox(width: 8),
         _StatusChip(
