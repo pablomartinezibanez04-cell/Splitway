@@ -176,4 +176,58 @@ void main() {
       expect(ctrl.draftSectorPoints, isEmpty);
     });
   });
+
+  group('saveDraft with mixed segments', () {
+    test('produces concatenated path with freehand points intact', () async {
+      // ctrl already has 3 tapped waypoints from setUp (SnappedSegment).
+      // Add a freehand stroke.
+      ctrl.setInputMode(DrawInputMode.freehand);
+      ctrl.startFreehandStroke();
+      ctrl.addFreehandPoint(const GeoPoint(latitude: 40.0, longitude: -2.75));
+      ctrl.addFreehandPoint(const GeoPoint(latitude: 40.001, longitude: -2.70));
+      ctrl.addFreehandPoint(const GeoPoint(latitude: 40.0, longitude: -2.65));
+      ctrl.endFreehandStroke();
+
+      // Add more tapped waypoints.
+      ctrl.setInputMode(DrawInputMode.appendPath);
+      ctrl.handleMapTap(const GeoPoint(latitude: 40.0, longitude: -2.60));
+      ctrl.handleMapTap(const GeoPoint(latitude: 40.0, longitude: -2.55));
+
+      final saved = await ctrl.saveDraft();
+      expect(saved, isNotNull);
+      // Path should contain all points: 3 snapped + freehand simplified + 2 snapped.
+      expect(saved!.path.length, greaterThanOrEqualTo(5));
+      // Freehand points should be present (not snapped away).
+      expect(
+        saved.path.any((p) =>
+            (p.latitude - 40.001).abs() < 0.01 &&
+            (p.longitude - (-2.70)).abs() < 0.01),
+        isTrue,
+      );
+    });
+
+    test('closed circuit detection works with mixed path', () async {
+      // Clear and create a closed route: tap → freehand → tap back near start.
+      final freshRepo = await _makeRepo();
+      final freshCtrl = RouteEditorController(freshRepo);
+      freshCtrl.startDrawing(name: 'Loop', difficulty: RouteDifficulty.easy);
+
+      freshCtrl.handleMapTap(const GeoPoint(latitude: 40.0, longitude: -3.0));
+      freshCtrl.handleMapTap(const GeoPoint(latitude: 40.0, longitude: -2.99));
+
+      freshCtrl.setInputMode(DrawInputMode.freehand);
+      freshCtrl.startFreehandStroke();
+      freshCtrl.addFreehandPoint(const GeoPoint(latitude: 40.001, longitude: -2.98));
+      freshCtrl.addFreehandPoint(const GeoPoint(latitude: 40.001, longitude: -3.01));
+      freshCtrl.endFreehandStroke();
+
+      freshCtrl.setInputMode(DrawInputMode.appendPath);
+      // Tap very close to start (within 20 m).
+      freshCtrl.handleMapTap(const GeoPoint(latitude: 40.0, longitude: -3.0001));
+
+      final saved = await freshCtrl.saveDraft();
+      expect(saved, isNotNull);
+      expect(saved!.isClosed, isTrue);
+    });
+  });
 }
