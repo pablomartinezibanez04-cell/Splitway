@@ -3,6 +3,7 @@ import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mbx;
 import 'package:splitway_core/splitway_core.dart';
 import 'package:splitway_mobile/l10n/app_localizations.dart';
 
+import '../../features/editor/draft_segment.dart';
 import 'route_map_painter.dart';
 import 'sector_segments.dart';
 
@@ -29,6 +30,12 @@ class SplitwayMap extends StatefulWidget {
     this.onTap,
     this.onLongPress,
     this.styleUri,
+    this.interactive = true,
+    this.freehandMode = false,
+    this.draftSegments = const [],
+    this.onFreehandStart,
+    this.onFreehandPoint,
+    this.onFreehandEnd,
   });
 
   final bool useMapbox;
@@ -52,6 +59,12 @@ class SplitwayMap extends StatefulWidget {
   final ValueChanged<GeoPoint>? onTap;
   final ValueChanged<GeoPoint>? onLongPress;
   final String? styleUri;
+  final bool interactive;
+  final bool freehandMode;
+  final List<DraftSegment> draftSegments;
+  final VoidCallback? onFreehandStart;
+  final ValueChanged<GeoPoint>? onFreehandPoint;
+  final VoidCallback? onFreehandEnd;
 
   @override
   State<SplitwayMap> createState() => _SplitwayMapState();
@@ -98,10 +111,26 @@ class _SplitwayMapState extends State<SplitwayMap> {
     if (!widget.useMapbox) {
       return _buildPainterFallback();
     }
-    return mbx.MapWidget(
+    final mapWidget = mbx.MapWidget(
       key: const ValueKey('splitway-mapbox'),
       styleUri: widget.styleUri ?? mbx.MapboxStyles.OUTDOORS,
       onMapCreated: _onMapCreated,
+    );
+
+    if (!widget.freehandMode) return mapWidget;
+
+    return Stack(
+      children: [
+        mapWidget,
+        Positioned.fill(
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onPanStart: _onFreehandPanStart,
+            onPanUpdate: _onFreehandPanUpdate,
+            onPanEnd: _onFreehandPanEnd,
+          ),
+        ),
+      ],
     );
   }
 
@@ -114,6 +143,10 @@ class _SplitwayMapState extends State<SplitwayMap> {
     }
     if (!widget.useMapbox) return;
 
+    if (oldWidget.freehandMode != widget.freehandMode) {
+      _updateGesturesForFreehand();
+    }
+
     final routeChanged = oldWidget.route != widget.route;
     final annotationsChanged = routeChanged ||
         oldWidget.telemetry.length != widget.telemetry.length ||
@@ -122,7 +155,9 @@ class _SplitwayMapState extends State<SplitwayMap> {
         oldWidget.draftWaypoints.length != widget.draftWaypoints.length ||
         oldWidget.draftSectorPoints.length != widget.draftSectorPoints.length ||
         oldWidget.highlightSectorId != widget.highlightSectorId ||
-        oldWidget.showSectors != widget.showSectors;
+        oldWidget.showSectors != widget.showSectors ||
+        oldWidget.draftSegments.length != widget.draftSegments.length ||
+        oldWidget.freehandMode != widget.freehandMode;
 
     if (annotationsChanged) _renderAnnotations();
 
@@ -181,10 +216,51 @@ class _SplitwayMapState extends State<SplitwayMap> {
         interactionID: 'splitway-long-tap',
       );
     }
+    if (!widget.interactive) {
+      await map.gestures.updateSettings(mbx.GesturesSettings(
+        scrollEnabled: false,
+        rotateEnabled: false,
+        pinchToZoomEnabled: false,
+        doubleTapToZoomInEnabled: false,
+        doubleTouchToZoomOutEnabled: false,
+        quickZoomEnabled: false,
+        pitchEnabled: false,
+        pinchPanEnabled: false,
+      ));
+    }
     _lineManager = await map.annotations.createPolylineAnnotationManager();
     _circleManager = await map.annotations.createCircleAnnotationManager();
+    await _updateGesturesForFreehand();
     await _renderAnnotations();
     await _flyToFitRoute();
+  }
+
+  Future<void> _updateGesturesForFreehand() async {
+    final map = _map;
+    if (map == null) return;
+    if (widget.freehandMode) {
+      await map.gestures.updateSettings(mbx.GesturesSettings(
+        scrollEnabled: false,
+        pinchToZoomEnabled: true,
+        doubleTapToZoomInEnabled: true,
+        doubleTouchToZoomOutEnabled: true,
+        rotateEnabled: false,
+        quickZoomEnabled: false,
+        pitchEnabled: false,
+        pinchPanEnabled: false,
+      ));
+    } else if (widget.interactive) {
+      await map.gestures.updateSettings(mbx.GesturesSettings(
+        scrollEnabled: true,
+        pinchToZoomEnabled: true,
+        doubleTapToZoomInEnabled: true,
+        doubleTouchToZoomOutEnabled: true,
+        rotateEnabled: true,
+        quickZoomEnabled: true,
+        pitchEnabled: true,
+        pinchPanEnabled: true,
+      ));
+    }
   }
 
   Future<void> _flyToFitRoute() async {
@@ -214,10 +290,14 @@ class _SplitwayMapState extends State<SplitwayMap> {
       infiniteBounds: false,
     );
 
+    final padding = widget.interactive
+        ? mbx.MbxEdgeInsets(top: 80, left: 60, bottom: 80, right: 60)
+        : mbx.MbxEdgeInsets(top: 40, left: 30, bottom: 40, right: 30);
+
     try {
       final camera = await map.cameraForCoordinateBounds(
         bounds,
-        mbx.MbxEdgeInsets(top: 80, left: 60, bottom: 80, right: 60),
+        padding,
         null,   // bearing
         null,   // pitch
         18.0,   // maxZoom — never closer than z18
@@ -316,7 +396,20 @@ class _SplitwayMapState extends State<SplitwayMap> {
       ));
     }
 
-    if (widget.draftPath.length >= 2) {
+    // Draft segments: snapped = purple, freehand = orange.
+    if (widget.draftSegments.isNotEmpty) {
+      for (final seg in widget.draftSegments) {
+        final rendered = seg.renderedPath;
+        if (rendered.length < 2) continue;
+        final color = seg is FreehandSegment ? 0xFFEF6C00 : 0xFF6A1B9A;
+        await lineMgr.create(mbx.PolylineAnnotationOptions(
+          geometry: _toLineString(rendered),
+          lineColor: color,
+          lineWidth: 3,
+        ));
+      }
+    } else if (widget.draftPath.length >= 2) {
+      // Backward compat: fall back to flat draftPath.
       await lineMgr.create(mbx.PolylineAnnotationOptions(
         geometry: _toLineString(widget.draftPath),
         lineColor: 0xFF6A1B9A,
@@ -364,6 +457,37 @@ class _SplitwayMapState extends State<SplitwayMap> {
       coordinates:
           points.map((p) => mbx.Position(p.longitude, p.latitude)).toList(),
     );
+  }
+
+  void _onFreehandPanStart(DragStartDetails details) {
+    widget.onFreehandStart?.call();
+    _convertAndSendFreehandPoint(details.localPosition);
+  }
+
+  void _onFreehandPanUpdate(DragUpdateDetails details) {
+    _convertAndSendFreehandPoint(details.localPosition);
+  }
+
+  void _onFreehandPanEnd(DragEndDetails details) {
+    widget.onFreehandEnd?.call();
+  }
+
+  Future<void> _convertAndSendFreehandPoint(Offset screenPos) async {
+    final map = _map;
+    if (map == null) return;
+    try {
+      final point = await map.coordinateForPixel(mbx.ScreenCoordinate(
+        x: screenPos.dx,
+        y: screenPos.dy,
+      ));
+      final coords = point.coordinates;
+      widget.onFreehandPoint?.call(GeoPoint(
+        latitude: coords.lat.toDouble(),
+        longitude: coords.lng.toDouble(),
+      ));
+    } catch (_) {
+      // Conversion failed — skip this point.
+    }
   }
 
   void _handleTap(mbx.MapContentGestureContext ctx) {
