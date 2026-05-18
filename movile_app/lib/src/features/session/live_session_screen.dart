@@ -104,6 +104,7 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
                 child: SplitwayMap(
                   useMapbox: widget.config.hasMapbox,
                   route: ctrl.selected!,
+                  interactive: false,
                 ),
               ),
             ),

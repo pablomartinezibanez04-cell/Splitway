@@ -264,6 +264,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get editorSegmentAddSector => 'Add sector';
 
   @override
+  String get editorSegmentFreehand => 'Freehand';
+
+  @override
+  String get editorModeFreehand => 'Draw freehand';
+
+  @override
+  String get editorUndoFreehand => 'Undo stroke';
+
+  @override
   String get editorUndoPoint => 'Undo point';
 
   @override

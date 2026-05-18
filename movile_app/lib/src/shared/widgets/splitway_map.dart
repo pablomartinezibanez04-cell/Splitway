@@ -74,6 +74,8 @@ class _SplitwayMapState extends State<SplitwayMap> {
   mbx.MapboxMap? _map;
   mbx.PolylineAnnotationManager? _lineManager;
   mbx.CircleAnnotationManager? _circleManager;
+  final _activePointers = <int>{};
+  bool _isFreehandStrokeActive = false;
 
   @override
   void initState() {
@@ -117,19 +119,19 @@ class _SplitwayMapState extends State<SplitwayMap> {
       onMapCreated: _onMapCreated,
     );
 
-    if (!widget.freehandMode) return mapWidget;
-
     return Stack(
       children: [
         mapWidget,
-        Positioned.fill(
-          child: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onPanStart: _onFreehandPanStart,
-            onPanUpdate: _onFreehandPanUpdate,
-            onPanEnd: _onFreehandPanEnd,
+        if (widget.freehandMode)
+          Positioned.fill(
+            child: Listener(
+              behavior: HitTestBehavior.translucent,
+              onPointerDown: _onPointerDown,
+              onPointerMove: _onPointerMove,
+              onPointerUp: _onPointerUp,
+              onPointerCancel: _onPointerCancel,
+            ),
           ),
-        ),
       ],
     );
   }
@@ -459,17 +461,38 @@ class _SplitwayMapState extends State<SplitwayMap> {
     );
   }
 
-  void _onFreehandPanStart(DragStartDetails details) {
-    widget.onFreehandStart?.call();
-    _convertAndSendFreehandPoint(details.localPosition);
+  void _onPointerDown(PointerDownEvent event) {
+    _activePointers.add(event.pointer);
+    if (_activePointers.length == 1) {
+      _isFreehandStrokeActive = true;
+      widget.onFreehandStart?.call();
+      _convertAndSendFreehandPoint(event.localPosition);
+    } else if (_isFreehandStrokeActive) {
+      _isFreehandStrokeActive = false;
+      widget.onFreehandEnd?.call();
+    }
   }
 
-  void _onFreehandPanUpdate(DragUpdateDetails details) {
-    _convertAndSendFreehandPoint(details.localPosition);
+  void _onPointerMove(PointerMoveEvent event) {
+    if (_isFreehandStrokeActive && _activePointers.length == 1) {
+      _convertAndSendFreehandPoint(event.localPosition);
+    }
   }
 
-  void _onFreehandPanEnd(DragEndDetails details) {
-    widget.onFreehandEnd?.call();
+  void _onPointerUp(PointerUpEvent event) {
+    _activePointers.remove(event.pointer);
+    if (_isFreehandStrokeActive && _activePointers.isEmpty) {
+      _isFreehandStrokeActive = false;
+      widget.onFreehandEnd?.call();
+    }
+  }
+
+  void _onPointerCancel(PointerCancelEvent event) {
+    _activePointers.remove(event.pointer);
+    if (_isFreehandStrokeActive && _activePointers.isEmpty) {
+      _isFreehandStrokeActive = false;
+      widget.onFreehandEnd?.call();
+    }
   }
 
   Future<void> _convertAndSendFreehandPoint(Offset screenPos) async {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:splitway_core/splitway_core.dart';
@@ -6,6 +8,7 @@ import 'package:splitway_mobile/l10n/app_localizations.dart';
 import '../../config/app_config.dart';
 import '../../routing/app_router.dart';
 import '../../services/auth/auth_service.dart';
+import '../../services/tracking/location_service.dart';
 import '../../shared/formatters.dart';
 import '../../shared/widgets/empty_state.dart';
 import '../../shared/widgets/splitway_map.dart';
@@ -600,9 +603,27 @@ class _DrawingView extends StatefulWidget {
 
 class _DrawingViewState extends State<_DrawingView> {
   final ValueNotifier<GeoPoint?> _flyToNotifier = ValueNotifier(null);
+  StreamSubscription<TelemetryPoint>? _locationSub;
+  GeoPoint? _liveLocation;
+
+  @override
+  void initState() {
+    super.initState();
+    _startLocationStream();
+  }
+
+  void _startLocationStream() {
+    _locationSub = LocationService.positionStream(
+      distanceFilterMeters: 3,
+    ).listen(
+      (tp) => setState(() => _liveLocation = tp.location),
+      onError: (_) {},
+    );
+  }
 
   @override
   void dispose() {
+    _locationSub?.cancel();
     _flyToNotifier.dispose();
     super.dispose();
   }
@@ -715,6 +736,7 @@ class _DrawingViewState extends State<_DrawingView> {
                   draftPath: controller.draftPath,
                   draftWaypoints: controller.rawWaypoints,
                   draftSectorPoints: controller.draftSectorPoints,
+                  userLocation: _liveLocation,
                   onTap: controller.handleMapTap,
                   freehandMode: controller.inputMode == DrawInputMode.freehand,
                   draftSegments: controller.segments,
@@ -780,9 +802,9 @@ class _DrawingViewState extends State<_DrawingView> {
                           controller.setInputMode(DrawInputMode.freehand),
                     ),
                     OutlinedButton.icon(
-                      onPressed: controller.draftPath.isEmpty
-                          ? null
-                          : controller.undoLastAction,
+                      onPressed: controller.canUndo
+                          ? controller.undoLastAction
+                          : null,
                       icon: const Icon(Icons.undo, size: 18),
                       label: Text(l.editorUndoPoint),
                     ),

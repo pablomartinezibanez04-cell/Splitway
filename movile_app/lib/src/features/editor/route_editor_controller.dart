@@ -22,6 +22,10 @@ enum DrawInputMode {
   freehand,
 }
 
+/// One undoable user action, recorded so [RouteEditorController.undoLastAction]
+/// can unwind path edits and sector additions as a single LIFO stack.
+enum _UndoOp { pathPoint, sector }
+
 class RouteEditorController extends ChangeNotifier {
   RouteEditorController(this._repo, {this.routingService, this.geocodingService});
 
@@ -103,6 +107,18 @@ class RouteEditorController extends ChangeNotifier {
   final List<GeoPoint> _draftSectorPoints = [];
   List<GeoPoint> get draftSectorPoints => List.unmodifiable(_draftSectorPoints);
 
+  /// Maximum distance (m) between a tap and the nearest path vertex for a
+  /// sector to be placed. Taps farther than this are ignored so a stray tap
+  /// far from the route doesn't drop a misplaced sector.
+  static const double _sectorSnapMaxDistanceMeters = 75.0;
+
+  /// LIFO history of undoable actions. Path waypoints, freehand strokes and
+  /// sector additions all push here so undo unwinds them in order.
+  final List<_UndoOp> _undoStack = [];
+
+  /// True when there is at least one action the user can undo.
+  bool get canUndo => _undoStack.isNotEmpty;
+
   /// Always null — retained for widget compatibility after removing 2-tap gate.
   GeoPoint? get pendingGateLeft => null;
 
@@ -165,6 +181,7 @@ class RouteEditorController extends ChangeNotifier {
     _segments.clear();
     _draftSectorGates.clear();
     _draftSectorPoints.clear();
+    _undoStack.clear();
     _inputMode = DrawInputMode.appendPath;
     notifyListeners();
   }
@@ -180,6 +197,7 @@ class RouteEditorController extends ChangeNotifier {
     _activeFreehand = null;
     _draftSectorGates.clear();
     _draftSectorPoints.clear();
+    _undoStack.clear();
     _inputMode = DrawInputMode.appendPath;
     notifyListeners();
   }
@@ -190,23 +208,32 @@ class RouteEditorController extends ChangeNotifier {
   }
 
   void undoLastAction() {
-    if (_segments.isEmpty) return;
+    if (_undoStack.isEmpty) return;
     _cancelSnap();
-    final last = _segments.last;
-    switch (last) {
-      case FreehandSegment():
-        _segments.removeLast();
-      case SnappedSegment():
-        if (last.waypoints.isNotEmpty) {
-          last.waypoints.removeLast();
-          last.snappedPath
-            ..clear()
-            ..addAll(last.waypoints);
-        }
-        if (last.waypoints.isEmpty) {
-          _segments.removeLast();
-        } else if (last.waypoints.length >= 2 && routingService != null) {
-          _scheduleSnap();
+    final op = _undoStack.removeLast();
+    switch (op) {
+      case _UndoOp.sector:
+        if (_draftSectorPoints.isNotEmpty) _draftSectorPoints.removeLast();
+        if (_draftSectorGates.isNotEmpty) _draftSectorGates.removeLast();
+      case _UndoOp.pathPoint:
+        if (_segments.isEmpty) break;
+        final last = _segments.last;
+        switch (last) {
+          case FreehandSegment():
+            _segments.removeLast();
+          case SnappedSegment():
+            if (last.waypoints.isNotEmpty) {
+              last.waypoints.removeLast();
+              last.snappedPath
+                ..clear()
+                ..addAll(last.effectiveWaypoints);
+            }
+            if (last.waypoints.isEmpty) {
+              _segments.removeLast();
+            } else if (last.effectiveWaypoints.length >= 2 &&
+                routingService != null) {
+              _scheduleSnap();
+            }
         }
     }
     notifyListeners();
@@ -224,13 +251,14 @@ class RouteEditorController extends ChangeNotifier {
         if (lastSeg is SnappedSegment) {
           seg = lastSeg;
         } else {
-          seg = SnappedSegment();
+          seg = SnappedSegment(seedPoint: lastSeg?.renderedPath.lastOrNull);
           _segments.add(seg);
         }
         seg.waypoints.add(p);
         seg.snappedPath
           ..clear()
-          ..addAll(seg.waypoints);
+          ..addAll(seg.effectiveWaypoints);
+        _undoStack.add(_UndoOp.pathPoint);
         notifyListeners();
         _scheduleSnap();
       case DrawInputMode.sectorPoint:
@@ -238,9 +266,11 @@ class RouteEditorController extends ChangeNotifier {
         final dp = draftPath;
         final idx = _nearestPathIndex(dp, p);
         final snapped = dp[idx];
+        if (snapped.distanceTo(p) > _sectorSnapMaxDistanceMeters) return;
         final gate = _gateAtPathIndex(dp, idx);
         _draftSectorPoints.add(snapped);
         _draftSectorGates.add(gate);
+        _undoStack.add(_UndoOp.sector);
         notifyListeners();
     }
   }
@@ -279,6 +309,7 @@ class RouteEditorController extends ChangeNotifier {
     seg.simplifiedPoints
       ..clear()
       ..addAll(simplifyPath(seg.rawPoints, 4.0));
+    _undoStack.add(_UndoOp.pathPoint);
     notifyListeners();
   }
 
@@ -325,7 +356,7 @@ class RouteEditorController extends ChangeNotifier {
   /// Schedules a snap request to fire after 600 ms of inactivity.
   void _scheduleSnap() {
     final seg = _segments.lastOrNull;
-    if (routingService == null || seg is! SnappedSegment || seg.waypoints.length < 2) return;
+    if (routingService == null || seg is! SnappedSegment || seg.effectiveWaypoints.length < 2) return;
     _snapDebouncer?.cancel();
     _snapDebouncer = Timer(const Duration(milliseconds: 600), _snapPath);
   }
@@ -333,9 +364,11 @@ class RouteEditorController extends ChangeNotifier {
   Future<void> _snapPath() async {
     if (routingService == null) return;
     final seg = _segments.lastOrNull;
-    if (seg is! SnappedSegment || seg.waypoints.length < 2) return;
+    if (seg is! SnappedSegment) return;
+    final effective = seg.effectiveWaypoints;
+    if (effective.length < 2) return;
 
-    final waypoints = List<GeoPoint>.of(seg.waypoints);
+    final waypoints = List<GeoPoint>.of(effective);
     final generation = ++_snapGeneration;
 
     _snapping = true;
@@ -371,16 +404,17 @@ class RouteEditorController extends ChangeNotifier {
     for (final seg in _segments) {
       switch (seg) {
         case SnappedSegment():
-          if (seg.waypoints.isEmpty) continue;
-          if (routingService != null && seg.waypoints.length >= 2) {
+          final effective = seg.effectiveWaypoints;
+          if (effective.isEmpty) continue;
+          if (routingService != null && effective.length >= 2) {
             _snapping = true;
             notifyListeners();
-            final snapped = await routingService!.snapToRoads(seg.waypoints);
+            final snapped = await routingService!.snapToRoads(effective);
             _snapping = false;
             notifyListeners();
-            pathParts.add(snapped ?? List.of(seg.waypoints));
+            pathParts.add(snapped ?? effective);
           } else {
-            pathParts.add(List.of(seg.waypoints));
+            pathParts.add(effective);
           }
         case FreehandSegment():
           if (seg.simplifiedPoints.isNotEmpty) {
@@ -454,6 +488,7 @@ class RouteEditorController extends ChangeNotifier {
     _segments.clear();
     _draftSectorGates.clear();
     _draftSectorPoints.clear();
+    _undoStack.clear();
     _inputMode = DrawInputMode.appendPath;
     _activeFreehand = null;
 

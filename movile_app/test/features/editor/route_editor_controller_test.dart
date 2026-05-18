@@ -122,7 +122,7 @@ void main() {
         () {
       ctrl.setInputMode(DrawInputMode.sectorPoint);
       // Tap near the middle vertex (-2.9 lng).
-      ctrl.handleMapTap(const GeoPoint(latitude: 40.001, longitude: -2.901));
+      ctrl.handleMapTap(const GeoPoint(latitude: 40.0002, longitude: -2.9));
 
       expect(ctrl.draftSectorGates, hasLength(1));
       // Gate center should be very close to the snapped path vertex.
@@ -134,24 +134,36 @@ void main() {
 
     test('two taps add two sector points', () {
       ctrl.setInputMode(DrawInputMode.sectorPoint);
-      ctrl.handleMapTap(const GeoPoint(latitude: 40.001, longitude: -2.901));
-      ctrl.handleMapTap(const GeoPoint(latitude: 40.001, longitude: -2.799));
+      ctrl.handleMapTap(const GeoPoint(latitude: 40.0002, longitude: -2.9));
+      ctrl.handleMapTap(const GeoPoint(latitude: 40.0002, longitude: -2.8));
 
       expect(ctrl.draftSectorGates, hasLength(2));
     });
 
     test('pendingGateLeft is always null in sectorPoint mode', () {
       ctrl.setInputMode(DrawInputMode.sectorPoint);
-      ctrl.handleMapTap(const GeoPoint(latitude: 40.001, longitude: -2.901));
+      ctrl.handleMapTap(const GeoPoint(latitude: 40.0002, longitude: -2.9));
       expect(ctrl.pendingGateLeft, isNull);
     });
 
     test('draftSectorPoints has same length as draftSectorGates', () {
       ctrl.setInputMode(DrawInputMode.sectorPoint);
-      ctrl.handleMapTap(const GeoPoint(latitude: 40.001, longitude: -2.901));
+      ctrl.handleMapTap(const GeoPoint(latitude: 40.0002, longitude: -2.9));
       expect(ctrl.draftSectorPoints, hasLength(1));
-      ctrl.handleMapTap(const GeoPoint(latitude: 40.001, longitude: -2.799));
+      ctrl.handleMapTap(const GeoPoint(latitude: 40.0002, longitude: -2.8));
       expect(ctrl.draftSectorPoints, hasLength(2));
+    });
+
+    test('tap far from the path in sectorPoint mode does nothing', () {
+      ctrl.setInputMode(DrawInputMode.sectorPoint);
+      // ~5.5 km north of the path — clearly outside the snap threshold.
+      ctrl.handleMapTap(const GeoPoint(latitude: 40.05, longitude: -2.9));
+
+      expect(ctrl.draftSectorGates, isEmpty);
+      expect(ctrl.draftSectorPoints, isEmpty);
+      expect(ctrl.canUndo, isTrue); // only the 3 path taps remain undoable
+      ctrl.undoLastAction();
+      expect(ctrl.draftPath, hasLength(2));
     });
 
     test('tap in sectorPoint mode with no draftPath does nothing', () async {
@@ -169,11 +181,61 @@ void main() {
   group('cancelDrawing resets sector points', () {
     test('draftSectorPoints cleared on cancel', () {
       ctrl.setInputMode(DrawInputMode.sectorPoint);
-      ctrl.handleMapTap(const GeoPoint(latitude: 40.001, longitude: -2.901));
+      ctrl.handleMapTap(const GeoPoint(latitude: 40.0002, longitude: -2.9));
       expect(ctrl.draftSectorPoints, hasLength(1));
 
       ctrl.cancelDrawing();
       expect(ctrl.draftSectorPoints, isEmpty);
+    });
+  });
+
+  group('LIFO undo across path points and sectors', () {
+    test('undoLastAction removes the most recently added sector first', () {
+      ctrl.setInputMode(DrawInputMode.sectorPoint);
+      ctrl.handleMapTap(const GeoPoint(latitude: 40.0002, longitude: -2.9));
+      expect(ctrl.draftSectorPoints, hasLength(1));
+      expect(ctrl.draftPath, hasLength(3));
+
+      ctrl.undoLastAction();
+
+      expect(ctrl.draftSectorPoints, isEmpty);
+      expect(ctrl.draftSectorGates, isEmpty);
+      // Path is untouched — the sector was the last action.
+      expect(ctrl.draftPath, hasLength(3));
+    });
+
+    test('undo unwinds interleaved path and sector actions as a stack', () {
+      // setUp added 3 path points. Add a sector, then another path point.
+      ctrl.setInputMode(DrawInputMode.sectorPoint);
+      ctrl.handleMapTap(const GeoPoint(latitude: 40.0002, longitude: -2.9));
+      ctrl.setInputMode(DrawInputMode.appendPath);
+      ctrl.handleMapTap(const GeoPoint(latitude: 40.0, longitude: -2.7));
+      expect(ctrl.draftPath, hasLength(4));
+      expect(ctrl.draftSectorPoints, hasLength(1));
+
+      ctrl.undoLastAction(); // pops the last path point
+      expect(ctrl.draftPath, hasLength(3));
+      expect(ctrl.draftSectorPoints, hasLength(1));
+
+      ctrl.undoLastAction(); // pops the sector
+      expect(ctrl.draftPath, hasLength(3));
+      expect(ctrl.draftSectorPoints, isEmpty);
+
+      ctrl.undoLastAction(); // back to popping path points
+      expect(ctrl.draftPath, hasLength(2));
+    });
+
+    test('canUndo is false once every action is undone', () {
+      ctrl.setInputMode(DrawInputMode.sectorPoint);
+      ctrl.handleMapTap(const GeoPoint(latitude: 40.0002, longitude: -2.9));
+      ctrl.undoLastAction(); // sector
+      ctrl.undoLastAction(); // path 3 -> 2
+      ctrl.undoLastAction(); // path 2 -> 1
+      ctrl.undoLastAction(); // path 1 -> 0, segment removed
+      expect(ctrl.canUndo, isFalse);
+      // Extra undo is a no-op.
+      ctrl.undoLastAction();
+      expect(ctrl.canUndo, isFalse);
     });
   });
 
