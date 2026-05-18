@@ -182,6 +182,12 @@ abstract class AppLocalizations {
   /// **'History'**
   String get navHistory;
 
+  /// No description provided for @navRoutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Routes'**
+  String get navRoutes;
+
   /// No description provided for @drawerMenu.
   ///
   /// In en, this message translates to:
@@ -1285,6 +1291,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Name'**
   String get historyRenameRouteLabel;
+
+  /// No description provided for @routesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My routes'**
+  String get routesTitle;
+
+  /// No description provided for @routesViewList.
+  ///
+  /// In en, this message translates to:
+  /// **'List'**
+  String get routesViewList;
+
+  /// No description provided for @routesViewGrid.
+  ///
+  /// In en, this message translates to:
+  /// **'Grid'**
+  String get routesViewGrid;
+
+  /// No description provided for @routesSessionsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No sessions} =1{1 session} other{{count} sessions}}'**
+  String routesSessionsCount(int count);
+
+  /// No description provided for @routesBestLap.
+  ///
+  /// In en, this message translates to:
+  /// **'Best: {time}'**
+  String routesBestLap(String time);
+
+  /// No description provided for @routesDetailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Route detail'**
+  String get routesDetailTitle;
 }
 
 class _AppLocalizationsDelegate

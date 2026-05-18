@@ -51,6 +51,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navHistory => 'History';
 
   @override
+  String get navRoutes => 'Routes';
+
+  @override
   String get drawerMenu => 'Menu';
 
   @override
@@ -698,4 +701,33 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get historyRenameRouteLabel => 'Name';
+
+  @override
+  String get routesTitle => 'My routes';
+
+  @override
+  String get routesViewList => 'List';
+
+  @override
+  String get routesViewGrid => 'Grid';
+
+  @override
+  String routesSessionsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sessions',
+      one: '1 session',
+      zero: 'No sessions',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String routesBestLap(String time) {
+    return 'Best: $time';
+  }
+
+  @override
+  String get routesDetailTitle => 'Route detail';
 }
