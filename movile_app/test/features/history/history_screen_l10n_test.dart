@@ -53,7 +53,7 @@ void main() {
       });
       await tester.pump();
     }
-    expect(find.text('Aún no has grabado ninguna sesión'), findsOneWidget);
+    expect(find.text('Aún no hay actividad'), findsOneWidget);
     await tester.runAsync(() => boot.repo.dispose());
     await tester.runAsync(() => boot.db.close());
   });
@@ -73,7 +73,7 @@ void main() {
       });
       await tester.pump();
     }
-    expect(find.text('No sessions recorded yet'), findsOneWidget);
+    expect(find.text('No activity recorded yet'), findsOneWidget);
     await tester.runAsync(() => boot.repo.dispose());
     await tester.runAsync(() => boot.db.close());
   });

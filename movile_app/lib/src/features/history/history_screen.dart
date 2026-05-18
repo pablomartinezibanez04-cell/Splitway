@@ -10,6 +10,29 @@ import '../../shared/widgets/empty_state.dart';
 import '../../shared/widgets/splitway_map.dart';
 import '../home/home_shell.dart';
 
+sealed class _HistoryEntry implements Comparable<_HistoryEntry> {
+  DateTime get date;
+
+  @override
+  int compareTo(_HistoryEntry other) => other.date.compareTo(date);
+}
+
+class _SessionEntry extends _HistoryEntry {
+  _SessionEntry(this.session);
+  final SessionRun session;
+
+  @override
+  DateTime get date => session.startedAt;
+}
+
+class _FreeRideEntry extends _HistoryEntry {
+  _FreeRideEntry(this.ride);
+  final FreeRideRun ride;
+
+  @override
+  DateTime get date => ride.startedAt;
+}
+
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({
     super.key,
@@ -28,7 +51,7 @@ class HistoryScreen extends StatefulWidget {
 
 class _HistoryScreenState extends State<HistoryScreen> {
   bool _loading = true;
-  List<SessionRun> _sessions = const [];
+  List<_HistoryEntry> _entries = const [];
   Map<String, RouteTemplate> _routes = const {};
 
   @override
@@ -50,10 +73,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Future<void> _load() async {
     setState(() => _loading = true);
     final sessions = await widget.repository.getAllSessions();
+    final freeRides = await widget.repository.getAllFreeRides();
     final routeList = await widget.repository.getAllRoutes();
     if (!mounted) return;
+    final entries = <_HistoryEntry>[
+      ...sessions.map(_SessionEntry.new),
+      ...freeRides.map(_FreeRideEntry.new),
+    ]..sort();
     setState(() {
-      _sessions = sessions;
+      _entries = entries;
       _routes = {for (final r in routeList) r.id: r};
       _loading = false;
     });
@@ -76,25 +104,31 @@ class _HistoryScreenState extends State<HistoryScreen> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : _sessions.isEmpty
+          : _entries.isEmpty
               ? EmptyState(
                   icon: Icons.history_toggle_off,
-                  title: l.historyNoSessionsTitle,
-                  message: l.historyNoSessionsMessage,
+                  title: l.historyNoEntriesTitle,
+                  message: l.historyNoEntriesMessage,
                 )
               : ListView.separated(
                   padding: const EdgeInsets.all(8),
-                  itemCount: _sessions.length,
+                  itemCount: _entries.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 4),
                   itemBuilder: (_, index) {
-                    final s = _sessions[index];
-                    final r = _routes[s.routeTemplateId];
-                    return _SessionTile(
-                      session: s,
-                      route: r,
-                      repository: widget.repository,
-                      config: widget.config,
-                    );
+                    final entry = _entries[index];
+                    return switch (entry) {
+                      _SessionEntry(:final session) => _SessionTile(
+                          session: session,
+                          route: _routes[session.routeTemplateId],
+                          repository: widget.repository,
+                          config: widget.config,
+                        ),
+                      _FreeRideEntry(:final ride) => _FreeRideTile(
+                          ride: ride,
+                          repository: widget.repository,
+                          config: widget.config,
+                        ),
+                    };
                   },
                 ),
     );
@@ -146,6 +180,244 @@ class _SessionTile extends StatelessWidget {
   }
 }
 
+class _FreeRideTile extends StatelessWidget {
+  const _FreeRideTile({
+    required this.ride,
+    required this.repository,
+    required this.config,
+  });
+
+  final FreeRideRun ride;
+  final LocalDraftRepository repository;
+  final AppConfig config;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final (dv, isKm) = Formatters.distanceMeters(ride.totalDistanceMeters);
+    final distStr = isKm
+        ? l.unitKilometers(dv.toStringAsFixed(2))
+        : l.unitMeters(dv.toStringAsFixed(0));
+    return Card(
+      child: ListTile(
+        leading: const Icon(Icons.explore, color: Colors.teal),
+        title: Text(ride.name ?? l.historyFreeRideLabel),
+        subtitle: Text(
+          l.historyFreeRideSubtitle(
+            Formatters.dateTime(ride.startedAt),
+            distStr,
+          ),
+        ),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => FreeRideDetailScreen(
+                rideId: ride.id,
+                repository: repository,
+                config: config,
+              ),
+            )),
+      ),
+    );
+  }
+}
+
+class FreeRideDetailScreen extends StatefulWidget {
+  const FreeRideDetailScreen({
+    super.key,
+    required this.rideId,
+    required this.repository,
+    this.config = const AppConfig(),
+  });
+
+  final String rideId;
+  final LocalDraftRepository repository;
+  final AppConfig config;
+
+  @override
+  State<FreeRideDetailScreen> createState() => _FreeRideDetailScreenState();
+}
+
+class _FreeRideDetailScreenState extends State<FreeRideDetailScreen> {
+  FreeRideRun? _ride;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final ride = await widget.repository.getFreeRideRun(widget.rideId);
+    if (!mounted) return;
+    setState(() {
+      _ride = ride;
+      _loading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(_ride?.name ?? l.historyFreeRideTitle),
+        actions: [
+          if (_ride != null)
+            IconButton(
+              tooltip: l.historyRenameFreeRideTitle,
+              icon: const Icon(Icons.edit_outlined),
+              onPressed: () async {
+                final rideId = _ride?.id;
+                final currentName = _ride?.name;
+                if (rideId == null) return;
+                final nameCtrl =
+                    TextEditingController(text: currentName ?? '');
+                final newName = await showDialog<String>(
+                  context: context,
+                  builder: (dialogCtx) => AlertDialog(
+                    title: Text(l.historyRenameFreeRideTitle),
+                    content: TextField(
+                      controller: nameCtrl,
+                      decoration: InputDecoration(
+                        labelText: l.historyRenameFreeRideLabel,
+                      ),
+                      autofocus: true,
+                      onSubmitted: (v) => Navigator.pop(dialogCtx, v),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(dialogCtx),
+                        child: Text(l.commonCancel),
+                      ),
+                      FilledButton(
+                        onPressed: () =>
+                            Navigator.pop(dialogCtx, nameCtrl.text),
+                        child: Text(l.commonSave),
+                      ),
+                    ],
+                  ),
+                );
+                if (newName == null || newName.trim().isEmpty) return;
+                await widget.repository.updateFreeRideMetadata(
+                  rideId,
+                  name: newName.trim(),
+                );
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(l.historyRenamedSnack)),
+                );
+                _load();
+              },
+            ),
+          if (_ride != null)
+            IconButton(
+              tooltip: l.historyDeleteFreeRideTitle,
+              icon: const Icon(Icons.delete_outline),
+              onPressed: () async {
+                final rideId = _ride?.id;
+                if (rideId == null) return;
+                final ok = await showDialog<bool>(
+                  context: context,
+                  builder: (dialogCtx) => AlertDialog(
+                    title: Text(l.historyDeleteFreeRideTitle),
+                    content: Text(l.historyIrreversibleWarning),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(dialogCtx, false),
+                        child: Text(l.commonCancel),
+                      ),
+                      FilledButton(
+                        onPressed: () => Navigator.pop(dialogCtx, true),
+                        child: Text(l.commonDelete),
+                      ),
+                    ],
+                  ),
+                );
+                if (ok != true) return;
+                await widget.repository.deleteFreeRide(rideId);
+                if (!context.mounted) return;
+                Navigator.of(context).pop();
+              },
+            ),
+        ],
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _ride == null
+              ? EmptyState(
+                  icon: Icons.error_outline,
+                  title: l.historySessionNotFound,
+                )
+              : ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    if (_ride!.points.isNotEmpty)
+                      Card(
+                        clipBehavior: Clip.antiAlias,
+                        child: AspectRatio(
+                          aspectRatio: 4 / 3,
+                          child: SplitwayMap(
+                            useMapbox: widget.config.hasMapbox,
+                            telemetry: _ride!.points,
+                            interactive: false,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 16),
+                    Text(
+                      Formatters.dateTime(_ride!.startedAt),
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 12),
+                    _FreeRideSummaryRow(ride: _ride!),
+                  ],
+                ),
+    );
+  }
+}
+
+class _FreeRideSummaryRow extends StatelessWidget {
+  const _FreeRideSummaryRow({required this.ride});
+
+  final FreeRideRun ride;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final (dv, isKm) = Formatters.distanceMeters(ride.totalDistanceMeters);
+    final distStr = isKm
+        ? l.unitKilometers(dv.toStringAsFixed(2))
+        : l.unitMeters(dv.toStringAsFixed(0));
+    final entries = [
+      (l.historyDistanceLabel, distStr),
+      (l.historyMaxSpeedLabel, l.unitKmh(Formatters.speedMps(ride.maxSpeedMps).toStringAsFixed(1))),
+      (l.historyAvgSpeedLabel, l.unitKmh(Formatters.speedMps(ride.avgSpeedMps).toStringAsFixed(1))),
+    ];
+    return Row(
+      children: [
+        for (final e in entries)
+          Expanded(
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Column(
+                  children: [
+                    Text(e.$1,
+                        style: Theme.of(context).textTheme.labelSmall),
+                    const SizedBox(height: 4),
+                    Text(e.$2,
+                        style: Theme.of(context).textTheme.titleMedium),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 class SessionDetailScreen extends StatefulWidget {
   const SessionDetailScreen({
     super.key,
@@ -193,30 +465,79 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       appBar: AppBar(
         title: Text(_route?.name ?? l.historySessionTitle),
         actions: [
+          if (_route != null)
+            IconButton(
+              tooltip: l.historyRenameRouteTitle,
+              icon: const Icon(Icons.edit_outlined),
+              onPressed: () async {
+                final routeId = _route?.id;
+                final currentName = _route?.name;
+                if (routeId == null) return;
+                final nameCtrl =
+                    TextEditingController(text: currentName ?? '');
+                final newName = await showDialog<String>(
+                  context: context,
+                  builder: (dialogCtx) => AlertDialog(
+                    title: Text(l.historyRenameRouteTitle),
+                    content: TextField(
+                      controller: nameCtrl,
+                      decoration: InputDecoration(
+                        labelText: l.historyRenameRouteLabel,
+                      ),
+                      autofocus: true,
+                      onSubmitted: (v) => Navigator.pop(dialogCtx, v),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(dialogCtx),
+                        child: Text(l.commonCancel),
+                      ),
+                      FilledButton(
+                        onPressed: () =>
+                            Navigator.pop(dialogCtx, nameCtrl.text),
+                        child: Text(l.commonSave),
+                      ),
+                    ],
+                  ),
+                );
+                if (newName == null || newName.trim().isEmpty) return;
+                await widget.repository.updateRouteTemplateName(
+                  routeId,
+                  newName.trim(),
+                );
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(l.historyRenamedSnack)),
+                );
+                _load();
+              },
+            ),
           if (_session != null)
             IconButton(
               tooltip: l.historyDeleteSessionTitle,
               icon: const Icon(Icons.delete_outline),
               onPressed: () async {
+                final sessionId = _session?.id;
+                if (sessionId == null) return;
                 final ok = await showDialog<bool>(
                   context: context,
-                  builder: (_) => AlertDialog(
+                  builder: (dialogCtx) => AlertDialog(
                     title: Text(l.historyDeleteSessionTitle),
                     content: Text(l.historyIrreversibleWarning),
                     actions: [
                       TextButton(
-                        onPressed: () => Navigator.pop(context, false),
+                        onPressed: () => Navigator.pop(dialogCtx, false),
                         child: Text(l.commonCancel),
                       ),
                       FilledButton(
-                        onPressed: () => Navigator.pop(context, true),
+                        onPressed: () => Navigator.pop(dialogCtx, true),
                         child: Text(l.commonDelete),
                       ),
                     ],
                   ),
                 );
                 if (ok != true) return;
-                await widget.repository.deleteSession(_session!.id);
+                await widget.repository.deleteSession(sessionId);
                 if (!context.mounted) return;
                 Navigator.of(context).pop();
               },

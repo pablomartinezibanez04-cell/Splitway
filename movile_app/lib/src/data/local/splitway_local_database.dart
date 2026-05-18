@@ -11,7 +11,7 @@ class SplitwayLocalDatabase {
 
   Database get raw => _db;
 
-  static const int _schemaVersion = 2;
+  static const int _schemaVersion = 3;
 
   static Future<SplitwayLocalDatabase> open({String? overridePath}) async {
     final path = overridePath ?? await _defaultPath();
@@ -102,6 +102,38 @@ class SplitwayLocalDatabase {
     if (from < 2 && to >= 2) {
       await db.execute(
         'ALTER TABLE route_templates ADD COLUMN location_label TEXT',
+      );
+    }
+    if (from < 3 && to >= 3) {
+      await db.execute('''
+        CREATE TABLE free_rides (
+          id TEXT PRIMARY KEY NOT NULL,
+          started_at INTEGER NOT NULL,
+          ended_at INTEGER,
+          status TEXT NOT NULL,
+          total_distance_m REAL NOT NULL,
+          max_speed_mps REAL NOT NULL,
+          avg_speed_mps REAL NOT NULL,
+          name TEXT,
+          description TEXT,
+          location_label TEXT
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE free_ride_telemetry (
+          free_ride_id TEXT NOT NULL,
+          ts INTEGER NOT NULL,
+          lat REAL NOT NULL,
+          lng REAL NOT NULL,
+          speed_mps REAL,
+          accuracy_m REAL,
+          bearing_deg REAL,
+          altitude_m REAL,
+          FOREIGN KEY (free_ride_id) REFERENCES free_rides(id) ON DELETE CASCADE
+        )
+      ''');
+      await db.execute(
+        'CREATE INDEX idx_fr_telemetry_ride_ts ON free_ride_telemetry(free_ride_id, ts)',
       );
     }
   }

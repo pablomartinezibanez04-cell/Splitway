@@ -8,6 +8,8 @@ import '../features/editor/route_editor_controller.dart';
 import '../features/editor/route_editor_screen.dart';
 import '../features/history/history_screen.dart';
 import '../features/home/home_shell.dart';
+import '../features/free_ride/free_ride_controller.dart';
+import '../features/free_ride/free_ride_screen.dart';
 import '../features/session/live_session_controller.dart';
 import '../features/session/live_session_screen.dart';
 import '../features/settings/settings_screen.dart';
@@ -33,7 +35,8 @@ class AppRouter {
               ? ReverseGeocodingService(accessToken: config.mapboxToken!)
               : null,
         ),
-        _sessionController = LiveSessionController(repository);
+        _sessionController = LiveSessionController(repository),
+        _freeRideController = FreeRideController(repository);
 
   final LocalDraftRepository repository;
   final AppConfig config;
@@ -45,6 +48,7 @@ class AppRouter {
 
   final RouteEditorController _editorController;
   final LiveSessionController _sessionController;
+  final FreeRideController _freeRideController;
 
   late final GoRouter router = GoRouter(
     initialLocation: '/editor',
@@ -103,6 +107,18 @@ class AppRouter {
           StatefulShellBranch(
             routes: [
               GoRoute(
+                path: '/free-ride',
+                builder: (_, __) => FreeRideScreen(
+                  controller: _freeRideController,
+                  config: config,
+                  authService: authService,
+                ),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
                 path: '/history',
                 builder: (_, __) => HistoryScreen(
                   repository: repository,
@@ -120,6 +136,7 @@ class AppRouter {
   void dispose() {
     _editorController.dispose();
     _sessionController.dispose();
+    _freeRideController.dispose();
   }
 }
 

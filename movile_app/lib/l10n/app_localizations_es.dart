@@ -583,4 +583,117 @@ class AppLocalizationsEs extends AppLocalizations {
   String historyBestLapSuffix(String duration) {
     return ' · mejor $duration';
   }
+
+  @override
+  String get navFreeRide => 'Sin destino';
+
+  @override
+  String get freeRideTitle => 'Sin destino';
+
+  @override
+  String get freeRideIdleTitle => 'Ruta sin destino';
+
+  @override
+  String get freeRideIdleMessage =>
+      'Graba tu recorrido en tiempo real sin una ruta predefinida. Se registran velocidad, distancia y posición automáticamente.';
+
+  @override
+  String get freeRideStartButton => 'Comenzar grabación';
+
+  @override
+  String get freeRideElapsedLabel => 'Tiempo';
+
+  @override
+  String get freeRideDistanceLabel => 'Distancia';
+
+  @override
+  String get freeRideSpeedLabel => 'Velocidad';
+
+  @override
+  String get freeRideMaxSpeedLabel => 'Vel. máx.';
+
+  @override
+  String get freeRideAvgSpeedLabel => 'Vel. media';
+
+  @override
+  String get freeRideFinishButton => 'Finalizar recorrido';
+
+  @override
+  String get freeRideCompleteTitle => 'Recorrido completo';
+
+  @override
+  String get freeRideSavedSnackBar => 'Recorrido guardado';
+
+  @override
+  String get freeRideSaveAsRouteButton => 'Guardar como ruta reutilizable';
+
+  @override
+  String get freeRideDiscardButton => 'Finalizar sin guardar ruta';
+
+  @override
+  String get freeRideNewRideButton => 'Nuevo recorrido';
+
+  @override
+  String get freeRideSaveRouteDialogTitle => 'Guardar como ruta';
+
+  @override
+  String get freeRideNameLabel => 'Nombre';
+
+  @override
+  String get freeRideDescriptionLabel => 'Descripción (opcional)';
+
+  @override
+  String get freeRideDifficultyLabel => 'Dificultad';
+
+  @override
+  String freeRideRouteSavedSnack(String name) {
+    return 'Ruta \"$name\" guardada';
+  }
+
+  @override
+  String freeRidePointsLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count puntos',
+      one: '1 punto',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get historyNoEntriesTitle => 'Aún no hay actividad';
+
+  @override
+  String get historyNoEntriesMessage =>
+      'Haz un recorrido libre o graba una sesión en una ruta.';
+
+  @override
+  String get historyFreeRideLabel => 'Recorrido libre';
+
+  @override
+  String historyFreeRideSubtitle(String date, String distance) {
+    return '$date · $distance';
+  }
+
+  @override
+  String get historyDeleteFreeRideTitle => 'Eliminar recorrido libre';
+
+  @override
+  String get historyFreeRideTitle => 'Detalle del recorrido';
+
+  @override
+  String get historyRenameFreeRideTitle => 'Renombrar recorrido';
+
+  @override
+  String get historyRenameFreeRideLabel => 'Nombre';
+
+  @override
+  String get historyRenamedSnack => 'Nombre actualizado';
+
+  @override
+  String get historyRenameRouteTitle => 'Renombrar ruta';
+
+  @override
+  String get historyRenameRouteLabel => 'Nombre';
 }

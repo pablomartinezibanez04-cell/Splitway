@@ -163,7 +163,7 @@ void main() {
       await tester.pump();
     }
 
-    expect(find.text('Aún no has grabado ninguna sesión'), findsOneWidget);
+    expect(find.text('Aún no hay actividad'), findsOneWidget);
 
     await tester.runAsync(() => _shutdown(boot));
   });

@@ -177,5 +177,41 @@
 
   "mapNoRoute": "Sin ruta",
 
-  "historyBestLapSuffix": " · mejor {duration}"
+  "historyBestLapSuffix": " · mejor {duration}",
+
+  "navFreeRide": "Sin destino",
+
+  "freeRideTitle": "Sin destino",
+  "freeRideIdleTitle": "Ruta sin destino",
+  "freeRideIdleMessage": "Graba tu recorrido en tiempo real sin una ruta predefinida. Se registran velocidad, distancia y posición automáticamente.",
+  "freeRideStartButton": "Comenzar grabación",
+  "freeRideElapsedLabel": "Tiempo",
+  "freeRideDistanceLabel": "Distancia",
+  "freeRideSpeedLabel": "Velocidad",
+  "freeRideMaxSpeedLabel": "Vel. máx.",
+  "freeRideAvgSpeedLabel": "Vel. media",
+  "freeRideFinishButton": "Finalizar recorrido",
+  "freeRideCompleteTitle": "Recorrido completo",
+  "freeRideSavedSnackBar": "Recorrido guardado",
+  "freeRideSaveAsRouteButton": "Guardar como ruta reutilizable",
+  "freeRideDiscardButton": "Finalizar sin guardar ruta",
+  "freeRideNewRideButton": "Nuevo recorrido",
+  "freeRideSaveRouteDialogTitle": "Guardar como ruta",
+  "freeRideNameLabel": "Nombre",
+  "freeRideDescriptionLabel": "Descripción (opcional)",
+  "freeRideDifficultyLabel": "Dificultad",
+  "freeRideRouteSavedSnack": "Ruta \"{name}\" guardada",
+  "freeRidePointsLabel": "{count, plural, =1{1 punto} other{{count} puntos}}",
+
+  "historyNoEntriesTitle": "Aún no hay actividad",
+  "historyNoEntriesMessage": "Haz un recorrido libre o graba una sesión en una ruta.",
+  "historyFreeRideLabel": "Recorrido libre",
+  "historyFreeRideSubtitle": "{date} · {distance}",
+  "historyDeleteFreeRideTitle": "Eliminar recorrido libre",
+  "historyFreeRideTitle": "Detalle del recorrido",
+  "historyRenameFreeRideTitle": "Renombrar recorrido",
+  "historyRenameFreeRideLabel": "Nombre",
+  "historyRenamedSnack": "Nombre actualizado",
+  "historyRenameRouteTitle": "Renombrar ruta",
+  "historyRenameRouteLabel": "Nombre"
 }

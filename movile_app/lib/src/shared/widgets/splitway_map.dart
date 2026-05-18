@@ -7,6 +7,19 @@ import '../../features/editor/draft_segment.dart';
 import 'route_map_painter.dart';
 import 'sector_segments.dart';
 
+/// A notifier that always fires, even when set to the same value.
+/// [ValueNotifier] silently ignores duplicate values, which breaks
+/// "center on me" buttons that re-fly to the current position.
+class FlyToNotifier extends ChangeNotifier {
+  GeoPoint? _target;
+  GeoPoint? get target => _target;
+
+  void flyTo(GeoPoint point) {
+    _target = point;
+    notifyListeners();
+  }
+}
+
 /// Wraps a real Mapbox `MapWidget` when [useMapbox] is true; otherwise falls
 /// back to the iter 1 `RouteMapPainter`. The fallback keeps widget tests
 /// working (no Mapbox SDK in test env) and lets the app boot without a
@@ -55,7 +68,7 @@ class SplitwayMap extends StatefulWidget {
   /// Initial camera center (e.g. user GPS location). Falls back to Madrid if null.
   final GeoPoint? initialCenter;
   /// When this notifier fires, the map flies to the given point.
-  final ValueNotifier<GeoPoint?>? flyToNotifier;
+  final FlyToNotifier? flyToNotifier;
   final ValueChanged<GeoPoint>? onTap;
   final ValueChanged<GeoPoint>? onLongPress;
   final String? styleUri;
@@ -95,7 +108,7 @@ class _SplitwayMapState extends State<SplitwayMap> {
   }
 
   void _onFlyToChanged() {
-    final target = widget.flyToNotifier?.value;
+    final target = widget.flyToNotifier?.target;
     if (target == null || _map == null) return;
     _map!.flyTo(
       mbx.CameraOptions(

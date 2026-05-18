@@ -103,6 +103,16 @@ class LocalDraftRepository {
     );
   }
 
+  Future<void> updateRouteTemplateName(String id, String name) async {
+    await _db.update(
+      'route_templates',
+      {'name': name},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    _changes.add(null);
+  }
+
   Future<void> deleteRoute(String id) async {
     await _db.delete('route_templates', where: 'id = ?', whereArgs: [id]);
     _changes.add(null);
@@ -241,6 +251,138 @@ class LocalDraftRepository {
   Future<void> deleteSession(String id) async {
     await _db.delete('session_runs', where: 'id = ?', whereArgs: [id]);
     _changes.add(null);
+  }
+
+  // ---------- Free rides ----------
+
+  Future<void> saveFreeRideRun(FreeRideRun ride) async {
+    await _db.transaction((txn) async {
+      await txn.insert(
+        'free_rides',
+        {
+          'id': ride.id,
+          'started_at': ride.startedAt.toUtc().millisecondsSinceEpoch,
+          'ended_at': ride.endedAt?.toUtc().millisecondsSinceEpoch,
+          'status': ride.status.id,
+          'total_distance_m': ride.totalDistanceMeters,
+          'max_speed_mps': ride.maxSpeedMps,
+          'avg_speed_mps': ride.avgSpeedMps,
+          'name': ride.name,
+          'description': ride.description,
+          'location_label': ride.locationLabel,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      await txn.delete('free_ride_telemetry',
+          where: 'free_ride_id = ?', whereArgs: [ride.id]);
+      final batch = txn.batch();
+      for (final p in ride.points) {
+        batch.insert('free_ride_telemetry', {
+          'free_ride_id': ride.id,
+          'ts': p.timestamp.toUtc().millisecondsSinceEpoch,
+          'lat': p.location.latitude,
+          'lng': p.location.longitude,
+          'speed_mps': p.speedMps,
+          'accuracy_m': p.accuracyMeters,
+          'bearing_deg': p.bearingDeg,
+          'altitude_m': p.altitudeMeters,
+        });
+      }
+      await batch.commit(noResult: true);
+    });
+    _changes.add(null);
+  }
+
+  Future<FreeRideRun?> getFreeRideRun(String id) async {
+    final rows = await _db
+        .query('free_rides', where: 'id = ?', whereArgs: [id], limit: 1);
+    if (rows.isEmpty) return null;
+    return _readFreeRide(rows.first, includePoints: true);
+  }
+
+  Future<List<FreeRideRun>> getAllFreeRides() async {
+    final rows = await _db.query('free_rides', orderBy: 'started_at DESC');
+    return Future.wait(
+        rows.map((r) => _readFreeRide(r, includePoints: false)));
+  }
+
+  Future<void> updateFreeRideMetadata(
+    String id, {
+    String? name,
+    String? description,
+    String? locationLabel,
+  }) async {
+    await _db.update(
+      'free_rides',
+      {
+        if (name != null) 'name': name,
+        if (description != null) 'description': description,
+        if (locationLabel != null) 'location_label': locationLabel,
+      },
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    _changes.add(null);
+  }
+
+  Future<void> deleteFreeRide(String id) async {
+    await _db.delete('free_rides', where: 'id = ?', whereArgs: [id]);
+    _changes.add(null);
+  }
+
+  Future<FreeRideRun> _readFreeRide(
+    Map<String, Object?> row, {
+    bool includePoints = false,
+  }) async {
+    final id = row['id']! as String;
+
+    List<TelemetryPoint> points = const [];
+    if (includePoints) {
+      final tRows = await _db.query(
+        'free_ride_telemetry',
+        where: 'free_ride_id = ?',
+        whereArgs: [id],
+        orderBy: 'ts ASC',
+      );
+      points = tRows.map((t) {
+        return TelemetryPoint(
+          timestamp: DateTime.fromMillisecondsSinceEpoch(
+            t['ts']! as int,
+            isUtc: true,
+          ).toLocal(),
+          location: GeoPoint(
+            latitude: (t['lat']! as num).toDouble(),
+            longitude: (t['lng']! as num).toDouble(),
+          ),
+          speedMps: (t['speed_mps'] as num?)?.toDouble(),
+          accuracyMeters: (t['accuracy_m'] as num?)?.toDouble(),
+          bearingDeg: (t['bearing_deg'] as num?)?.toDouble(),
+          altitudeMeters: (t['altitude_m'] as num?)?.toDouble(),
+        );
+      }).toList();
+    }
+
+    return FreeRideRun(
+      id: id,
+      startedAt: DateTime.fromMillisecondsSinceEpoch(
+        row['started_at']! as int,
+        isUtc: true,
+      ).toLocal(),
+      endedAt: row['ended_at'] == null
+          ? null
+          : DateTime.fromMillisecondsSinceEpoch(
+              row['ended_at']! as int,
+              isUtc: true,
+            ).toLocal(),
+      status: FreeRideStatusX.fromId(row['status']! as String),
+      points: points,
+      totalDistanceMeters: (row['total_distance_m']! as num).toDouble(),
+      maxSpeedMps: (row['max_speed_mps']! as num).toDouble(),
+      avgSpeedMps: (row['avg_speed_mps']! as num).toDouble(),
+      name: row['name'] as String?,
+      description: row['description'] as String?,
+      locationLabel: row['location_label'] as String?,
+    );
   }
 
   // ---------- Cloud sync ----------

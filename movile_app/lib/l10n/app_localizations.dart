@@ -1081,6 +1081,204 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **' · best {duration}'**
   String historyBestLapSuffix(String duration);
+
+  /// No description provided for @navFreeRide.
+  ///
+  /// In en, this message translates to:
+  /// **'Free ride'**
+  String get navFreeRide;
+
+  /// No description provided for @freeRideTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Free ride'**
+  String get freeRideTitle;
+
+  /// No description provided for @freeRideIdleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Ride without a destination'**
+  String get freeRideIdleTitle;
+
+  /// No description provided for @freeRideIdleMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Record your path in real time without a predefined route. Speed, distance and position are tracked automatically.'**
+  String get freeRideIdleMessage;
+
+  /// No description provided for @freeRideStartButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Start recording'**
+  String get freeRideStartButton;
+
+  /// No description provided for @freeRideElapsedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Elapsed'**
+  String get freeRideElapsedLabel;
+
+  /// No description provided for @freeRideDistanceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Distance'**
+  String get freeRideDistanceLabel;
+
+  /// No description provided for @freeRideSpeedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed'**
+  String get freeRideSpeedLabel;
+
+  /// No description provided for @freeRideMaxSpeedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Max speed'**
+  String get freeRideMaxSpeedLabel;
+
+  /// No description provided for @freeRideAvgSpeedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Avg speed'**
+  String get freeRideAvgSpeedLabel;
+
+  /// No description provided for @freeRideFinishButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish ride'**
+  String get freeRideFinishButton;
+
+  /// No description provided for @freeRideCompleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Ride complete'**
+  String get freeRideCompleteTitle;
+
+  /// No description provided for @freeRideSavedSnackBar.
+  ///
+  /// In en, this message translates to:
+  /// **'Free ride saved'**
+  String get freeRideSavedSnackBar;
+
+  /// No description provided for @freeRideSaveAsRouteButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Save as reusable route'**
+  String get freeRideSaveAsRouteButton;
+
+  /// No description provided for @freeRideDiscardButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish without saving route'**
+  String get freeRideDiscardButton;
+
+  /// No description provided for @freeRideNewRideButton.
+  ///
+  /// In en, this message translates to:
+  /// **'New ride'**
+  String get freeRideNewRideButton;
+
+  /// No description provided for @freeRideSaveRouteDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Save as route'**
+  String get freeRideSaveRouteDialogTitle;
+
+  /// No description provided for @freeRideNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get freeRideNameLabel;
+
+  /// No description provided for @freeRideDescriptionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Description (optional)'**
+  String get freeRideDescriptionLabel;
+
+  /// No description provided for @freeRideDifficultyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Difficulty'**
+  String get freeRideDifficultyLabel;
+
+  /// No description provided for @freeRideRouteSavedSnack.
+  ///
+  /// In en, this message translates to:
+  /// **'Route \"{name}\" saved'**
+  String freeRideRouteSavedSnack(String name);
+
+  /// No description provided for @freeRidePointsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 point} other{{count} points}}'**
+  String freeRidePointsLabel(int count);
+
+  /// No description provided for @historyNoEntriesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No activity recorded yet'**
+  String get historyNoEntriesTitle;
+
+  /// No description provided for @historyNoEntriesMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Go for a free ride or record a session on a route.'**
+  String get historyNoEntriesMessage;
+
+  /// No description provided for @historyFreeRideLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Free ride'**
+  String get historyFreeRideLabel;
+
+  /// No description provided for @historyFreeRideSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{date} · {distance}'**
+  String historyFreeRideSubtitle(String date, String distance);
+
+  /// No description provided for @historyDeleteFreeRideTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete free ride'**
+  String get historyDeleteFreeRideTitle;
+
+  /// No description provided for @historyFreeRideTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Free ride detail'**
+  String get historyFreeRideTitle;
+
+  /// No description provided for @historyRenameFreeRideTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename ride'**
+  String get historyRenameFreeRideTitle;
+
+  /// No description provided for @historyRenameFreeRideLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get historyRenameFreeRideLabel;
+
+  /// No description provided for @historyRenamedSnack.
+  ///
+  /// In en, this message translates to:
+  /// **'Name updated'**
+  String get historyRenamedSnack;
+
+  /// No description provided for @historyRenameRouteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename route'**
+  String get historyRenameRouteTitle;
+
+  /// No description provided for @historyRenameRouteLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get historyRenameRouteLabel;
 }
 
 class _AppLocalizationsDelegate
