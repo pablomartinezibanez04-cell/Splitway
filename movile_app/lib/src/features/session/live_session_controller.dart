@@ -12,9 +12,12 @@ enum LiveSessionStage { selecting, ready, running, finished }
 enum TrackingSource { simulated, realGps }
 
 class LiveSessionController extends ChangeNotifier {
-  LiveSessionController(this._repo);
+  LiveSessionController(this._repo) {
+    _changesSub = _repo.changes.listen((_) => _onRepoChanged());
+  }
 
   final LocalDraftRepository _repo;
+  StreamSubscription<void>? _changesSub;
 
   LiveSessionStage _stage = LiveSessionStage.selecting;
   LiveSessionStage get stage => _stage;
@@ -51,9 +54,22 @@ class LiveSessionController extends ChangeNotifier {
 
   Future<void> load() async {
     _routes = await _repo.getAllRoutes();
+    if (_selected != null) {
+      final stillExists = _routes.any((r) => r.id == _selected!.id);
+      if (!stillExists) _selected = null;
+    }
     _selected ??= _routes.isNotEmpty ? _routes.first : null;
-    if (_selected != null) _stage = LiveSessionStage.ready;
+    _stage =
+        _selected != null ? LiveSessionStage.ready : LiveSessionStage.selecting;
     notifyListeners();
+  }
+
+  void _onRepoChanged() {
+    if (_stage == LiveSessionStage.running ||
+        _stage == LiveSessionStage.finished) {
+      return;
+    }
+    load();
   }
 
   void selectRoute(RouteTemplate route) {
@@ -216,6 +232,7 @@ class LiveSessionController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _changesSub?.cancel();
     _gpsSub?.cancel();
     _autoSimulator?.cancel();
     _tracker?.removeListener(_onTrackerChange);
