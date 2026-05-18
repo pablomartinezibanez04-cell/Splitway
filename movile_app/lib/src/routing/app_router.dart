@@ -51,7 +51,7 @@ class AppRouter {
   final FreeRideController _freeRideController;
 
   late final GoRouter router = GoRouter(
-    initialLocation: '/editor',
+    initialLocation: '/routes',
     routes: [
       // Login screen (outside the shell — no bottom nav).
       GoRoute(
@@ -83,7 +83,7 @@ class AppRouter {
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: '/editor',
+                path: '/routes',
                 builder: (_, __) => RouteEditorScreen(
                   controller: _editorController,
                   config: config,
