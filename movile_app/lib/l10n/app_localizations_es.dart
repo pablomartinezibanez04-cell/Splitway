@@ -346,6 +346,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get editorNewRouteDialogTitle => 'Nueva ruta';
 
   @override
+  String get editorEditRouteDialogTitle => 'Editar ruta';
+
+  @override
   String get editorNameLabel => 'Nombre';
 
   @override

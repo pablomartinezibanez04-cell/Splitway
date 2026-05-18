@@ -12,6 +12,20 @@ class LocalDraftRepository {
   final SplitwayLocalDatabase _database;
   Database get _db => _database.raw;
 
+  /// The Supabase user ID of the currently logged-in user, or null when
+  /// no session is active. When set, queries return the user's data plus
+  /// demo rows (owner_id IS NULL). When null, only demo rows are returned.
+  String? _userId;
+  String? get userId => _userId;
+  set userId(String? value) {
+    _userId = value;
+    _changes.add(null);
+  }
+
+  String get _ownerFilter =>
+      _userId != null ? "(owner_id = ? OR owner_id IS NULL)" : "owner_id IS NULL";
+  List<Object?> get _ownerArgs => _userId != null ? [_userId] : [];
+
   final StreamController<void> _changes =
       StreamController<void>.broadcast();
   Stream<void> get changes => _changes.stream;
@@ -32,6 +46,7 @@ class LocalDraftRepository {
           'difficulty': route.difficulty.id,
           'created_at': route.createdAt.toUtc().millisecondsSinceEpoch,
           'location_label': route.locationLabel,
+          'owner_id': _userId,
         },
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
@@ -50,14 +65,23 @@ class LocalDraftRepository {
   }
 
   Future<RouteTemplate?> getRouteTemplate(String id) async {
-    final routes = await _db
-        .query('route_templates', where: 'id = ?', whereArgs: [id], limit: 1);
+    final routes = await _db.query(
+      'route_templates',
+      where: 'id = ? AND $_ownerFilter',
+      whereArgs: [id, ..._ownerArgs],
+      limit: 1,
+    );
     if (routes.isEmpty) return null;
     return _readRoute(routes.first);
   }
 
   Future<List<RouteTemplate>> getAllRoutes() async {
-    final rows = await _db.query('route_templates', orderBy: 'created_at DESC');
+    final rows = await _db.query(
+      'route_templates',
+      where: _ownerFilter,
+      whereArgs: _ownerArgs,
+      orderBy: 'created_at DESC',
+    );
     return Future.wait(rows.map(_readRoute));
   }
 
@@ -138,6 +162,7 @@ class LocalDraftRepository {
           'total_distance_m': session.totalDistanceMeters,
           'max_speed_mps': session.maxSpeedMps,
           'avg_speed_mps': session.avgSpeedMps,
+          'owner_id': _userId,
         },
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
@@ -162,14 +187,29 @@ class LocalDraftRepository {
   }
 
   Future<SessionRun?> getSessionRun(String id) async {
-    final rows = await _db
-        .query('session_runs', where: 'id = ?', whereArgs: [id], limit: 1);
+    final rows = await _db.query(
+      'session_runs',
+      where: 'id = ? AND $_ownerFilter',
+      whereArgs: [id, ..._ownerArgs],
+      limit: 1,
+    );
     if (rows.isEmpty) return null;
     return _readSession(rows.first, includePoints: true);
   }
 
-  Future<List<SessionRun>> getAllSessions({bool includePoints = false}) async {
-    final rows = await _db.query('session_runs', orderBy: 'started_at DESC');
+  Future<List<SessionRun>> getAllSessions({
+    bool includePoints = false,
+    int? limit,
+    int? offset,
+  }) async {
+    final rows = await _db.query(
+      'session_runs',
+      where: _ownerFilter,
+      whereArgs: _ownerArgs,
+      orderBy: 'started_at DESC',
+      limit: limit,
+      offset: offset,
+    );
     return Future.wait(
       rows.map((r) => _readSession(r, includePoints: includePoints)),
     );
@@ -178,8 +218,8 @@ class LocalDraftRepository {
   Future<List<SessionRun>> getSessionsByRoute(String routeId) async {
     final rows = await _db.query(
       'session_runs',
-      where: 'route_id = ?',
-      whereArgs: [routeId],
+      where: 'route_id = ? AND $_ownerFilter',
+      whereArgs: [routeId, ..._ownerArgs],
       orderBy: 'started_at DESC',
     );
     return Future.wait(rows.map((r) => _readSession(r)));
@@ -270,6 +310,7 @@ class LocalDraftRepository {
           'name': ride.name,
           'description': ride.description,
           'location_label': ride.locationLabel,
+          'owner_id': _userId,
         },
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
@@ -294,14 +335,28 @@ class LocalDraftRepository {
   }
 
   Future<FreeRideRun?> getFreeRideRun(String id) async {
-    final rows = await _db
-        .query('free_rides', where: 'id = ?', whereArgs: [id], limit: 1);
+    final rows = await _db.query(
+      'free_rides',
+      where: 'id = ? AND $_ownerFilter',
+      whereArgs: [id, ..._ownerArgs],
+      limit: 1,
+    );
     if (rows.isEmpty) return null;
     return _readFreeRide(rows.first, includePoints: true);
   }
 
-  Future<List<FreeRideRun>> getAllFreeRides() async {
-    final rows = await _db.query('free_rides', orderBy: 'started_at DESC');
+  Future<List<FreeRideRun>> getAllFreeRides({
+    int? limit,
+    int? offset,
+  }) async {
+    final rows = await _db.query(
+      'free_rides',
+      where: _ownerFilter,
+      whereArgs: _ownerArgs,
+      orderBy: 'started_at DESC',
+      limit: limit,
+      offset: offset,
+    );
     return Future.wait(
         rows.map((r) => _readFreeRide(r, includePoints: false)));
   }
@@ -383,6 +438,24 @@ class LocalDraftRepository {
       description: row['description'] as String?,
       locationLabel: row['location_label'] as String?,
     );
+  }
+
+  // ---------- Counts (for pagination) ----------
+
+  Future<int> countSessions() async {
+    final result = await _db.rawQuery(
+      'SELECT COUNT(*) AS c FROM session_runs WHERE $_ownerFilter',
+      _ownerArgs,
+    );
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  Future<int> countFreeRides() async {
+    final result = await _db.rawQuery(
+      'SELECT COUNT(*) AS c FROM free_rides WHERE $_ownerFilter',
+      _ownerArgs,
+    );
+    return Sqflite.firstIntValue(result) ?? 0;
   }
 
   // ---------- Cloud sync ----------

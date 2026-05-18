@@ -34,6 +34,7 @@ class RouteEditorController extends ChangeNotifier {
   final LocalDraftRepository _repo;
   LocalDraftRepository get repository => _repo;
   StreamSubscription<void>? _changesSub;
+  Timer? _reloadDebouncer;
 
   /// Optional: when present each new waypoint triggers a Mapbox Directions
   /// API call to snap the drawn path to actual roads in real time.
@@ -140,7 +141,8 @@ class RouteEditorController extends ChangeNotifier {
 
   void _onRepoChanged() {
     if (_drawing) return;
-    load();
+    _reloadDebouncer?.cancel();
+    _reloadDebouncer = Timer(const Duration(milliseconds: 300), load);
   }
 
   // ---------- Load / select ----------
@@ -548,6 +550,7 @@ class RouteEditorController extends ChangeNotifier {
   void dispose() {
     _changesSub?.cancel();
     _snapDebouncer?.cancel();
+    _reloadDebouncer?.cancel();
     super.dispose();
   }
 }

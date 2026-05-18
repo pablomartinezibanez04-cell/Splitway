@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:splitway_core/splitway_core.dart';
 import 'package:splitway_mobile/l10n/app_localizations.dart';
@@ -50,39 +52,81 @@ class HistoryScreen extends StatefulWidget {
 }
 
 class _HistoryScreenState extends State<HistoryScreen> {
+  static const _pageSize = 30;
+
   bool _loading = true;
   List<_HistoryEntry> _entries = const [];
   Map<String, RouteTemplate> _routes = const {};
+  bool _hasMore = true;
+  int _sessionOffset = 0;
+  int _freeRideOffset = 0;
+
+  StreamSubscription<void>? _changesSub;
+  Timer? _reloadDebouncer;
 
   @override
   void initState() {
     super.initState();
-    widget.repository.changes.listen((_) => _load());
+    _changesSub = widget.repository.changes.listen((_) {
+      _reloadDebouncer?.cancel();
+      _reloadDebouncer = Timer(const Duration(milliseconds: 300), _reload);
+    });
     widget.authService?.addListener(_onAuthChanged);
     _load();
   }
 
   @override
   void dispose() {
+    _changesSub?.cancel();
+    _reloadDebouncer?.cancel();
     widget.authService?.removeListener(_onAuthChanged);
     super.dispose();
   }
 
-  void _onAuthChanged() => setState(() {});
+  void _onAuthChanged() {
+    _reload();
+  }
 
+  /// Full reload: resets pagination and re-fetches the first page.
+  void _reload() {
+    _sessionOffset = 0;
+    _freeRideOffset = 0;
+    _hasMore = true;
+    _entries = const [];
+    _load();
+  }
+
+  /// Loads the next page of entries (both sessions and free rides).
   Future<void> _load() async {
-    setState(() => _loading = true);
-    final sessions = await widget.repository.getAllSessions();
-    final freeRides = await widget.repository.getAllFreeRides();
+    if (!mounted) return;
+    setState(() => _loading = _entries.isEmpty);
+
+    final sessions = await widget.repository.getAllSessions(
+      limit: _pageSize,
+      offset: _sessionOffset,
+    );
+    final freeRides = await widget.repository.getAllFreeRides(
+      limit: _pageSize,
+      offset: _freeRideOffset,
+    );
     final routeList = await widget.repository.getAllRoutes();
     if (!mounted) return;
-    final entries = <_HistoryEntry>[
+
+    final newEntries = <_HistoryEntry>[
       ...sessions.map(_SessionEntry.new),
       ...freeRides.map(_FreeRideEntry.new),
     ]..sort();
+
     setState(() {
-      _entries = entries;
+      if (_sessionOffset == 0 && _freeRideOffset == 0) {
+        _entries = newEntries;
+      } else {
+        _entries = [..._entries, ...newEntries];
+      }
       _routes = {for (final r in routeList) r.id: r};
+      _sessionOffset += sessions.length;
+      _freeRideOffset += freeRides.length;
+      _hasMore = sessions.length == _pageSize || freeRides.length == _pageSize;
       _loading = false;
     });
   }
@@ -97,7 +141,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         actions: [
           IconButton(
             tooltip: l.commonRefresh,
-            onPressed: _load,
+            onPressed: _reload,
             icon: const Icon(Icons.refresh),
           ),
         ],
@@ -112,9 +156,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 )
               : ListView.separated(
                   padding: const EdgeInsets.all(8),
-                  itemCount: _entries.length,
+                  itemCount: _entries.length + (_hasMore ? 1 : 0),
                   separatorBuilder: (_, __) => const SizedBox(height: 4),
                   itemBuilder: (_, index) {
+                    if (index >= _entries.length) {
+                      // Load-more sentinel: trigger next page when visible.
+                      _load();
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    }
                     final entry = _entries[index];
                     return switch (entry) {
                       _SessionEntry(:final session) => _SessionTile(

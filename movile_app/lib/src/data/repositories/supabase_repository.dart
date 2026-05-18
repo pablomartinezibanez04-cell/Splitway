@@ -144,9 +144,121 @@ class SupabaseRepository {
     return sessions;
   }
 
+  /// Fetches a single session by [id], optionally with telemetry points.
+  Future<SessionRun?> fetchSession(
+    String id, {
+    bool includePoints = false,
+  }) async {
+    final rows = await _client
+        .from('session_runs')
+        .select()
+        .eq('id', id)
+        .limit(1);
+    if (rows.isEmpty) return null;
+    List<TelemetryPoint> points = const [];
+    if (includePoints) {
+      final tRows = await _client
+          .from('telemetry_points')
+          .select()
+          .eq('session_id', id)
+          .order('ts');
+      points = tRows.map(_parseTelemetryPoint).toList();
+    }
+    return _parseSession(rows.first, points);
+  }
+
   /// Deletes a session from the cloud.
   Future<void> deleteSession(String id) async {
     await _client.from('session_runs').delete().eq('id', id);
+  }
+
+  // ---------- Free rides ----------
+
+  /// Upserts a free ride run (metadata + telemetry) to Supabase.
+  Future<void> upsertFreeRide(FreeRideRun ride) async {
+    await _client.from('free_rides').upsert({
+      'id': ride.id,
+      'owner_id': _uid,
+      'started_at': ride.startedAt.toUtc().toIso8601String(),
+      'ended_at': ride.endedAt?.toUtc().toIso8601String(),
+      'status': ride.status.id,
+      'total_distance_m': ride.totalDistanceMeters,
+      'max_speed_mps': ride.maxSpeedMps,
+      'avg_speed_mps': ride.avgSpeedMps,
+      'name': ride.name,
+      'description': ride.description,
+      'location_label': ride.locationLabel,
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    });
+
+    // Telemetry: delete old + bulk insert.
+    await _client
+        .from('free_ride_telemetry')
+        .delete()
+        .eq('free_ride_id', ride.id);
+
+    if (ride.points.isNotEmpty) {
+      const batchSize = 500;
+      for (var i = 0; i < ride.points.length; i += batchSize) {
+        final batch = ride.points.skip(i).take(batchSize);
+        await _client.from('free_ride_telemetry').insert(
+          batch.map((p) => {
+            'free_ride_id': ride.id,
+            'owner_id': _uid,
+            'ts': p.timestamp.toUtc().toIso8601String(),
+            'lat': p.location.latitude,
+            'lng': p.location.longitude,
+            'speed_mps': p.speedMps,
+            'accuracy_m': p.accuracyMeters,
+            'bearing_deg': p.bearingDeg,
+            'altitude_m': p.altitudeMeters,
+          }).toList(),
+        );
+      }
+    }
+  }
+
+  /// Fetches all free rides belonging to the current user (without telemetry).
+  Future<List<FreeRideRun>> fetchAllFreeRides() async {
+    final rows = await _client
+        .from('free_rides')
+        .select()
+        .order('started_at', ascending: false);
+    return rows.map((r) => _parseFreeRide(r, const [])).toList();
+  }
+
+  /// Fetches a single free ride by [id], optionally with telemetry points.
+  Future<FreeRideRun?> fetchFreeRide(
+    String id, {
+    bool includePoints = false,
+  }) async {
+    final rows = await _client
+        .from('free_rides')
+        .select()
+        .eq('id', id)
+        .limit(1);
+    if (rows.isEmpty) return null;
+    List<TelemetryPoint> points = const [];
+    if (includePoints) {
+      final tRows = await _client
+          .from('free_ride_telemetry')
+          .select()
+          .eq('free_ride_id', id)
+          .order('ts');
+      points = tRows.map(_parseTelemetryPoint).toList();
+    }
+    return _parseFreeRide(rows.first, points);
+  }
+
+  /// Returns remote free ride IDs with their `updated_at` timestamps.
+  Future<Map<String, DateTime>> fetchFreeRideTimestamps() async {
+    final rows = await _client
+        .from('free_rides')
+        .select('id, updated_at');
+    return {
+      for (final r in rows)
+        r['id'] as String: DateTime.parse(r['updated_at'] as String),
+    };
   }
 
   // ---------- Sync helpers ----------
@@ -239,6 +351,25 @@ class SupabaseRepository {
       totalDistanceMeters: (row['total_distance_m'] as num).toDouble(),
       maxSpeedMps: (row['max_speed_mps'] as num).toDouble(),
       avgSpeedMps: (row['avg_speed_mps'] as num).toDouble(),
+    );
+  }
+
+  FreeRideRun _parseFreeRide(
+      Map<String, dynamic> row, List<TelemetryPoint> points) {
+    return FreeRideRun(
+      id: row['id'] as String,
+      startedAt: DateTime.parse(row['started_at'] as String).toLocal(),
+      endedAt: row['ended_at'] == null
+          ? null
+          : DateTime.parse(row['ended_at'] as String).toLocal(),
+      status: FreeRideStatusX.fromId(row['status'] as String),
+      points: points,
+      totalDistanceMeters: (row['total_distance_m'] as num).toDouble(),
+      maxSpeedMps: (row['max_speed_mps'] as num).toDouble(),
+      avgSpeedMps: (row['avg_speed_mps'] as num).toDouble(),
+      name: row['name'] as String?,
+      description: row['description'] as String?,
+      locationLabel: row['location_label'] as String?,
     );
   }
 

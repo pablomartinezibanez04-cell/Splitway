@@ -72,9 +72,14 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
     );
     if (!allowed || !mounted) return;
 
-    final result = await showDialog<_NewRouteResult>(
+    final result = await showModalBottomSheet<_NewRouteResult>(
       context: context,
-      builder: (_) => const _NewRouteDialog(),
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => const _NewRouteSheet(),
     );
     if (result == null) return;
 
@@ -423,9 +428,14 @@ class _RouteDetail extends StatelessWidget {
   }
 
   Future<void> _showEditDialog(BuildContext context) async {
-    final result = await showDialog<_EditRouteResult>(
+    final result = await showModalBottomSheet<_EditRouteResult>(
       context: context,
-      builder: (_) => _EditRouteDialog(
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => _EditRouteSheet(
         name: route.name,
         description: route.description,
         difficulty: route.difficulty,
@@ -503,8 +513,8 @@ class _EditRouteResult {
   final RouteDifficulty difficulty;
 }
 
-class _EditRouteDialog extends StatefulWidget {
-  const _EditRouteDialog({
+class _EditRouteSheet extends StatefulWidget {
+  const _EditRouteSheet({
     required this.name,
     required this.difficulty,
     this.description,
@@ -515,10 +525,10 @@ class _EditRouteDialog extends StatefulWidget {
   final RouteDifficulty difficulty;
 
   @override
-  State<_EditRouteDialog> createState() => _EditRouteDialogState();
+  State<_EditRouteSheet> createState() => _EditRouteSheetState();
 }
 
-class _EditRouteDialogState extends State<_EditRouteDialog> {
+class _EditRouteSheetState extends State<_EditRouteSheet> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _descCtrl;
   late RouteDifficulty _difficulty;
@@ -540,63 +550,131 @@ class _EditRouteDialogState extends State<_EditRouteDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Editar ruta'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _nameCtrl,
-              decoration: const InputDecoration(labelText: 'Nombre'),
-              autofocus: true,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _descCtrl,
-              decoration: const InputDecoration(labelText: 'Descripción (opcional)'),
-            ),
-            const SizedBox(height: 16),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text('Dificultad',
-                  style: Theme.of(context).textTheme.labelLarge),
-            ),
-            const SizedBox(height: 8),
-            SegmentedButton<RouteDifficulty>(
-              segments: const [
-                ButtonSegment(value: RouteDifficulty.easy, label: Text('Fácil')),
-                ButtonSegment(value: RouteDifficulty.medium, label: Text('Media')),
-                ButtonSegment(value: RouteDifficulty.hard, label: Text('Difícil')),
-              ],
-              selected: {_difficulty},
-              onSelectionChanged: (s) => setState(() => _difficulty = s.first),
-            ),
-          ],
-        ),
+    final l = AppLocalizations.of(context);
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+        left: 24,
+        right: 24,
+        top: 16,
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancelar'),
-        ),
-        FilledButton(
-          onPressed: () {
-            final name = _nameCtrl.text.trim();
-            if (name.isEmpty) return;
-            Navigator.pop(
-              context,
-              _EditRouteResult(
-                name: name,
-                difficulty: _difficulty,
-                description:
-                    _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: cs.onSurfaceVariant.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(2),
               ),
-            );
-          },
-          child: const Text('Guardar'),
-        ),
-      ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: cs.primaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.edit_road_rounded, color: cs.onPrimaryContainer, size: 24),
+              ),
+              const SizedBox(width: 14),
+              Text(
+                l.editorEditRouteDialogTitle,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          TextField(
+            controller: _nameCtrl,
+            decoration: InputDecoration(
+              labelText: l.editorNameLabel,
+              prefixIcon: const Icon(Icons.label_rounded),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            autofocus: true,
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _descCtrl,
+            decoration: InputDecoration(
+              labelText: l.editorDescriptionLabel,
+              prefixIcon: const Icon(Icons.notes_rounded),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              alignLabelWithHint: true,
+            ),
+            maxLines: 2,
+          ),
+          const SizedBox(height: 24),
+          Text(
+            l.editorDifficultyLabel,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+          const SizedBox(height: 12),
+          _DifficultySelector(
+            value: _difficulty,
+            onChanged: (d) => setState(() => _difficulty = d),
+          ),
+          const SizedBox(height: 28),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(l.commonCancel),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 2,
+                child: FilledButton.icon(
+                  onPressed: () {
+                    final name = _nameCtrl.text.trim();
+                    if (name.isEmpty) return;
+                    Navigator.pop(
+                      context,
+                      _EditRouteResult(
+                        name: name,
+                        difficulty: _difficulty,
+                        description: _descCtrl.text.trim().isEmpty
+                            ? null
+                            : _descCtrl.text.trim(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.check_rounded),
+                  label: Text(l.commonSave),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+        ],
+      ),
     );
   }
 }
@@ -948,14 +1026,14 @@ class _NewRouteResult {
   final RouteDifficulty difficulty;
 }
 
-class _NewRouteDialog extends StatefulWidget {
-  const _NewRouteDialog();
+class _NewRouteSheet extends StatefulWidget {
+  const _NewRouteSheet();
 
   @override
-  State<_NewRouteDialog> createState() => _NewRouteDialogState();
+  State<_NewRouteSheet> createState() => _NewRouteSheetState();
 }
 
-class _NewRouteDialogState extends State<_NewRouteDialog> {
+class _NewRouteSheetState extends State<_NewRouteSheet> {
   final _nameCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   RouteDifficulty _difficulty = RouteDifficulty.medium;
@@ -970,70 +1048,214 @@ class _NewRouteDialogState extends State<_NewRouteDialog> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return AlertDialog(
-      title: Text(l.editorNewRouteDialogTitle),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _nameCtrl,
-              decoration: InputDecoration(
-                labelText: l.editorNameLabel,
-              ),
-              autofocus: true,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _descCtrl,
-              decoration: InputDecoration(
-                labelText: l.editorDescriptionLabel,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(l.editorDifficultyLabel,
-                  style: Theme.of(context).textTheme.labelLarge),
-            ),
-            const SizedBox(height: 8),
-            SegmentedButton<RouteDifficulty>(
-              segments: [
-                ButtonSegment(
-                    value: RouteDifficulty.easy, label: Text(l.editorDifficultyEasy)),
-                ButtonSegment(
-                    value: RouteDifficulty.medium, label: Text(l.editorDifficultyMedium)),
-                ButtonSegment(
-                    value: RouteDifficulty.hard, label: Text(l.editorDifficultyHard)),
-              ],
-              selected: {_difficulty},
-              onSelectionChanged: (s) => setState(() => _difficulty = s.first),
-            ),
-          ],
-        ),
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+        left: 24,
+        right: 24,
+        top: 16,
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(l.commonCancel),
-        ),
-        FilledButton(
-          onPressed: () {
-            final name = _nameCtrl.text.trim();
-            if (name.isEmpty) return;
-            Navigator.pop(
-              context,
-              _NewRouteResult(
-                name: name,
-                difficulty: _difficulty,
-                description:
-                    _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: cs.onSurfaceVariant.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(2),
               ),
-            );
-          },
-          child: Text(l.editorStartDrawingButton),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: cs.primaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.route_rounded, color: cs.onPrimaryContainer, size: 24),
+              ),
+              const SizedBox(width: 14),
+              Text(
+                l.editorNewRouteDialogTitle,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          TextField(
+            controller: _nameCtrl,
+            decoration: InputDecoration(
+              labelText: l.editorNameLabel,
+              prefixIcon: const Icon(Icons.label_rounded),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            autofocus: true,
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _descCtrl,
+            decoration: InputDecoration(
+              labelText: l.editorDescriptionLabel,
+              prefixIcon: const Icon(Icons.notes_rounded),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            l.editorDifficultyLabel,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+          const SizedBox(height: 12),
+          _DifficultySelector(
+            value: _difficulty,
+            onChanged: (d) => setState(() => _difficulty = d),
+          ),
+          const SizedBox(height: 28),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(l.commonCancel),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 2,
+                child: FilledButton.icon(
+                  onPressed: () {
+                    final name = _nameCtrl.text.trim();
+                    if (name.isEmpty) return;
+                    Navigator.pop(
+                      context,
+                      _NewRouteResult(
+                        name: name,
+                        difficulty: _difficulty,
+                        description: _descCtrl.text.trim().isEmpty
+                            ? null
+                            : _descCtrl.text.trim(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.draw_rounded),
+                  label: Text(l.editorStartDrawingButton),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+}
+
+class _DifficultySelector extends StatelessWidget {
+  const _DifficultySelector({
+    required this.value,
+    required this.onChanged,
+  });
+
+  final RouteDifficulty value;
+  final ValueChanged<RouteDifficulty> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Row(
+      children: [
+        _buildOption(
+          context: context,
+          difficulty: RouteDifficulty.easy,
+          label: l.editorDifficultyEasy,
+          icon: Icons.park_rounded,
+          color: Colors.green,
+        ),
+        const SizedBox(width: 10),
+        _buildOption(
+          context: context,
+          difficulty: RouteDifficulty.medium,
+          label: l.editorDifficultyMedium,
+          icon: Icons.terrain_rounded,
+          color: Colors.orange,
+        ),
+        const SizedBox(width: 10),
+        _buildOption(
+          context: context,
+          difficulty: RouteDifficulty.hard,
+          label: l.editorDifficultyHard,
+          icon: Icons.whatshot_rounded,
+          color: Colors.red,
         ),
       ],
+    );
+  }
+
+  Widget _buildOption({
+    required BuildContext context,
+    required RouteDifficulty difficulty,
+    required String label,
+    required IconData icon,
+    required Color color,
+  }) {
+    final selected = value == difficulty;
+    final cs = Theme.of(context).colorScheme;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => onChanged(difficulty),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            color: selected
+                ? color.withValues(alpha: 0.12)
+                : cs.surfaceContainerHighest.withValues(alpha: 0.4),
+            border: Border.all(
+              color: selected ? color : cs.outline.withValues(alpha: 0.2),
+              width: selected ? 2 : 1,
+            ),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(
+            children: [
+              Icon(icon,
+                  color: selected ? color : cs.onSurfaceVariant, size: 28),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: selected ? color : cs.onSurfaceVariant,
+                      fontWeight: selected ? FontWeight.bold : FontWeight.w500,
+                    ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

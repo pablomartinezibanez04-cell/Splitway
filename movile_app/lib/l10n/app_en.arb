@@ -117,6 +117,7 @@
   "@editorRouteSavedSnack": { "placeholders": { "name": { "type": "String" } } },
   "editorSnapFailedMessage": "Could not reach the server to snap the route to roads. Showing straight segments until the connection is restored.",
   "editorNewRouteDialogTitle": "New route",
+  "editorEditRouteDialogTitle": "Edit route",
   "editorNameLabel": "Name",
   "editorDescriptionLabel": "Description (optional)",
   "editorDifficultyLabel": "Difficulty",

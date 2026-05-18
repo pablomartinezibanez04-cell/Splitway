@@ -325,62 +325,137 @@ class _FreeRideScreenState extends State<FreeRideScreen> {
     final descCtrl = TextEditingController();
     var difficulty = RouteDifficulty.medium;
 
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showModalBottomSheet<bool>(
       context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: Text(l.freeRideSaveRouteDialogTitle),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameCtrl,
-                decoration: InputDecoration(labelText: l.freeRideNameLabel),
-                autofocus: true,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: descCtrl,
-                decoration:
-                    InputDecoration(labelText: l.freeRideDescriptionLabel),
-              ),
-              const SizedBox(height: 16),
-              Text(l.freeRideDifficultyLabel,
-                  style: Theme.of(ctx).textTheme.titleSmall),
-              const SizedBox(height: 8),
-              SegmentedButton<RouteDifficulty>(
-                segments: [
-                  ButtonSegment(
-                    value: RouteDifficulty.easy,
-                    label: Text(l.editorDifficultyEasy),
-                  ),
-                  ButtonSegment(
-                    value: RouteDifficulty.medium,
-                    label: Text(l.editorDifficultyMedium),
-                  ),
-                  ButtonSegment(
-                    value: RouteDifficulty.hard,
-                    label: Text(l.editorDifficultyHard),
-                  ),
-                ],
-                selected: {difficulty},
-                onSelectionChanged: (s) {
-                  setDialogState(() => difficulty = s.first);
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(l.commonCancel),
+        builder: (ctx, setDialogState) {
+          final cs = Theme.of(ctx).colorScheme;
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom,
+              left: 24,
+              right: 24,
+              top: 16,
             ),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text(l.commonSave),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: cs.onSurfaceVariant.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: cs.primaryContainer,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(Icons.save_rounded,
+                          color: cs.onPrimaryContainer, size: 24),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Text(
+                        l.freeRideSaveRouteDialogTitle,
+                        style: Theme.of(ctx)
+                            .textTheme
+                            .headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                TextField(
+                  controller: nameCtrl,
+                  decoration: InputDecoration(
+                    labelText: l.freeRideNameLabel,
+                    prefixIcon: const Icon(Icons.label_rounded),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  autofocus: true,
+                  textInputAction: TextInputAction.next,
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: descCtrl,
+                  decoration: InputDecoration(
+                    labelText: l.freeRideDescriptionLabel,
+                    prefixIcon: const Icon(Icons.notes_rounded),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    alignLabelWithHint: true,
+                  ),
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  l.freeRideDifficultyLabel,
+                  style: Theme.of(ctx)
+                      .textTheme
+                      .titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 12),
+                _FreeRideDifficultySelector(
+                  value: difficulty,
+                  onChanged: (d) => setDialogState(() => difficulty = d),
+                ),
+                const SizedBox(height: 28),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        style: OutlinedButton.styleFrom(
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(l.commonCancel),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: FilledButton.icon(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        icon: const Icon(Icons.check_rounded),
+                        label: Text(l.commonSave),
+                        style: FilledButton.styleFrom(
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
 
@@ -523,6 +598,92 @@ class _PermissionBanner extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodySmall),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _FreeRideDifficultySelector extends StatelessWidget {
+  const _FreeRideDifficultySelector({
+    required this.value,
+    required this.onChanged,
+  });
+
+  final RouteDifficulty value;
+  final ValueChanged<RouteDifficulty> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Row(
+      children: [
+        _buildOption(
+          context: context,
+          difficulty: RouteDifficulty.easy,
+          label: l.editorDifficultyEasy,
+          icon: Icons.park_rounded,
+          color: Colors.green,
+        ),
+        const SizedBox(width: 10),
+        _buildOption(
+          context: context,
+          difficulty: RouteDifficulty.medium,
+          label: l.editorDifficultyMedium,
+          icon: Icons.terrain_rounded,
+          color: Colors.orange,
+        ),
+        const SizedBox(width: 10),
+        _buildOption(
+          context: context,
+          difficulty: RouteDifficulty.hard,
+          label: l.editorDifficultyHard,
+          icon: Icons.whatshot_rounded,
+          color: Colors.red,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOption({
+    required BuildContext context,
+    required RouteDifficulty difficulty,
+    required String label,
+    required IconData icon,
+    required Color color,
+  }) {
+    final selected = value == difficulty;
+    final cs = Theme.of(context).colorScheme;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => onChanged(difficulty),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            color: selected
+                ? color.withValues(alpha: 0.12)
+                : cs.surfaceContainerHighest.withValues(alpha: 0.4),
+            border: Border.all(
+              color: selected ? color : cs.outline.withValues(alpha: 0.2),
+              width: selected ? 2 : 1,
+            ),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(
+            children: [
+              Icon(icon,
+                  color: selected ? color : cs.onSurfaceVariant, size: 28),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: selected ? color : cs.onSurfaceVariant,
+                      fontWeight: selected ? FontWeight.bold : FontWeight.w500,
+                    ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -112,19 +112,21 @@ class SyncService extends ChangeNotifier {
     var transferred = 0;
 
     // --- Routes ---
+    // Comparison uses only IDs + timestamps — no heavy path_json loading.
     final localRoutes = await local.getAllRoutes();
-    final remoteTimestamps = await remote.fetchRouteTimestamps();
+    final remoteRouteTs = await remote.fetchRouteTimestamps();
 
-    // Push local → remote (routes that are new or newer locally)
+    // Push local → remote (new or newer locally)
     for (final route in localRoutes) {
-      final remoteUpdated = remoteTimestamps[route.id];
+      if (route.id == 'demo-oval') continue; // never push demo route
+      final remoteUpdated = remoteRouteTs[route.id];
       if (remoteUpdated == null || route.createdAt.isAfter(remoteUpdated)) {
         await remote.upsertRoute(route);
         transferred++;
       }
     }
 
-    // Pull remote → local (routes that don't exist locally or are newer)
+    // Pull remote → local (only routes that don't exist locally)
     final localRouteIds = {for (final r in localRoutes) r.id};
     final remoteRoutes = await remote.fetchAllRoutes();
     for (final route in remoteRoutes) {
@@ -135,27 +137,67 @@ class SyncService extends ChangeNotifier {
     }
 
     // --- Sessions ---
-    final localSessions = await local.getAllSessions(includePoints: true);
-    final remoteSessionTimestamps = await remote.fetchSessionTimestamps();
+    // Load local sessions WITHOUT telemetry — only need IDs + timestamps
+    // to decide what to push/pull.
+    final localSessions = await local.getAllSessions(includePoints: false);
+    final remoteSessionTs = await remote.fetchSessionTimestamps();
 
-    // Push local → remote
+    // Push local → remote (new or newer locally).
+    // Re-load each session WITH points only when we actually need to push.
     for (final session in localSessions) {
-      final remoteUpdated = remoteSessionTimestamps[session.id];
+      final remoteUpdated = remoteSessionTs[session.id];
       if (remoteUpdated == null ||
           (session.endedAt?.isAfter(remoteUpdated) ?? false)) {
-        await remote.upsertSession(session);
-        transferred++;
+        final full = await local.getSessionRun(session.id);
+        if (full != null) {
+          await remote.upsertSession(full);
+          transferred++;
+        }
       }
     }
 
-    // Pull remote → local
+    // Pull remote → local (only sessions that don't exist locally).
+    // Fetch each missing session individually instead of all at once.
     final localSessionIds = {for (final s in localSessions) s.id};
-    final remoteSessions =
-        await remote.fetchAllSessions(includePoints: true);
-    for (final session in remoteSessions) {
-      if (!localSessionIds.contains(session.id)) {
-        await local.saveSessionRun(session);
-        transferred++;
+    for (final remoteId in remoteSessionTs.keys) {
+      if (!localSessionIds.contains(remoteId)) {
+        final session =
+            await remote.fetchSession(remoteId, includePoints: true);
+        if (session != null) {
+          await local.saveSessionRun(session);
+          transferred++;
+        }
+      }
+    }
+
+    // --- Free rides ---
+    final localFreeRides = await local.getAllFreeRides();
+    final remoteFreeRideTs = await remote.fetchFreeRideTimestamps();
+
+    // Push local → remote
+    for (final ride in localFreeRides) {
+      final remoteUpdated = remoteFreeRideTs[ride.id];
+      if (remoteUpdated == null ||
+          (ride.endedAt?.isAfter(remoteUpdated) ?? false)) {
+        // Re-load with telemetry for push
+        final full = await local.getFreeRideRun(ride.id);
+        if (full != null) {
+          await remote.upsertFreeRide(full);
+          transferred++;
+        }
+      }
+    }
+
+    // Pull remote → local (only rides that don't exist locally)
+    final localFreeRideIds = {for (final r in localFreeRides) r.id};
+    for (final remoteId in remoteFreeRideTs.keys) {
+      if (!localFreeRideIds.contains(remoteId)) {
+        final ride =
+            await remote.fetchFreeRide(remoteId, includePoints: true);
+        if (ride != null) {
+          await local.saveFreeRideRun(ride);
+          transferred++;
+        }
       }
     }
 

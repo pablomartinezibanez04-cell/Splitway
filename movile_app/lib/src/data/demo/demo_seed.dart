@@ -7,11 +7,11 @@ import '../repositories/local_draft_repository.dart';
 class DemoSeed {
   DemoSeed._();
 
-  /// If the routes table is empty, inserts a demo oval-track route so the
-  /// editor and session screens have something visible on first launch.
+  /// Ensures the demo oval-track route exists so the editor and session
+  /// screens have something visible even when no user is logged in.
   static Future<void> ensureSeeded(LocalDraftRepository repo) async {
-    final existing = await repo.getAllRoutes();
-    if (existing.isNotEmpty) return;
+    final existing = await repo.getRouteTemplate('demo-oval');
+    if (existing != null) return;
     await repo.saveRouteTemplate(_buildOvalDemo());
   }
 

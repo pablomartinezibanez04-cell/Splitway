@@ -18,6 +18,7 @@ class LiveSessionController extends ChangeNotifier {
 
   final LocalDraftRepository _repo;
   StreamSubscription<void>? _changesSub;
+  Timer? _reloadDebouncer;
 
   LiveSessionStage _stage = LiveSessionStage.selecting;
   LiveSessionStage get stage => _stage;
@@ -69,7 +70,8 @@ class LiveSessionController extends ChangeNotifier {
         _stage == LiveSessionStage.finished) {
       return;
     }
-    load();
+    _reloadDebouncer?.cancel();
+    _reloadDebouncer = Timer(const Duration(milliseconds: 300), load);
   }
 
   void selectRoute(RouteTemplate route) {
@@ -233,6 +235,7 @@ class LiveSessionController extends ChangeNotifier {
   @override
   void dispose() {
     _changesSub?.cancel();
+    _reloadDebouncer?.cancel();
     _gpsSub?.cancel();
     _autoSimulator?.cancel();
     _tracker?.removeListener(_onTrackerChange);

@@ -44,6 +44,7 @@ class _SplitwayAppState extends State<SplitwayApp> {
       _authService = AuthService(client: client);
       _authService!.addListener(_onAuthStateChanged);
       if (client.auth.currentUser != null) {
+        _repository.userId = client.auth.currentUser!.id;
         _createSyncService(client);
       }
     }
@@ -61,6 +62,7 @@ class _SplitwayAppState extends State<SplitwayApp> {
     final isLoggedIn = _authService?.isLoggedIn ?? false;
 
     if (isLoggedIn && _syncService == null && widget.config.hasSupabase) {
+      _repository.userId = Supabase.instance.client.auth.currentUser?.id;
       _createSyncService(Supabase.instance.client);
       _router.syncService = _syncService;
     } else if (!isLoggedIn && _syncService != null) {
@@ -68,6 +70,7 @@ class _SplitwayAppState extends State<SplitwayApp> {
       _syncService!.dispose();
       _syncService = null;
       _router.syncService = null;
+      _repository.userId = null;
     }
   }
 

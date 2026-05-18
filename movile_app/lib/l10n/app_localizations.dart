@@ -686,6 +686,12 @@ abstract class AppLocalizations {
   /// **'New route'**
   String get editorNewRouteDialogTitle;
 
+  /// No description provided for @editorEditRouteDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit route'**
+  String get editorEditRouteDialogTitle;
+
   /// No description provided for @editorNameLabel.
   ///
   /// In en, this message translates to:
