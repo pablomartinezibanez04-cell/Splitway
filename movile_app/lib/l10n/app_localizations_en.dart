@@ -582,4 +582,81 @@ class AppLocalizationsEn extends AppLocalizations {
   String historyBestLapSuffix(String duration) {
     return ' · best $duration';
   }
+
+  @override
+  String get navFreeRide => 'Free ride';
+
+  @override
+  String get freeRideTitle => 'Free ride';
+
+  @override
+  String get freeRideIdleTitle => 'Ride without a destination';
+
+  @override
+  String get freeRideIdleMessage =>
+      'Record your path in real time without a predefined route. Speed, distance and position are tracked automatically.';
+
+  @override
+  String get freeRideStartButton => 'Start recording';
+
+  @override
+  String get freeRideElapsedLabel => 'Elapsed';
+
+  @override
+  String get freeRideDistanceLabel => 'Distance';
+
+  @override
+  String get freeRideSpeedLabel => 'Speed';
+
+  @override
+  String get freeRideMaxSpeedLabel => 'Max speed';
+
+  @override
+  String get freeRideAvgSpeedLabel => 'Avg speed';
+
+  @override
+  String get freeRideFinishButton => 'Finish ride';
+
+  @override
+  String get freeRideCompleteTitle => 'Ride complete';
+
+  @override
+  String get freeRideSavedSnackBar => 'Free ride saved';
+
+  @override
+  String get freeRideSaveAsRouteButton => 'Save as reusable route';
+
+  @override
+  String get freeRideDiscardButton => 'Finish without saving route';
+
+  @override
+  String get freeRideNewRideButton => 'New ride';
+
+  @override
+  String get freeRideSaveRouteDialogTitle => 'Save as route';
+
+  @override
+  String get freeRideNameLabel => 'Name';
+
+  @override
+  String get freeRideDescriptionLabel => 'Description (optional)';
+
+  @override
+  String get freeRideDifficultyLabel => 'Difficulty';
+
+  @override
+  String freeRideRouteSavedSnack(String name) {
+    return 'Route \"$name\" saved';
+  }
+
+  @override
+  String freeRidePointsLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count points',
+      one: '1 point',
+    );
+    return '$_temp0';
+  }
 }

@@ -199,5 +199,31 @@
   "mapNoRoute": "No route",
 
   "historyBestLapSuffix": " · best {duration}",
-  "@historyBestLapSuffix": { "placeholders": { "duration": { "type": "String" } } }
+  "@historyBestLapSuffix": { "placeholders": { "duration": { "type": "String" } } },
+
+  "navFreeRide": "Free ride",
+
+  "freeRideTitle": "Free ride",
+  "freeRideIdleTitle": "Ride without a destination",
+  "freeRideIdleMessage": "Record your path in real time without a predefined route. Speed, distance and position are tracked automatically.",
+  "freeRideStartButton": "Start recording",
+  "freeRideElapsedLabel": "Elapsed",
+  "freeRideDistanceLabel": "Distance",
+  "freeRideSpeedLabel": "Speed",
+  "freeRideMaxSpeedLabel": "Max speed",
+  "freeRideAvgSpeedLabel": "Avg speed",
+  "freeRideFinishButton": "Finish ride",
+  "freeRideCompleteTitle": "Ride complete",
+  "freeRideSavedSnackBar": "Free ride saved",
+  "freeRideSaveAsRouteButton": "Save as reusable route",
+  "freeRideDiscardButton": "Finish without saving route",
+  "freeRideNewRideButton": "New ride",
+  "freeRideSaveRouteDialogTitle": "Save as route",
+  "freeRideNameLabel": "Name",
+  "freeRideDescriptionLabel": "Description (optional)",
+  "freeRideDifficultyLabel": "Difficulty",
+  "freeRideRouteSavedSnack": "Route \"{name}\" saved",
+  "@freeRideRouteSavedSnack": { "placeholders": { "name": { "type": "String" } } },
+  "freeRidePointsLabel": "{count, plural, =1{1 point} other{{count} points}}",
+  "@freeRidePointsLabel": { "placeholders": { "count": { "type": "int" } } }
 }
