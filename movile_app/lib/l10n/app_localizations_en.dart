@@ -659,4 +659,40 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get historyNoEntriesTitle => 'No activity recorded yet';
+
+  @override
+  String get historyNoEntriesMessage =>
+      'Go for a free ride or record a session on a route.';
+
+  @override
+  String get historyFreeRideLabel => 'Free ride';
+
+  @override
+  String historyFreeRideSubtitle(String date, String distance) {
+    return '$date · $distance';
+  }
+
+  @override
+  String get historyDeleteFreeRideTitle => 'Delete free ride';
+
+  @override
+  String get historyFreeRideTitle => 'Free ride detail';
+
+  @override
+  String get historyRenameFreeRideTitle => 'Rename ride';
+
+  @override
+  String get historyRenameFreeRideLabel => 'Name';
+
+  @override
+  String get historyRenamedSnack => 'Name updated';
+
+  @override
+  String get historyRenameRouteTitle => 'Rename route';
+
+  @override
+  String get historyRenameRouteLabel => 'Name';
 }

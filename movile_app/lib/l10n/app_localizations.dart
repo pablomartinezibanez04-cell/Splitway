@@ -1213,6 +1213,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 point} other{{count} points}}'**
   String freeRidePointsLabel(int count);
+
+  /// No description provided for @historyNoEntriesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No activity recorded yet'**
+  String get historyNoEntriesTitle;
+
+  /// No description provided for @historyNoEntriesMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Go for a free ride or record a session on a route.'**
+  String get historyNoEntriesMessage;
+
+  /// No description provided for @historyFreeRideLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Free ride'**
+  String get historyFreeRideLabel;
+
+  /// No description provided for @historyFreeRideSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{date} · {distance}'**
+  String historyFreeRideSubtitle(String date, String distance);
+
+  /// No description provided for @historyDeleteFreeRideTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete free ride'**
+  String get historyDeleteFreeRideTitle;
+
+  /// No description provided for @historyFreeRideTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Free ride detail'**
+  String get historyFreeRideTitle;
+
+  /// No description provided for @historyRenameFreeRideTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename ride'**
+  String get historyRenameFreeRideTitle;
+
+  /// No description provided for @historyRenameFreeRideLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get historyRenameFreeRideLabel;
+
+  /// No description provided for @historyRenamedSnack.
+  ///
+  /// In en, this message translates to:
+  /// **'Name updated'**
+  String get historyRenamedSnack;
+
+  /// No description provided for @historyRenameRouteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename route'**
+  String get historyRenameRouteTitle;
+
+  /// No description provided for @historyRenameRouteLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get historyRenameRouteLabel;
 }
 
 class _AppLocalizationsDelegate

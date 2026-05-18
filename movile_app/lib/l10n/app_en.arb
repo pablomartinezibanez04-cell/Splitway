@@ -225,5 +225,18 @@
   "freeRideRouteSavedSnack": "Route \"{name}\" saved",
   "@freeRideRouteSavedSnack": { "placeholders": { "name": { "type": "String" } } },
   "freeRidePointsLabel": "{count, plural, =1{1 point} other{{count} points}}",
-  "@freeRidePointsLabel": { "placeholders": { "count": { "type": "int" } } }
+  "@freeRidePointsLabel": { "placeholders": { "count": { "type": "int" } } },
+
+  "historyNoEntriesTitle": "No activity recorded yet",
+  "historyNoEntriesMessage": "Go for a free ride or record a session on a route.",
+  "historyFreeRideLabel": "Free ride",
+  "historyFreeRideSubtitle": "{date} · {distance}",
+  "@historyFreeRideSubtitle": { "placeholders": { "date": { "type": "String" }, "distance": { "type": "String" } } },
+  "historyDeleteFreeRideTitle": "Delete free ride",
+  "historyFreeRideTitle": "Free ride detail",
+  "historyRenameFreeRideTitle": "Rename ride",
+  "historyRenameFreeRideLabel": "Name",
+  "historyRenamedSnack": "Name updated",
+  "historyRenameRouteTitle": "Rename route",
+  "historyRenameRouteLabel": "Name"
 }

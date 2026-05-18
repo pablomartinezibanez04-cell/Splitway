@@ -6,6 +6,7 @@ import 'package:splitway_core/splitway_core.dart';
 import 'package:splitway_mobile/l10n/app_localizations.dart';
 
 import '../../config/app_config.dart';
+import '../../data/repositories/local_draft_repository.dart';
 import '../../routing/app_router.dart';
 import '../../services/auth/auth_service.dart';
 import '../../services/tracking/location_service.dart';
@@ -13,6 +14,7 @@ import '../../shared/formatters.dart';
 import '../../shared/widgets/empty_state.dart';
 import '../../shared/widgets/splitway_map.dart';
 import '../home/home_shell.dart';
+import '../history/history_screen.dart';
 import 'route_editor_controller.dart';
 import 'widgets/bento_grid.dart';
 
@@ -414,6 +416,8 @@ class _RouteDetail extends StatelessWidget {
       builder: (_) => _RouteSessionsScreen(
         routeName: route.name,
         sessions: controller.sessionsForSelected,
+        repository: controller.repository,
+        config: config,
       ),
     ));
   }
@@ -441,10 +445,14 @@ class _RouteSessionsScreen extends StatelessWidget {
   const _RouteSessionsScreen({
     required this.routeName,
     required this.sessions,
+    required this.repository,
+    required this.config,
   });
 
   final String routeName;
   final List<SessionRun> sessions;
+  final LocalDraftRepository repository;
+  final AppConfig config;
 
   @override
   Widget build(BuildContext context) {
@@ -468,6 +476,13 @@ class _RouteSessionsScreen extends StatelessWidget {
                       '${best != null ? " · Mejor: ${Formatters.duration(best.duration)}" : ""}',
                     ),
                     trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => SessionDetailScreen(
+                        sessionId: s.id,
+                        repository: repository,
+                        config: config,
+                      ),
+                    )),
                   ),
                 );
               },
@@ -602,7 +617,7 @@ class _DrawingView extends StatefulWidget {
 }
 
 class _DrawingViewState extends State<_DrawingView> {
-  final ValueNotifier<GeoPoint?> _flyToNotifier = ValueNotifier(null);
+  final FlyToNotifier _flyToNotifier = FlyToNotifier();
   StreamSubscription<TelemetryPoint>? _locationSub;
   GeoPoint? _liveLocation;
 
@@ -628,32 +643,10 @@ class _DrawingViewState extends State<_DrawingView> {
     super.dispose();
   }
 
-  Future<void> _centerOnUser() async {
-    try {
-      final servicesOn = await Geolocator.isLocationServiceEnabled();
-      if (!servicesOn) return;
-
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        return;
-      }
-
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 5),
-        ),
-      );
-      _flyToNotifier.value = GeoPoint(
-        latitude: position.latitude,
-        longitude: position.longitude,
-      );
-    } catch (_) {
-      // Silently ignore — GPS unavailable.
+  void _centerOnUser() {
+    final loc = _liveLocation;
+    if (loc != null) {
+      _flyToNotifier.flyTo(loc);
     }
   }
 

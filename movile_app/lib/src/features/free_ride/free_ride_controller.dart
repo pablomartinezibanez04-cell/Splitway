@@ -121,6 +121,21 @@ class FreeRideController extends ChangeNotifier {
 
     await _repo.saveRouteTemplate(route);
 
+    final session = SessionRun(
+      id: 'sess-${DateTime.now().microsecondsSinceEpoch}',
+      routeTemplateId: route.id,
+      startedAt: run.startedAt,
+      endedAt: run.endedAt,
+      status: SessionStatus.completed,
+      points: run.points,
+      laps: const [],
+      sectorSummaries: const [],
+      totalDistanceMeters: run.totalDistanceMeters,
+      maxSpeedMps: run.maxSpeedMps,
+      avgSpeedMps: run.avgSpeedMps,
+    );
+    await _repo.saveSessionRun(session);
+
     await _repo.updateFreeRideMetadata(
       run.id,
       name: name,

@@ -1,5 +1,6 @@
 // movile_app/lib/src/features/free_ride/free_ride_screen.dart
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:splitway_core/splitway_core.dart';
 import 'package:splitway_mobile/l10n/app_localizations.dart';
 
@@ -30,6 +31,11 @@ class FreeRideScreen extends StatefulWidget {
 }
 
 class _FreeRideScreenState extends State<FreeRideScreen> {
+  final FlyToNotifier _flyToNotifier = FlyToNotifier();
+  bool _followUser = true;
+  int _lastPointCount = 0;
+  GeoPoint? _initialCenter;
+
   @override
   void initState() {
     super.initState();
@@ -39,10 +45,56 @@ class _FreeRideScreenState extends State<FreeRideScreen> {
   @override
   void dispose() {
     widget.controller.removeListener(_onChange);
+    _flyToNotifier.dispose();
     super.dispose();
   }
 
-  void _onChange() => setState(() {});
+  void _onChange() {
+    final ctrl = widget.controller;
+    if (ctrl.stage == FreeRideStage.recording && _followUser) {
+      final points = ctrl.ingested;
+      if (points.length > _lastPointCount && points.isNotEmpty) {
+        _flyToNotifier.flyTo(points.last.location);
+      }
+      _lastPointCount = points.length;
+    }
+    setState(() {});
+  }
+
+  Future<GeoPoint?> _getCurrentLocation() async {
+    try {
+      final servicesOn = await Geolocator.isLocationServiceEnabled();
+      if (!servicesOn) return null;
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        return null;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 5),
+        ),
+      );
+      return GeoPoint(
+          latitude: position.latitude, longitude: position.longitude);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _centerOnUser() {
+    final ctrl = widget.controller;
+    _followUser = true;
+    if (ctrl.ingested.isNotEmpty) {
+      _flyToNotifier.flyTo(ctrl.ingested.last.location);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -88,6 +140,9 @@ class _FreeRideScreenState extends State<FreeRideScreen> {
                 message: AppLocalizations.of(context).loginBannerDefault,
               );
               if (!allowed || !mounted) return;
+              _initialCenter = await _getCurrentLocation();
+              _followUser = true;
+              _lastPointCount = 0;
               await ctrl.startRecording();
             },
             icon: const Icon(Icons.play_arrow),
@@ -109,12 +164,27 @@ class _FreeRideScreenState extends State<FreeRideScreen> {
           Expanded(
             child: Card(
               clipBehavior: Clip.antiAlias,
-              child: SplitwayMap(
-                useMapbox: widget.config.hasMapbox,
-                telemetry: ctrl.ingested,
-                userLocation: ctrl.ingested.isNotEmpty
-                    ? ctrl.ingested.last.location
-                    : null,
+              child: Stack(
+                children: [
+                  SplitwayMap(
+                    useMapbox: widget.config.hasMapbox,
+                    telemetry: ctrl.ingested,
+                    userLocation: ctrl.ingested.isNotEmpty
+                        ? ctrl.ingested.last.location
+                        : null,
+                    initialCenter: _initialCenter,
+                    flyToNotifier: _flyToNotifier,
+                  ),
+                  Positioned(
+                    right: 12,
+                    bottom: 12,
+                    child: FloatingActionButton.small(
+                      heroTag: 'free_ride_center',
+                      onPressed: _centerOnUser,
+                      child: const Icon(Icons.my_location),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

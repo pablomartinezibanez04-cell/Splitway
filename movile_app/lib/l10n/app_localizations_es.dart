@@ -660,4 +660,40 @@ class AppLocalizationsEs extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get historyNoEntriesTitle => 'Aún no hay actividad';
+
+  @override
+  String get historyNoEntriesMessage =>
+      'Haz un recorrido libre o graba una sesión en una ruta.';
+
+  @override
+  String get historyFreeRideLabel => 'Recorrido libre';
+
+  @override
+  String historyFreeRideSubtitle(String date, String distance) {
+    return '$date · $distance';
+  }
+
+  @override
+  String get historyDeleteFreeRideTitle => 'Eliminar recorrido libre';
+
+  @override
+  String get historyFreeRideTitle => 'Detalle del recorrido';
+
+  @override
+  String get historyRenameFreeRideTitle => 'Renombrar recorrido';
+
+  @override
+  String get historyRenameFreeRideLabel => 'Nombre';
+
+  @override
+  String get historyRenamedSnack => 'Nombre actualizado';
+
+  @override
+  String get historyRenameRouteTitle => 'Renombrar ruta';
+
+  @override
+  String get historyRenameRouteLabel => 'Nombre';
 }

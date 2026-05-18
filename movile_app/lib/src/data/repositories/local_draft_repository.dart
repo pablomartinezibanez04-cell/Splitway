@@ -103,6 +103,16 @@ class LocalDraftRepository {
     );
   }
 
+  Future<void> updateRouteTemplateName(String id, String name) async {
+    await _db.update(
+      'route_templates',
+      {'name': name},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    _changes.add(null);
+  }
+
   Future<void> deleteRoute(String id) async {
     await _db.delete('route_templates', where: 'id = ?', whereArgs: [id]);
     _changes.add(null);

@@ -34,6 +34,7 @@ class SyncService extends ChangeNotifier {
   Timer? _periodicTimer;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   bool _isConnected = true;
+  bool _disposed = false;
 
   SyncStatus _status = SyncStatus.idle;
   SyncStatus get status => _status;
@@ -162,7 +163,13 @@ class SyncService extends ChangeNotifier {
   }
 
   @override
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
+  }
+
+  @override
   void dispose() {
+    _disposed = true;
     _periodicTimer?.cancel();
     _connectivitySubscription?.cancel();
     super.dispose();

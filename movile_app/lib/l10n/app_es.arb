@@ -201,5 +201,17 @@
   "freeRideDescriptionLabel": "Descripción (opcional)",
   "freeRideDifficultyLabel": "Dificultad",
   "freeRideRouteSavedSnack": "Ruta \"{name}\" guardada",
-  "freeRidePointsLabel": "{count, plural, =1{1 punto} other{{count} puntos}}"
+  "freeRidePointsLabel": "{count, plural, =1{1 punto} other{{count} puntos}}",
+
+  "historyNoEntriesTitle": "Aún no hay actividad",
+  "historyNoEntriesMessage": "Haz un recorrido libre o graba una sesión en una ruta.",
+  "historyFreeRideLabel": "Recorrido libre",
+  "historyFreeRideSubtitle": "{date} · {distance}",
+  "historyDeleteFreeRideTitle": "Eliminar recorrido libre",
+  "historyFreeRideTitle": "Detalle del recorrido",
+  "historyRenameFreeRideTitle": "Renombrar recorrido",
+  "historyRenameFreeRideLabel": "Nombre",
+  "historyRenamedSnack": "Nombre actualizado",
+  "historyRenameRouteTitle": "Renombrar ruta",
+  "historyRenameRouteLabel": "Nombre"
 }

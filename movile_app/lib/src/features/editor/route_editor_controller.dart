@@ -27,9 +27,13 @@ enum DrawInputMode {
 enum _UndoOp { pathPoint, sector }
 
 class RouteEditorController extends ChangeNotifier {
-  RouteEditorController(this._repo, {this.routingService, this.geocodingService});
+  RouteEditorController(this._repo, {this.routingService, this.geocodingService}) {
+    _changesSub = _repo.changes.listen((_) => _onRepoChanged());
+  }
 
   final LocalDraftRepository _repo;
+  LocalDraftRepository get repository => _repo;
+  StreamSubscription<void>? _changesSub;
 
   /// Optional: when present each new waypoint triggers a Mapbox Directions
   /// API call to snap the drawn path to actual roads in real time.
@@ -133,6 +137,11 @@ class RouteEditorController extends ChangeNotifier {
   Timer? _snapDebouncer;
   // Monotonically-increasing generation counter — stale responses are ignored.
   int _snapGeneration = 0;
+
+  void _onRepoChanged() {
+    if (_drawing) return;
+    load();
+  }
 
   // ---------- Load / select ----------
 
@@ -537,6 +546,7 @@ class RouteEditorController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _changesSub?.cancel();
     _snapDebouncer?.cancel();
     super.dispose();
   }
