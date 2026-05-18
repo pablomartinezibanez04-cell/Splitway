@@ -47,6 +47,12 @@ class RouteEditorController extends ChangeNotifier {
   List<SessionRun> _sessionsForSelected = const [];
   List<SessionRun> get sessionsForSelected => _sessionsForSelected;
 
+  Map<String, int> _routeSessionCounts = const {};
+  Map<String, int> get routeSessionCounts => _routeSessionCounts;
+
+  Map<String, Duration?> _routeBestLaps = const {};
+  Map<String, Duration?> get routeBestLaps => _routeBestLaps;
+
   bool _loading = true;
   bool get loading => _loading;
 
@@ -163,6 +169,7 @@ class RouteEditorController extends ChangeNotifier {
     if (_selected != null) {
       _loadSessionsForRoute(_selected!.id);
     }
+    _loadAllRouteSummaries();
   }
 
   void select(RouteTemplate route) {
@@ -173,6 +180,26 @@ class RouteEditorController extends ChangeNotifier {
 
   Future<void> _loadSessionsForRoute(String routeId) async {
     _sessionsForSelected = await _repo.getSessionsByRoute(routeId);
+    notifyListeners();
+  }
+
+  Future<void> _loadAllRouteSummaries() async {
+    final counts = <String, int>{};
+    final bests = <String, Duration?>{};
+    for (final route in _routes) {
+      final sessions = await _repo.getSessionsByRoute(route.id);
+      counts[route.id] = sessions.length;
+      LapSummary? best;
+      for (final s in sessions) {
+        final lap = s.bestLap;
+        if (lap != null && (best == null || lap.duration < best.duration)) {
+          best = lap;
+        }
+      }
+      bests[route.id] = best?.duration;
+    }
+    _routeSessionCounts = counts;
+    _routeBestLaps = bests;
     notifyListeners();
   }
 
