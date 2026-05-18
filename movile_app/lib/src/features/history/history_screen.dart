@@ -241,6 +241,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                           useMapbox: widget.config.hasMapbox,
                           route: _route!,
                           telemetry: _session!.points,
+                          interactive: false,
                         ),
                       ),
                     ),

@@ -28,10 +28,9 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        // Build only for x86_64 emulators to reduce APK size (~135MB → ~45MB).
-        // Comment out or change to "arm64-v8a" when deploying to a physical device.
+        // arm64-v8a: móviles físicos modernos. x86_64: emuladores.
         ndk {
-            abiFilters += setOf("x86_64")
+            abiFilters += setOf("arm64-v8a", "x86_64")
         }
     }
 

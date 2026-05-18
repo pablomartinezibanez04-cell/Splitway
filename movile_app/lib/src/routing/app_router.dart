@@ -13,6 +13,7 @@ import '../features/session/live_session_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../services/auth/auth_service.dart';
 import '../services/locale/locale_controller.dart';
+import '../services/geocoding/reverse_geocoding_service.dart';
 import '../services/routing/routing_service.dart';
 import '../services/sync/sync_service.dart';
 
@@ -27,6 +28,9 @@ class AppRouter {
           repository,
           routingService: config.hasMapbox
               ? RoutingService(mapboxToken: config.mapboxToken!)
+              : null,
+          geocodingService: config.hasMapbox
+              ? ReverseGeocodingService(accessToken: config.mapboxToken!)
               : null,
         ),
         _sessionController = LiveSessionController(repository);

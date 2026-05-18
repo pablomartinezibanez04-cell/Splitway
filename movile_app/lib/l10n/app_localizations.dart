@@ -566,6 +566,24 @@ abstract class AppLocalizations {
   /// **'Add sector'**
   String get editorSegmentAddSector;
 
+  /// No description provided for @editorSegmentFreehand.
+  ///
+  /// In en, this message translates to:
+  /// **'Freehand'**
+  String get editorSegmentFreehand;
+
+  /// No description provided for @editorModeFreehand.
+  ///
+  /// In en, this message translates to:
+  /// **'Draw freehand'**
+  String get editorModeFreehand;
+
+  /// No description provided for @editorUndoFreehand.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo stroke'**
+  String get editorUndoFreehand;
+
   /// No description provided for @editorUndoPoint.
   ///
   /// In en, this message translates to:

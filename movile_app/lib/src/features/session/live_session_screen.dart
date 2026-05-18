@@ -84,17 +84,10 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
           Text(l.sessionSelectRoute,
               style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
-          DropdownButtonFormField<String>(
-            initialValue: ctrl.selected?.id,
-            items: [
-              for (final r in ctrl.routes)
-                DropdownMenuItem(value: r.id, child: Text(r.name)),
-            ],
-            onChanged: (id) {
-              if (id == null) return;
-              final route = ctrl.routes.firstWhere((r) => r.id == id);
-              ctrl.selectRoute(route);
-            },
+          _RoutePickerTile(
+            selected: ctrl.selected,
+            routes: ctrl.routes,
+            onSelected: ctrl.selectRoute,
           ),
           const SizedBox(height: 16),
           if (ctrl.selected != null)
@@ -104,6 +97,7 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
                 child: SplitwayMap(
                   useMapbox: widget.config.hasMapbox,
                   route: ctrl.selected!,
+                  interactive: false,
                 ),
               ),
             ),
@@ -181,6 +175,9 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
                 route: route,
                 telemetry: tracker.ingested,
                 highlightSectorId: snapshot.lastCrossedSectorId,
+                userLocation: tracker.ingested.isNotEmpty
+                    ? tracker.ingested.last.location
+                    : null,
               ),
             ),
           ),
@@ -591,5 +588,109 @@ class _GpsStatusTile extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _RoutePickerTile extends StatelessWidget {
+  const _RoutePickerTile({
+    required this.selected,
+    required this.routes,
+    required this.onSelected,
+  });
+
+  final RouteTemplate? selected;
+  final List<RouteTemplate> routes;
+  final ValueChanged<RouteTemplate> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () => _showPicker(context),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                selected?.name ?? '',
+                style: theme.textTheme.bodyLarge,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const Icon(Icons.arrow_drop_down),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showPicker(BuildContext context) async {
+    final l = AppLocalizations.of(context);
+    final picked = await showModalBottomSheet<RouteTemplate>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.5,
+        minChildSize: 0.3,
+        maxChildSize: 0.85,
+        expand: false,
+        builder: (ctx, scrollController) => Column(
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 32,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Theme.of(ctx)
+                    .colorScheme
+                    .onSurfaceVariant
+                    .withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                l.sessionSelectRoute,
+                style: Theme.of(ctx).textTheme.titleMedium,
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: ListView.builder(
+                controller: scrollController,
+                itemCount: routes.length,
+                itemBuilder: (ctx, i) {
+                  final r = routes[i];
+                  final isSelected = r.id == selected?.id;
+                  return ListTile(
+                    title: Text(r.name),
+                    subtitle:
+                        r.description != null && r.description!.isNotEmpty
+                            ? Text(r.description!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis)
+                            : null,
+                    trailing: isSelected
+                        ? Icon(Icons.check,
+                            color: Theme.of(ctx).colorScheme.primary)
+                        : null,
+                    selected: isSelected,
+                    onTap: () => Navigator.pop(ctx, r),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (picked != null) onSelected(picked);
   }
 }

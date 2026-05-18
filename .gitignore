@@ -44,3 +44,4 @@ supabase/.temp
 /movile_app/env/local.json
 
 client_secret*.json
+.claude/*

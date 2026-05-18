@@ -4,7 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:splitway_core/splitway_core.dart';
 
 import '../../data/repositories/local_draft_repository.dart';
+import '../../services/geocoding/reverse_geocoding_service.dart';
 import '../../services/routing/routing_service.dart';
+import 'draft_segment.dart';
 
 /// Which kind of input the next map tap should produce while drawing a
 /// new route in the editor.
@@ -15,16 +17,30 @@ enum DrawInputMode {
   /// A single tap snaps to the nearest path vertex and auto-generates a
   /// perpendicular sector gate at that point.
   sectorPoint,
+
+  /// Freehand drawing: pan gestures produce a continuous stroke.
+  freehand,
 }
 
+/// One undoable user action, recorded so [RouteEditorController.undoLastAction]
+/// can unwind path edits and sector additions as a single LIFO stack.
+enum _UndoOp { pathPoint, sector }
+
 class RouteEditorController extends ChangeNotifier {
-  RouteEditorController(this._repo, {this.routingService});
+  RouteEditorController(this._repo, {this.routingService, this.geocodingService});
 
   final LocalDraftRepository _repo;
 
   /// Optional: when present each new waypoint triggers a Mapbox Directions
   /// API call to snap the drawn path to actual roads in real time.
   final RoutingService? routingService;
+
+  /// Optional: when present, reverse geocoding is called on save to populate
+  /// the route's locationLabel field.
+  final ReverseGeocodingService? geocodingService;
+
+  List<SessionRun> _sessionsForSelected = const [];
+  List<SessionRun> get sessionsForSelected => _sessionsForSelected;
 
   bool _loading = true;
   bool get loading => _loading;
@@ -56,17 +72,32 @@ class RouteEditorController extends ChangeNotifier {
   String? get draftDescription => _draftDescription;
   RouteDifficulty get draftDifficulty => _draftDifficulty;
 
-  /// Raw waypoints tapped by the user — the canonical input for snapping.
-  final List<GeoPoint> _rawWaypoints = [];
-  List<GeoPoint> get rawWaypoints => List.unmodifiable(_rawWaypoints);
+  final List<DraftSegment> _segments = [];
+  List<DraftSegment> get segments => List.unmodifiable(_segments);
 
-  /// Road-following display path (snapped via Mapbox, or == _rawWaypoints
-  /// when routing is unavailable).
-  final List<GeoPoint> _draftPath = [];
-  List<GeoPoint> get draftPath => List.unmodifiable(_draftPath);
+  List<GeoPoint> get draftPath {
+    final path = <GeoPoint>[];
+    for (final seg in _segments) {
+      final rendered = seg.renderedPath;
+      if (rendered.isEmpty) continue;
+      if (path.isNotEmpty && rendered.isNotEmpty && path.last == rendered.first) {
+        path.addAll(rendered.skip(1));
+      } else {
+        path.addAll(rendered);
+      }
+    }
+    return path;
+  }
+
+  List<GeoPoint> get rawWaypoints {
+    return [
+      for (final seg in _segments)
+        if (seg is SnappedSegment) ...seg.waypoints,
+    ];
+  }
 
   /// Number of user-tapped waypoints (shown in the status bar).
-  int get draftWaypointCount => _rawWaypoints.length;
+  int get draftWaypointCount => rawWaypoints.length;
 
   final List<GateDefinition> _draftSectorGates = [];
   List<GateDefinition> get draftSectorGates =>
@@ -76,15 +107,27 @@ class RouteEditorController extends ChangeNotifier {
   final List<GeoPoint> _draftSectorPoints = [];
   List<GeoPoint> get draftSectorPoints => List.unmodifiable(_draftSectorPoints);
 
+  /// Maximum distance (m) between a tap and the nearest path vertex for a
+  /// sector to be placed. Taps farther than this are ignored so a stray tap
+  /// far from the route doesn't drop a misplaced sector.
+  static const double _sectorSnapMaxDistanceMeters = 75.0;
+
+  /// LIFO history of undoable actions. Path waypoints, freehand strokes and
+  /// sector additions all push here so undo unwinds them in order.
+  final List<_UndoOp> _undoStack = [];
+
+  /// True when there is at least one action the user can undo.
+  bool get canUndo => _undoStack.isNotEmpty;
+
   /// Always null — retained for widget compatibility after removing 2-tap gate.
   GeoPoint? get pendingGateLeft => null;
 
   DrawInputMode _inputMode = DrawInputMode.appendPath;
   DrawInputMode get inputMode => _inputMode;
 
-  /// True if a draft can be persisted (≥2 waypoints and a name).
+  /// True if a draft can be persisted (≥2 path points and a name).
   bool get draftCanSave =>
-      _rawWaypoints.length >= 2 && _draftName.trim().isNotEmpty;
+      draftPath.length >= 2 && _draftName.trim().isNotEmpty;
 
   // Debounce live snapping so rapid taps only fire one API call.
   Timer? _snapDebouncer;
@@ -106,10 +149,19 @@ class RouteEditorController extends ChangeNotifier {
     }
     _loading = false;
     notifyListeners();
+    if (_selected != null) {
+      _loadSessionsForRoute(_selected!.id);
+    }
   }
 
   void select(RouteTemplate route) {
     _selected = route;
+    notifyListeners();
+    _loadSessionsForRoute(route.id);
+  }
+
+  Future<void> _loadSessionsForRoute(String routeId) async {
+    _sessionsForSelected = await _repo.getSessionsByRoute(routeId);
     notifyListeners();
   }
 
@@ -126,10 +178,10 @@ class RouteEditorController extends ChangeNotifier {
     _draftName = name;
     _draftDescription = description;
     _draftDifficulty = difficulty;
-    _rawWaypoints.clear();
-    _draftPath.clear();
+    _segments.clear();
     _draftSectorGates.clear();
     _draftSectorPoints.clear();
+    _undoStack.clear();
     _inputMode = DrawInputMode.appendPath;
     notifyListeners();
   }
@@ -141,10 +193,11 @@ class RouteEditorController extends ChangeNotifier {
     _draftName = '';
     _draftDescription = null;
     _draftDifficulty = RouteDifficulty.medium;
-    _rawWaypoints.clear();
-    _draftPath.clear();
+    _segments.clear();
+    _activeFreehand = null;
     _draftSectorGates.clear();
     _draftSectorPoints.clear();
+    _undoStack.clear();
     _inputMode = DrawInputMode.appendPath;
     notifyListeners();
   }
@@ -154,55 +207,120 @@ class RouteEditorController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void undoLastPathPoint() {
-    if (_rawWaypoints.isEmpty) return;
+  void undoLastAction() {
+    if (_undoStack.isEmpty) return;
     _cancelSnap();
-    _rawWaypoints.removeLast();
-    if (_rawWaypoints.length < 2 || routingService == null) {
-      // Nothing to snap: just mirror raw waypoints into the display path.
-      _snapping = false;
-      _draftPath
-        ..clear()
-        ..addAll(_rawWaypoints);
-      notifyListeners();
-    } else {
-      // Re-snap the reduced waypoint list.
-      _draftPath.clear();
-      notifyListeners();
-      _scheduleSnap();
+    final op = _undoStack.removeLast();
+    switch (op) {
+      case _UndoOp.sector:
+        if (_draftSectorPoints.isNotEmpty) _draftSectorPoints.removeLast();
+        if (_draftSectorGates.isNotEmpty) _draftSectorGates.removeLast();
+      case _UndoOp.pathPoint:
+        if (_segments.isEmpty) break;
+        final last = _segments.last;
+        switch (last) {
+          case FreehandSegment():
+            _segments.removeLast();
+          case SnappedSegment():
+            if (last.waypoints.isNotEmpty) {
+              last.waypoints.removeLast();
+              last.snappedPath
+                ..clear()
+                ..addAll(last.effectiveWaypoints);
+            }
+            if (last.waypoints.isEmpty) {
+              _segments.removeLast();
+            } else if (last.effectiveWaypoints.length >= 2 &&
+                routingService != null) {
+              _scheduleSnap();
+            }
+        }
     }
+    notifyListeners();
   }
 
   /// Routes a single map tap to the right drafting bucket.
   void handleMapTap(GeoPoint p) {
     if (!_drawing) return;
     switch (_inputMode) {
+      case DrawInputMode.freehand:
+        return;
       case DrawInputMode.appendPath:
-        _rawWaypoints.add(p);
-        // Show the raw tap immediately for instant visual feedback.
-        _draftPath.add(p);
+        final lastSeg = _segments.lastOrNull;
+        final SnappedSegment seg;
+        if (lastSeg is SnappedSegment) {
+          seg = lastSeg;
+        } else {
+          seg = SnappedSegment(seedPoint: lastSeg?.renderedPath.lastOrNull);
+          _segments.add(seg);
+        }
+        seg.waypoints.add(p);
+        seg.snappedPath
+          ..clear()
+          ..addAll(seg.effectiveWaypoints);
+        _undoStack.add(_UndoOp.pathPoint);
         notifyListeners();
-        // Then schedule a snap to replace the straight segment with a road.
         _scheduleSnap();
       case DrawInputMode.sectorPoint:
-        if (_draftPath.length < 2) return;  // Need at least 2 points to compute a bearing
-        final idx = _nearestPathIndex(p);
-        final snapped = _draftPath[idx];
-        final gate = _gateAtPathIndex(idx);
+        if (draftPath.length < 2) return;
+        final dp = draftPath;
+        final idx = _nearestPathIndex(dp, p);
+        final snapped = dp[idx];
+        if (snapped.distanceTo(p) > _sectorSnapMaxDistanceMeters) return;
+        final gate = _gateAtPathIndex(dp, idx);
         _draftSectorPoints.add(snapped);
         _draftSectorGates.add(gate);
+        _undoStack.add(_UndoOp.sector);
         notifyListeners();
     }
   }
 
+  // ---------- Freehand handlers ----------
+
+  FreehandSegment? _activeFreehand;
+
+  void startFreehandStroke() {
+    if (!_drawing) return;
+    final seg = FreehandSegment();
+    _segments.add(seg);
+    _activeFreehand = seg;
+    notifyListeners();
+  }
+
+  void addFreehandPoint(GeoPoint p) {
+    final seg = _activeFreehand;
+    if (seg == null) return;
+    if (seg.rawPoints.isNotEmpty && seg.rawPoints.last.distanceTo(p) < 5.0) {
+      return;
+    }
+    seg.rawPoints.add(p);
+    notifyListeners();
+  }
+
+  void endFreehandStroke() {
+    final seg = _activeFreehand;
+    if (seg == null) return;
+    _activeFreehand = null;
+    if (seg.rawPoints.length < 2) {
+      _segments.remove(seg);
+      notifyListeners();
+      return;
+    }
+    seg.simplifiedPoints
+      ..clear()
+      ..addAll(simplifyPath(seg.rawPoints, 4.0));
+    _undoStack.add(_UndoOp.pathPoint);
+    notifyListeners();
+  }
+
   // ---------- Sector-point helpers ----------
 
-  /// Returns the index of the [_draftPath] vertex closest to [tap].
-  int _nearestPathIndex(GeoPoint tap) {
+  /// Returns the index of the [path] vertex closest to [tap].
+  int _nearestPathIndex(List<GeoPoint> path, GeoPoint tap) {
     int bestIdx = 0;
-    double bestDist = _draftPath[0].distanceTo(tap);
-    for (var i = 1; i < _draftPath.length; i++) {
-      final d = _draftPath[i].distanceTo(tap);
+    double bestDist = path[0].distanceTo(tap);
+    for (var i = 1; i < path.length; i++) {
+      final d = path[i].distanceTo(tap);
       if (d < bestDist) {
         bestDist = d;
         bestIdx = i;
@@ -211,15 +329,15 @@ class RouteEditorController extends ChangeNotifier {
     return bestIdx;
   }
 
-  /// Builds a perpendicular [GateDefinition] at [_draftPath[idx]].
-  GateDefinition _gateAtPathIndex(int idx) {
-    final anchor = _draftPath[idx];
-    if (idx < _draftPath.length - 1) {
-      return _perpendicularGate(anchor, _draftPath[idx + 1]);
+  /// Builds a perpendicular [GateDefinition] at [path[idx]].
+  GateDefinition _gateAtPathIndex(List<GeoPoint> path, int idx) {
+    final anchor = path[idx];
+    if (idx < path.length - 1) {
+      return _perpendicularGate(anchor, path[idx + 1]);
     }
     // At the last vertex: extrapolate the bearing forward to keep the gate
     // centered on anchor (not on the previous vertex).
-    final prev = _draftPath[idx - 1];
+    final prev = path[idx - 1];
     final bearing = prev.bearingTo(anchor);
     final reference = anchor.destinationPoint(bearing, 1.0);
     return _perpendicularGate(anchor, reference);
@@ -237,15 +355,20 @@ class RouteEditorController extends ChangeNotifier {
 
   /// Schedules a snap request to fire after 600 ms of inactivity.
   void _scheduleSnap() {
-    if (routingService == null || _rawWaypoints.length < 2) return;
+    final seg = _segments.lastOrNull;
+    if (routingService == null || seg is! SnappedSegment || seg.effectiveWaypoints.length < 2) return;
     _snapDebouncer?.cancel();
     _snapDebouncer = Timer(const Duration(milliseconds: 600), _snapPath);
   }
 
   Future<void> _snapPath() async {
-    if (routingService == null || _rawWaypoints.length < 2) return;
+    if (routingService == null) return;
+    final seg = _segments.lastOrNull;
+    if (seg is! SnappedSegment) return;
+    final effective = seg.effectiveWaypoints;
+    if (effective.length < 2) return;
 
-    final waypoints = List<GeoPoint>.of(_rawWaypoints); // snapshot
+    final waypoints = List<GeoPoint>.of(effective);
     final generation = ++_snapGeneration;
 
     _snapping = true;
@@ -253,24 +376,19 @@ class RouteEditorController extends ChangeNotifier {
 
     final snapped = await routingService!.snapToRoads(waypoints);
 
-    // Discard if a newer snap was already triggered.
     if (_snapGeneration != generation) return;
 
     _snapping = false;
     if (snapped != null && snapped.length >= 2) {
       _snapFailed = false;
-      _draftPath
+      seg.snappedPath
         ..clear()
         ..addAll(snapped);
-      debugPrint(
-          'LiveSnap: ${waypoints.length} waypoints → ${snapped.length} road points');
     } else {
-      // Fallback: show straight lines between waypoints.
       _snapFailed = true;
-      _draftPath
+      seg.snappedPath
         ..clear()
         ..addAll(waypoints);
-      debugPrint('LiveSnap: failed, showing straight segments');
     }
     notifyListeners();
   }
@@ -279,65 +397,63 @@ class RouteEditorController extends ChangeNotifier {
 
   Future<RouteTemplate?> saveDraft() async {
     if (!draftCanSave) return null;
-
-    // Cancel any pending live snap — we handle the final path here.
     _cancelSnap();
 
-    // Determine whether this should be a closed circuit.
-    final distFirstLast = _rawWaypoints.first.distanceTo(_rawWaypoints.last);
+    final pathParts = <List<GeoPoint>>[];
+
+    for (final seg in _segments) {
+      switch (seg) {
+        case SnappedSegment():
+          final effective = seg.effectiveWaypoints;
+          if (effective.isEmpty) continue;
+          if (routingService != null && effective.length >= 2) {
+            _snapping = true;
+            notifyListeners();
+            final snapped = await routingService!.snapToRoads(effective);
+            _snapping = false;
+            notifyListeners();
+            pathParts.add(snapped ?? effective);
+          } else {
+            pathParts.add(effective);
+          }
+        case FreehandSegment():
+          if (seg.simplifiedPoints.isNotEmpty) {
+            pathParts.add(List.of(seg.simplifiedPoints));
+          } else if (seg.rawPoints.isNotEmpty) {
+            pathParts.add(List.of(seg.rawPoints));
+          }
+      }
+    }
+
+    final finalPath = <GeoPoint>[];
+    for (final part in pathParts) {
+      if (part.isEmpty) continue;
+      if (finalPath.isNotEmpty && part.isNotEmpty &&
+          finalPath.last.distanceTo(part.first) < 1.0) {
+        finalPath.addAll(part.skip(1));
+      } else {
+        finalPath.addAll(part);
+      }
+    }
+
+    if (finalPath.length < 2) return null;
+
+    final distFirstLast = finalPath.first.distanceTo(finalPath.last);
     final isClosed = distFirstLast <= 20.0;
 
-    List<GeoPoint> finalPath;
-
-    if (routingService != null) {
-      // Build the waypoint list for the final snap.
-      final List<GeoPoint> waypointsToSnap;
-      if (isClosed) {
-        // Replace the last raw waypoint with the first to force a clean loop.
-        waypointsToSnap = [
-          ..._rawWaypoints.sublist(0, _rawWaypoints.length - 1),
-          _rawWaypoints.first,
-        ];
-      } else {
-        waypointsToSnap = List<GeoPoint>.of(_rawWaypoints);
-      }
-
-      _snapping = true;
-      notifyListeners();
-      final snapped = await routingService!.snapToRoads(waypointsToSnap);
-      _snapping = false;
-      notifyListeners();
-
-      if (snapped != null && snapped.length >= 2) {
-        finalPath = snapped;
-        debugPrint(
-            'SaveSnap: ${waypointsToSnap.length} waypoints → ${snapped.length} road points');
-        // Guarantee exact closure for closed circuits.
-        if (isClosed && finalPath.first != finalPath.last) {
-          finalPath = [...finalPath, finalPath.first];
-        }
-      } else {
-        debugPrint('SaveSnap: failed, using straight segments');
-        finalPath = waypointsToSnap;
-      }
-    } else {
-      // No routing service — work with raw waypoints.
-      if (isClosed) {
-        finalPath = [
-          ..._rawWaypoints.sublist(0, _rawWaypoints.length - 1),
-          _rawWaypoints.first,
-        ];
-      } else {
-        finalPath = List<GeoPoint>.of(_rawWaypoints);
-      }
+    if (isClosed && finalPath.first != finalPath.last) {
+      finalPath.add(finalPath.first);
     }
 
     debugPrint(
         'Route: ${isClosed ? "closed" : "open"} circuit, '
         'distance first↔last = ${distFirstLast.toStringAsFixed(1)} m');
 
-    // Auto-generate start/finish gate perpendicular to the route at the
-    // first point, using the bearing toward the second point.
+    String? locationLabel;
+    if (geocodingService != null && finalPath.isNotEmpty) {
+      locationLabel = await geocodingService!.reverseGeocode(finalPath.first);
+    }
+
     final startFinishGate = _perpendicularGate(finalPath[0], finalPath[1]);
 
     final id = 'route-${DateTime.now().microsecondsSinceEpoch}';
@@ -347,6 +463,7 @@ class RouteEditorController extends ChangeNotifier {
       description: _draftDescription?.trim().isEmpty ?? true
           ? null
           : _draftDescription!.trim(),
+      locationLabel: locationLabel,
       path: List.unmodifiable(finalPath),
       startFinishGate: startFinishGate,
       sectors: [
@@ -368,11 +485,12 @@ class RouteEditorController extends ChangeNotifier {
     _draftName = '';
     _draftDescription = null;
     _draftDifficulty = RouteDifficulty.medium;
-    _rawWaypoints.clear();
-    _draftPath.clear();
+    _segments.clear();
     _draftSectorGates.clear();
     _draftSectorPoints.clear();
+    _undoStack.clear();
     _inputMode = DrawInputMode.appendPath;
+    _activeFreehand = null;
 
     await load();
     _selected = route;
@@ -398,6 +516,22 @@ class RouteEditorController extends ChangeNotifier {
     if (_selected?.id == id) {
       _selected = null;
     }
+    await load();
+  }
+
+  Future<void> updateRouteMetadata({
+    required String routeId,
+    required String name,
+    String? description,
+    required RouteDifficulty difficulty,
+  }) async {
+    final existing = _routes.firstWhere((r) => r.id == routeId);
+    final updated = existing.copyWith(
+      name: name,
+      description: description,
+      difficulty: difficulty,
+    );
+    await _repo.saveRouteTemplate(updated);
     await load();
   }
 

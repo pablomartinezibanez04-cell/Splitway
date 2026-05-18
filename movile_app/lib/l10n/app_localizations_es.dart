@@ -265,6 +265,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get editorSegmentAddSector => 'Añadir sector';
 
   @override
+  String get editorSegmentFreehand => 'A mano';
+
+  @override
+  String get editorModeFreehand => 'Dibujo a mano alzada';
+
+  @override
+  String get editorUndoFreehand => 'Deshacer trazo';
+
+  @override
   String get editorUndoPoint => 'Deshacer punto';
 
   @override
