@@ -109,9 +109,11 @@ if (route.thumbnailUrl == null) {
   } catch (_) { /* log, continue without thumbnail */ }
 }
 // upsert route (now with thumbnailUrl if generation succeeded)
+// returns the updated RouteTemplate to the caller
+return route;
 ```
 
-After upsert, also update `thumbnail_url` in the local SQLite via `LocalDraftRepository`.
+`SupabaseRepository` does **not** touch local SQLite — it returns the updated `RouteTemplate` (with `thumbnailUrl` populated) to the `RouteEditorController`, which is responsible for persisting it locally via `LocalDraftRepository.saveRouteTemplate(updatedRoute)`.
 
 ---
 
