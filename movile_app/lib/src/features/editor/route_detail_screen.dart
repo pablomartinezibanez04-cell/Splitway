@@ -121,8 +121,8 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
                     _showSectors ? Icons.flag : Icons.flag_outlined,
                   ),
                   tooltip: _showSectors
-                      ? l.editorHideSectorsTip
-                      : l.editorShowSectorsTip,
+                      ? l.editorHideSectors
+                      : l.editorShowSectors,
                 ),
               ],
             ],
