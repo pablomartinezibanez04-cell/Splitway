@@ -46,6 +46,7 @@ class SupabaseRepository {
       'path_json': route.path.map((p) => p.toJson()).toList(),
       'start_finish_gate_json': route.startFinishGate.toJson(),
       'difficulty': route.difficulty.id,
+      'location_label': route.locationLabel,
       'created_at': route.createdAt.toUtc().toIso8601String(),
       'updated_at': DateTime.now().toUtc().toIso8601String(),
       'thumbnail_url': route.thumbnailUrl,
@@ -94,50 +95,33 @@ class SupabaseRepository {
 
   // ---------- Sessions ----------
 
-  /// Upserts a session run (metadata + telemetry) to Supabase.
+  /// Upserts a session run (metadata + telemetry) to Supabase atomically.
   Future<void> upsertSession(SessionRun session) async {
-    await _client.from('session_runs').upsert({
-      'id': session.id,
-      'owner_id': _uid,
-      'route_id': session.routeTemplateId,
-      'started_at': session.startedAt.toUtc().toIso8601String(),
-      'ended_at': session.endedAt?.toUtc().toIso8601String(),
-      'status': session.status.id,
-      'lap_summaries_json': session.laps.map((l) => l.toJson()).toList(),
-      'sector_summaries_json':
+    await _client.rpc('upsert_session_with_telemetry', params: {
+      'p_id': session.id,
+      'p_route_id': session.routeTemplateId,
+      'p_started_at': session.startedAt.toUtc().toIso8601String(),
+      'p_ended_at': session.endedAt?.toUtc().toIso8601String(),
+      'p_status': session.status.id,
+      'p_lap_summaries': session.laps.map((l) => l.toJson()).toList(),
+      'p_sector_summaries':
           session.sectorSummaries.map((s) => s.toJson()).toList(),
-      'total_distance_m': session.totalDistanceMeters,
-      'max_speed_mps': session.maxSpeedMps,
-      'avg_speed_mps': session.avgSpeedMps,
-      'updated_at': DateTime.now().toUtc().toIso8601String(),
+      'p_total_distance_m': session.totalDistanceMeters,
+      'p_max_speed_mps': session.maxSpeedMps,
+      'p_avg_speed_mps': session.avgSpeedMps,
+      'p_updated_at': DateTime.now().toUtc().toIso8601String(),
+      'p_points': session.points
+          .map((p) => {
+                'ts': p.timestamp.toUtc().toIso8601String(),
+                'lat': p.location.latitude,
+                'lng': p.location.longitude,
+                'speed_mps': p.speedMps,
+                'accuracy_m': p.accuracyMeters,
+                'bearing_deg': p.bearingDeg,
+                'altitude_m': p.altitudeMeters,
+              })
+          .toList(),
     });
-
-    // Telemetry: delete old + bulk insert.
-    await _client
-        .from('telemetry_points')
-        .delete()
-        .eq('session_id', session.id);
-
-    if (session.points.isNotEmpty) {
-      // Insert in batches of 500 to avoid payload limits.
-      const batchSize = 500;
-      for (var i = 0; i < session.points.length; i += batchSize) {
-        final batch = session.points.skip(i).take(batchSize);
-        await _client.from('telemetry_points').insert(
-          batch.map((p) => {
-            'session_id': session.id,
-            'owner_id': _uid,
-            'ts': p.timestamp.toUtc().toIso8601String(),
-            'lat': p.location.latitude,
-            'lng': p.location.longitude,
-            'speed_mps': p.speedMps,
-            'accuracy_m': p.accuracyMeters,
-            'bearing_deg': p.bearingDeg,
-            'altitude_m': p.altitudeMeters,
-          }).toList(),
-        );
-      }
-    }
   }
 
   /// Fetches all sessions belonging to the current user.
@@ -194,48 +178,32 @@ class SupabaseRepository {
 
   // ---------- Free rides ----------
 
-  /// Upserts a free ride run (metadata + telemetry) to Supabase.
+  /// Upserts a free ride run (metadata + telemetry) to Supabase atomically.
   Future<void> upsertFreeRide(FreeRideRun ride) async {
-    await _client.from('free_rides').upsert({
-      'id': ride.id,
-      'owner_id': _uid,
-      'started_at': ride.startedAt.toUtc().toIso8601String(),
-      'ended_at': ride.endedAt?.toUtc().toIso8601String(),
-      'status': ride.status.id,
-      'total_distance_m': ride.totalDistanceMeters,
-      'max_speed_mps': ride.maxSpeedMps,
-      'avg_speed_mps': ride.avgSpeedMps,
-      'name': ride.name,
-      'description': ride.description,
-      'location_label': ride.locationLabel,
-      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    await _client.rpc('upsert_free_ride_with_telemetry', params: {
+      'p_id': ride.id,
+      'p_started_at': ride.startedAt.toUtc().toIso8601String(),
+      'p_ended_at': ride.endedAt?.toUtc().toIso8601String(),
+      'p_status': ride.status.id,
+      'p_total_distance_m': ride.totalDistanceMeters,
+      'p_max_speed_mps': ride.maxSpeedMps,
+      'p_avg_speed_mps': ride.avgSpeedMps,
+      'p_name': ride.name,
+      'p_description': ride.description,
+      'p_location_label': ride.locationLabel,
+      'p_updated_at': DateTime.now().toUtc().toIso8601String(),
+      'p_points': ride.points
+          .map((p) => {
+                'ts': p.timestamp.toUtc().toIso8601String(),
+                'lat': p.location.latitude,
+                'lng': p.location.longitude,
+                'speed_mps': p.speedMps,
+                'accuracy_m': p.accuracyMeters,
+                'bearing_deg': p.bearingDeg,
+                'altitude_m': p.altitudeMeters,
+              })
+          .toList(),
     });
-
-    // Telemetry: delete old + bulk insert.
-    await _client
-        .from('free_ride_telemetry')
-        .delete()
-        .eq('free_ride_id', ride.id);
-
-    if (ride.points.isNotEmpty) {
-      const batchSize = 500;
-      for (var i = 0; i < ride.points.length; i += batchSize) {
-        final batch = ride.points.skip(i).take(batchSize);
-        await _client.from('free_ride_telemetry').insert(
-          batch.map((p) => {
-            'free_ride_id': ride.id,
-            'owner_id': _uid,
-            'ts': p.timestamp.toUtc().toIso8601String(),
-            'lat': p.location.latitude,
-            'lng': p.location.longitude,
-            'speed_mps': p.speedMps,
-            'accuracy_m': p.accuracyMeters,
-            'bearing_deg': p.bearingDeg,
-            'altitude_m': p.altitudeMeters,
-          }).toList(),
-        );
-      }
-    }
   }
 
   /// Fetches all free rides belonging to the current user (without telemetry).
@@ -339,6 +307,7 @@ class SupabaseRepository {
       startFinishGate: GateDefinition.fromJson(gateMap),
       sectors: sectors,
       difficulty: RouteDifficultyX.fromId(row['difficulty'] as String),
+      locationLabel: row['location_label'] as String?,
       createdAt: DateTime.parse(row['created_at'] as String).toLocal(),
       thumbnailUrl: row['thumbnail_url'] as String?,
     );

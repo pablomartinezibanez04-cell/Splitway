@@ -25,30 +25,40 @@ class AppRouter {
     required this.config,
     required this.localeController,
     this.authService,
-    this.syncService,
-  })  : _editorController = RouteEditorController(
-          repository,
-          routingService: config.hasMapbox
-              ? RoutingService(mapboxToken: config.mapboxToken!)
-              : null,
-          geocodingService: config.hasMapbox
-              ? ReverseGeocodingService(accessToken: config.mapboxToken!)
-              : null,
-        ),
-        _sessionController = LiveSessionController(repository),
-        _freeRideController = FreeRideController(repository);
+    SyncService? syncService,
+  }) {
+    _editorController = RouteEditorController(
+      repository,
+      routingService: config.hasMapbox
+          ? RoutingService(mapboxToken: config.mapboxToken!)
+          : null,
+      geocodingService: config.hasMapbox
+          ? ReverseGeocodingService(accessToken: config.mapboxToken!)
+          : null,
+    );
+    _sessionController = LiveSessionController(repository);
+    _freeRideController = FreeRideController(repository);
+    if (syncService != null) this.syncService = syncService;
+  }
 
   final LocalDraftRepository repository;
   final AppConfig config;
   final LocaleController localeController;
   final AuthService? authService;
 
-  /// Mutable so [SplitwayApp] can attach/detach after login/logout.
-  SyncService? syncService;
+  late final RouteEditorController _editorController;
+  late final LiveSessionController _sessionController;
+  late final FreeRideController _freeRideController;
 
-  final RouteEditorController _editorController;
-  final LiveSessionController _sessionController;
-  final FreeRideController _freeRideController;
+  SyncService? _syncService;
+
+  /// Mutable so [SplitwayApp] can attach/detach after login/logout.
+  /// Propagates to [_editorController] so route deletions also hit the remote.
+  SyncService? get syncService => _syncService;
+  set syncService(SyncService? value) {
+    _syncService = value;
+    _editorController.syncService = value;
+  }
 
   late final GoRouter router = GoRouter(
     initialLocation: '/routes',

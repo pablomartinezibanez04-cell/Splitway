@@ -115,14 +115,14 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
               _DifficultyChip(difficulty: route.difficulty),
               if (route.sectors.isNotEmpty) ...[
                 const SizedBox(width: 8),
-                IconButton(
+                TextButton.icon(
                   onPressed: () => setState(() => _showSectors = !_showSectors),
                   icon: Icon(
                     _showSectors ? Icons.flag : Icons.flag_outlined,
                   ),
-                  tooltip: _showSectors
-                      ? l.editorHideSectors
-                      : l.editorShowSectors,
+                  label: Text(
+                    _showSectors ? l.editorHideSectors : l.editorShowSectors,
+                  ),
                 ),
               ],
             ],

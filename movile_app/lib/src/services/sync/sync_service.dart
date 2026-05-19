@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
+import 'package:splitway_core/splitway_core.dart';
 
 import '../../data/repositories/local_draft_repository.dart';
 import '../../data/repositories/supabase_repository.dart';
@@ -59,6 +60,16 @@ class SyncService extends ChangeNotifier {
   void stopPeriodicSync() {
     _periodicTimer?.cancel();
     _periodicTimer = null;
+  }
+
+  /// Deletes a route from both local storage and the remote backend.
+  Future<void> deleteRoute(String id) async {
+    await local.deleteRoute(id);
+    try {
+      await remote.deleteRoute(id);
+    } catch (e) {
+      debugPrint('SyncService: failed to delete route $id from remote: $e');
+    }
   }
 
   void _onConnectivityChanged(List<ConnectivityResult> results) {

@@ -6,6 +6,7 @@ import 'package:splitway_core/splitway_core.dart';
 import '../../data/repositories/local_draft_repository.dart';
 import '../../services/geocoding/reverse_geocoding_service.dart';
 import '../../services/routing/routing_service.dart';
+import '../../services/sync/sync_service.dart';
 import 'draft_segment.dart';
 
 /// Which kind of input the next map tap should produce while drawing a
@@ -43,6 +44,10 @@ class RouteEditorController extends ChangeNotifier {
   /// Optional: when present, reverse geocoding is called on save to populate
   /// the route's locationLabel field.
   final ReverseGeocodingService? geocodingService;
+
+  /// Optional: when present, deletions are propagated to the remote backend
+  /// so sync cannot re-download routes the user has deleted.
+  SyncService? syncService;
 
   List<SessionRun> _sessionsForSelected = const [];
   List<SessionRun> get sessionsForSelected => _sessionsForSelected;
@@ -550,7 +555,11 @@ class RouteEditorController extends ChangeNotifier {
   // ---------- CRUD on existing routes ----------
 
   Future<void> deleteRoute(String id) async {
-    await _repo.deleteRoute(id);
+    if (syncService != null) {
+      await syncService!.deleteRoute(id);
+    } else {
+      await _repo.deleteRoute(id);
+    }
     if (_selected?.id == id) {
       _selected = null;
     }
