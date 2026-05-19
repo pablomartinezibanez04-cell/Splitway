@@ -141,6 +141,14 @@ class RouteEditorController extends ChangeNotifier {
   DrawInputMode _inputMode = DrawInputMode.appendPath;
   DrawInputMode get inputMode => _inputMode;
 
+  String _routingProfile = 'driving';
+  String get routingProfile => _routingProfile;
+  set routingProfile(String value) {
+    if (_routingProfile == value) return;
+    _routingProfile = value;
+    notifyListeners();
+  }
+
   /// True if a draft can be persisted (≥2 path points and a name).
   bool get draftCanSave =>
       draftPath.length >= 2 && _draftName.trim().isNotEmpty;
@@ -226,6 +234,7 @@ class RouteEditorController extends ChangeNotifier {
     _draftSectorPoints.clear();
     _undoStack.clear();
     _inputMode = DrawInputMode.appendPath;
+    _routingProfile = 'driving';
     notifyListeners();
   }
 
@@ -242,6 +251,7 @@ class RouteEditorController extends ChangeNotifier {
     _draftSectorPoints.clear();
     _undoStack.clear();
     _inputMode = DrawInputMode.appendPath;
+    _routingProfile = 'driving';
     notifyListeners();
   }
 
@@ -325,6 +335,12 @@ class RouteEditorController extends ChangeNotifier {
   void startFreehandStroke() {
     if (!_drawing) return;
     final seg = FreehandSegment();
+    if (_segments.isNotEmpty) {
+      final prev = _segments.last.renderedPath;
+      if (prev.isNotEmpty) {
+        seg.rawPoints.add(prev.last);
+      }
+    }
     _segments.add(seg);
     _activeFreehand = seg;
     notifyListeners();
@@ -533,6 +549,7 @@ class RouteEditorController extends ChangeNotifier {
     _draftSectorPoints.clear();
     _undoStack.clear();
     _inputMode = DrawInputMode.appendPath;
+    _routingProfile = 'driving';
     _activeFreehand = null;
 
     await load();
