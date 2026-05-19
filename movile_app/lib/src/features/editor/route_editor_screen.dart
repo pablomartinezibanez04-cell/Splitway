@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:splitway_core/splitway_core.dart';
 import 'package:splitway_mobile/l10n/app_localizations.dart';
@@ -56,7 +57,16 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
   }
 
   void _onChange() {
-    setState(() {});
+    // Defer setState to avoid calling it during the build phase when a
+    // ChangeNotifier fires while the widget tree is still being built.
+    if (SchedulerBinding.instance.schedulerPhase ==
+        SchedulerPhase.persistentCallbacks) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() {});
+      });
+    } else {
+      if (mounted) setState(() {});
+    }
   }
 
   Future<void> _onCreateRoute() async {
