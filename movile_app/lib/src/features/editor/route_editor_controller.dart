@@ -433,7 +433,7 @@ class RouteEditorController extends ChangeNotifier {
     _snapping = true;
     notifyListeners();
 
-    final snapped = await routingService!.snapToRoads(waypoints);
+    final snapped = await routingService!.snapToRoads(waypoints, profile: _routingProfile);
 
     if (_snapGeneration != generation) return;
 
@@ -468,7 +468,7 @@ class RouteEditorController extends ChangeNotifier {
           if (routingService != null && effective.length >= 2) {
             _snapping = true;
             notifyListeners();
-            final snapped = await routingService!.snapToRoads(effective);
+            final snapped = await routingService!.snapToRoads(effective, profile: _routingProfile);
             _snapping = false;
             notifyListeners();
             pathParts.add(snapped ?? effective);
