@@ -2,6 +2,8 @@ import 'gate_definition.dart';
 import 'geo_point.dart';
 import 'sector_definition.dart';
 
+const _sentinel = Object();
+
 enum RouteDifficulty { easy, medium, hard }
 
 extension RouteDifficultyX on RouteDifficulty {
@@ -26,12 +28,14 @@ class RouteTemplate {
     required this.createdAt,
     this.description,
     this.locationLabel,
+    this.thumbnailUrl,
   });
 
   final String id;
   final String name;
   final String? description;
   final String? locationLabel;
+  final String? thumbnailUrl;
   final List<GeoPoint> path;
   final GateDefinition startFinishGate;
   final List<SectorDefinition> sectors;
@@ -58,6 +62,7 @@ class RouteTemplate {
     String? name,
     String? description,
     String? locationLabel,
+    Object? thumbnailUrl = _sentinel,
     List<GeoPoint>? path,
     GateDefinition? startFinishGate,
     List<SectorDefinition>? sectors,
@@ -69,6 +74,9 @@ class RouteTemplate {
       name: name ?? this.name,
       description: description ?? this.description,
       locationLabel: locationLabel ?? this.locationLabel,
+      thumbnailUrl: thumbnailUrl == _sentinel
+          ? this.thumbnailUrl
+          : thumbnailUrl as String?,
       path: path ?? this.path,
       startFinishGate: startFinishGate ?? this.startFinishGate,
       sectors: sectors ?? this.sectors,
@@ -82,6 +90,7 @@ class RouteTemplate {
         'name': name,
         'description': description,
         'locationLabel': locationLabel,
+        'thumbnailUrl': thumbnailUrl,
         'path': path.map((p) => p.toJson()).toList(),
         'startFinishGate': startFinishGate.toJson(),
         'sectors': sectors.map((s) => s.toJson()).toList(),
@@ -94,6 +103,7 @@ class RouteTemplate {
         name: json['name'] as String,
         description: json['description'] as String?,
         locationLabel: json['locationLabel'] as String?,
+        thumbnailUrl: json['thumbnailUrl'] as String?,
         path: (json['path'] as List<dynamic>)
             .map((e) => GeoPoint.fromJson(e as Map<String, dynamic>))
             .toList(),
