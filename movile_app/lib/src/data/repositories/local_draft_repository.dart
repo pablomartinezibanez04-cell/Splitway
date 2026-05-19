@@ -47,6 +47,7 @@ class LocalDraftRepository {
           'created_at': route.createdAt.toUtc().millisecondsSinceEpoch,
           'location_label': route.locationLabel,
           'owner_id': _userId,
+          'thumbnail_url': route.thumbnailUrl,
         },
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
@@ -124,6 +125,7 @@ class LocalDraftRepository {
         isUtc: true,
       ).toLocal(),
       locationLabel: row['location_label'] as String?,
+      thumbnailUrl: row['thumbnail_url'] as String?,
     );
   }
 
