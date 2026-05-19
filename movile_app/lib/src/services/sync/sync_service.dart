@@ -116,11 +116,14 @@ class SyncService extends ChangeNotifier {
     final localRoutes = await local.getAllRoutes();
     final remoteRouteTs = await remote.fetchRouteTimestamps();
 
-    // Push local → remote (new or newer locally)
+    // Push local → remote (new or newer locally, or missing thumbnail)
     for (final route in localRoutes) {
       if (route.id == 'demo-oval') continue; // never push demo route
       final remoteUpdated = remoteRouteTs[route.id];
-      if (remoteUpdated == null || route.createdAt.isAfter(remoteUpdated)) {
+      final needsPush = remoteUpdated == null ||
+          route.createdAt.isAfter(remoteUpdated);
+      final needsThumbnail = route.thumbnailUrl == null;
+      if (needsPush || needsThumbnail) {
         final updated = await remote.upsertRoute(route);
         // Persist generated thumbnail URL back to local DB
         if (updated.thumbnailUrl != null &&
