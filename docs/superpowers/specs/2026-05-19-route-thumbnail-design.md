@@ -39,9 +39,12 @@ ALTER TABLE route_templates ADD COLUMN thumbnail_url TEXT;
 ### Supabase Storage
 
 - Bucket: `route-thumbnails`  
-- Access: **public** (URLs used directly in `Image.network`)  
+- Access: **private**  
 - Path pattern: `{userId}/{routeId}.png`  
-- Upsert on regeneration (overwrite existing file)
+- Upsert on regeneration (overwrite existing file)  
+- After upload, generate a **signed URL with 1 year expiry** (`createSignedUrl(path, 365 * 24 * 3600)`) — this is what gets stored in `thumbnail_url`  
+- `Image.network(thumbnailUrl)` works normally since the signed URL includes the access token  
+- When a signed URL expires, the next sync detects `thumbnailUrl` as stale (network error on load) — future improvement; for now the 1-year window is sufficient
 
 ---
 
