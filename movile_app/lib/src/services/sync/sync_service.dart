@@ -116,7 +116,11 @@ class SyncService extends ChangeNotifier {
     final localRoutes = await local.getAllRoutes();
     final remoteRouteTs = await remote.fetchRouteTimestamps();
 
-    // Push local → remote (new or newer locally, or missing thumbnail)
+    // Push local → remote (new or newer locally, or missing thumbnail).
+    // Collect routes with new thumbnails to batch-save locally afterwards,
+    // so the controller's 300ms reload debouncer collapses all saves into
+    // a single UI rebuild (avoids one flicker per thumbnail loaded).
+    final routesWithNewThumbnails = <RouteTemplate>[];
     for (final route in localRoutes) {
       if (route.id == 'demo-oval') continue; // never push demo route
       final remoteUpdated = remoteRouteTs[route.id];
@@ -125,13 +129,17 @@ class SyncService extends ChangeNotifier {
       final needsThumbnail = route.thumbnailUrl == null;
       if (needsPush || needsThumbnail) {
         final updated = await remote.upsertRoute(route);
-        // Persist generated thumbnail URL back to local DB
         if (updated.thumbnailUrl != null &&
             updated.thumbnailUrl != route.thumbnailUrl) {
-          await local.saveRouteTemplate(updated);
+          routesWithNewThumbnails.add(updated);
         }
         transferred++;
       }
+    }
+    // Batch-save: all local writes happen back-to-back (no network delay),
+    // so the 300ms debouncer collapses them into one reload.
+    for (final route in routesWithNewThumbnails) {
+      await local.saveRouteTemplate(route);
     }
 
     // Pull remote → local (only routes that don't exist locally)
