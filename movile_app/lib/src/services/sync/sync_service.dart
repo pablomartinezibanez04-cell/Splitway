@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
+import 'package:splitway_core/splitway_core.dart';
 
 import '../../data/repositories/local_draft_repository.dart';
 import '../../data/repositories/supabase_repository.dart';
@@ -61,6 +62,16 @@ class SyncService extends ChangeNotifier {
     _periodicTimer = null;
   }
 
+  /// Deletes a route from both local storage and the remote backend.
+  Future<void> deleteRoute(String id) async {
+    await local.deleteRoute(id);
+    try {
+      await remote.deleteRoute(id);
+    } catch (e) {
+      debugPrint('SyncService: failed to delete route $id from remote: $e');
+    }
+  }
+
   void _onConnectivityChanged(List<ConnectivityResult> results) {
     final wasConnected = _isConnected;
     _isConnected =
@@ -116,14 +127,30 @@ class SyncService extends ChangeNotifier {
     final localRoutes = await local.getAllRoutes();
     final remoteRouteTs = await remote.fetchRouteTimestamps();
 
-    // Push local → remote (new or newer locally)
+    // Push local → remote (new or newer locally, or missing thumbnail).
+    // Collect routes with new thumbnails to batch-save locally afterwards,
+    // so the controller's 300ms reload debouncer collapses all saves into
+    // a single UI rebuild (avoids one flicker per thumbnail loaded).
+    final routesWithNewThumbnails = <RouteTemplate>[];
     for (final route in localRoutes) {
       if (route.id == 'demo-oval') continue; // never push demo route
       final remoteUpdated = remoteRouteTs[route.id];
-      if (remoteUpdated == null || route.createdAt.isAfter(remoteUpdated)) {
-        await remote.upsertRoute(route);
+      final needsPush = remoteUpdated == null ||
+          route.createdAt.isAfter(remoteUpdated);
+      final needsThumbnail = route.thumbnailUrl == null;
+      if (needsPush || needsThumbnail) {
+        final updated = await remote.upsertRoute(route);
+        if (updated.thumbnailUrl != null &&
+            updated.thumbnailUrl != route.thumbnailUrl) {
+          routesWithNewThumbnails.add(updated);
+        }
         transferred++;
       }
+    }
+    // Batch-save: all local writes happen back-to-back (no network delay),
+    // so the 300ms debouncer collapses them into one reload.
+    for (final route in routesWithNewThumbnails) {
+      await local.saveRouteTemplate(route);
     }
 
     // Pull remote → local (only routes that don't exist locally)

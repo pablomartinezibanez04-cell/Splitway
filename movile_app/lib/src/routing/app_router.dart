@@ -42,6 +42,19 @@ class AppRouter {
         _freeRideController = FreeRideController(repository) {
     if (syncService != null) this.syncService = syncService;
     if (profileService != null) this.profileService = profileService;
+  }) {
+    _editorController = RouteEditorController(
+      repository,
+      routingService: config.hasMapbox
+          ? RoutingService(mapboxToken: config.mapboxToken!)
+          : null,
+      geocodingService: config.hasMapbox
+          ? ReverseGeocodingService(accessToken: config.mapboxToken!)
+          : null,
+    );
+    _sessionController = LiveSessionController(repository);
+    _freeRideController = FreeRideController(repository);
+    if (syncService != null) this.syncService = syncService;
   }
 
   final LocalDraftRepository repository;
@@ -52,13 +65,22 @@ class AppRouter {
   /// Mutable so [SplitwayApp] can attach/detach after login/logout.
   SyncService? syncService;
   ProfileService? profileService;
+  late final RouteEditorController _editorController;
+  late final LiveSessionController _sessionController;
+  late final FreeRideController _freeRideController;
 
-  final RouteEditorController _editorController;
-  final LiveSessionController _sessionController;
-  final FreeRideController _freeRideController;
+  SyncService? _syncService;
+
+  /// Mutable so [SplitwayApp] can attach/detach after login/logout.
+  /// Propagates to [_editorController] so route deletions also hit the remote.
+  SyncService? get syncService => _syncService;
+  set syncService(SyncService? value) {
+    _syncService = value;
+    _editorController.syncService = value;
+  }
 
   late final GoRouter router = GoRouter(
-    initialLocation: '/editor',
+    initialLocation: '/routes',
     routes: [
       // Login screen (outside the shell — no bottom nav).
       GoRoute(
@@ -98,7 +120,7 @@ class AppRouter {
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: '/editor',
+                path: '/routes',
                 builder: (_, __) => RouteEditorScreen(
                   controller: _editorController,
                   config: config,

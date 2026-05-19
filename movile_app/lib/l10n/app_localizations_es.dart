@@ -51,6 +51,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get navHistory => 'Historial';
 
   @override
+  String get navRoutes => 'Rutas';
+
+  @override
   String get drawerMenu => 'Menú';
 
   @override
@@ -341,6 +344,18 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get editorSnapFailedMessage =>
       'No se pudo conectar con el servidor para ajustar la ruta a las carreteras. Se muestran segmentos rectos hasta que la conexión se restablezca.';
+
+  @override
+  String get editorRoutingProfileTooltip => 'Modo de ruta';
+
+  @override
+  String get editorRoutingProfileDriving => 'Carretera';
+
+  @override
+  String get editorRoutingProfileWalking => 'Sendero';
+
+  @override
+  String get editorRoutingProfileCycling => 'Ciclista';
 
   @override
   String get editorNewRouteDialogTitle => 'Nueva ruta';
@@ -766,4 +781,31 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get drawerProfile => 'Perfil';
+  String get routesTitle => 'Mis rutas';
+
+  @override
+  String get routesViewList => 'Lista';
+
+  @override
+  String get routesViewGrid => 'Mosaico';
+
+  @override
+  String routesSessionsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sesiones',
+      one: '1 sesión',
+      zero: 'Sin sesiones',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String routesBestLap(String time) {
+    return 'Mejor: $time';
+  }
+
+  @override
+  String get routesDetailTitle => 'Detalle de ruta';
 }

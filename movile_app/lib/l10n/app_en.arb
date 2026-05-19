@@ -18,6 +18,7 @@
   "navEditor": "Editor",
   "navSession": "Session",
   "navHistory": "History",
+  "navRoutes": "Routes",
 
   "drawerMenu": "Menu",
   "drawerDefaultUser": "User",
@@ -116,6 +117,10 @@
   "editorRouteSavedSnack": "Saved \"{name}\"",
   "@editorRouteSavedSnack": { "placeholders": { "name": { "type": "String" } } },
   "editorSnapFailedMessage": "Could not reach the server to snap the route to roads. Showing straight segments until the connection is restored.",
+  "editorRoutingProfileTooltip": "Routing mode",
+  "editorRoutingProfileDriving": "Road",
+  "editorRoutingProfileWalking": "Trail",
+  "editorRoutingProfileCycling": "Cycling",
   "editorNewRouteDialogTitle": "New route",
   "editorEditRouteDialogTitle": "Edit route",
   "editorNameLabel": "Name",
@@ -239,5 +244,14 @@
   "historyRenameFreeRideLabel": "Name",
   "historyRenamedSnack": "Name updated",
   "historyRenameRouteTitle": "Rename route",
-  "historyRenameRouteLabel": "Name"
+  "historyRenameRouteLabel": "Name",
+
+  "routesTitle": "My routes",
+  "routesViewList": "List",
+  "routesViewGrid": "Grid",
+  "routesSessionsCount": "{count, plural, =0{No sessions} =1{1 session} other{{count} sessions}}",
+  "@routesSessionsCount": { "placeholders": { "count": { "type": "int" } } },
+  "routesBestLap": "Best: {time}",
+  "@routesBestLap": { "placeholders": { "time": { "type": "String" } } },
+  "routesDetailTitle": "Route detail"
 }

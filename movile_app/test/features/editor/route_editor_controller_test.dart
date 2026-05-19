@@ -239,6 +239,32 @@ void main() {
     });
   });
 
+  group('routingProfile', () {
+    test('defaults to driving', () {
+      expect(ctrl.routingProfile, 'driving');
+    });
+
+    test('setter updates value and notifies listeners', () {
+      int notifications = 0;
+      ctrl.addListener(() => notifications++);
+      ctrl.routingProfile = 'walking';
+      expect(ctrl.routingProfile, 'walking');
+      expect(notifications, 1);
+    });
+
+    test('resets to driving on cancelDrawing', () {
+      ctrl.routingProfile = 'cycling';
+      ctrl.cancelDrawing();
+      expect(ctrl.routingProfile, 'driving');
+    });
+
+    test('resets to driving on startDrawing', () {
+      ctrl.routingProfile = 'walking';
+      ctrl.startDrawing(name: 'New', difficulty: RouteDifficulty.easy);
+      expect(ctrl.routingProfile, 'driving');
+    });
+  });
+
   group('saveDraft with mixed segments', () {
     test('produces concatenated path with freehand points intact', () async {
       // ctrl already has 3 tapped waypoints from setUp (SnappedSegment).

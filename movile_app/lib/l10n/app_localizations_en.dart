@@ -51,6 +51,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navHistory => 'History';
 
   @override
+  String get navRoutes => 'Routes';
+
+  @override
   String get drawerMenu => 'Menu';
 
   @override
@@ -340,6 +343,18 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get editorSnapFailedMessage =>
       'Could not reach the server to snap the route to roads. Showing straight segments until the connection is restored.';
+
+  @override
+  String get editorRoutingProfileTooltip => 'Routing mode';
+
+  @override
+  String get editorRoutingProfileDriving => 'Road';
+
+  @override
+  String get editorRoutingProfileWalking => 'Trail';
+
+  @override
+  String get editorRoutingProfileCycling => 'Cycling';
 
   @override
   String get editorNewRouteDialogTitle => 'New route';
@@ -765,4 +780,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get drawerProfile => 'Profile';
+  String get routesTitle => 'My routes';
+
+  @override
+  String get routesViewList => 'List';
+
+  @override
+  String get routesViewGrid => 'Grid';
+
+  @override
+  String routesSessionsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sessions',
+      one: '1 session',
+      zero: 'No sessions',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String routesBestLap(String time) {
+    return 'Best: $time';
+  }
+
+  @override
+  String get routesDetailTitle => 'Route detail';
 }

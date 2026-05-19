@@ -60,9 +60,9 @@ class HomeShell extends StatelessWidget {
         ),
         destinations: [
           NavigationDestination(
-            icon: const Icon(Icons.edit_location_alt_outlined),
-            selectedIcon: const Icon(Icons.edit_location_alt),
-            label: AppLocalizations.of(context).navEditor,
+            icon: const Icon(Icons.route_outlined),
+            selectedIcon: const Icon(Icons.route),
+            label: AppLocalizations.of(context).navRoutes,
           ),
           NavigationDestination(
             icon: const Icon(Icons.play_circle_outline),

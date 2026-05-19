@@ -22,7 +22,7 @@ class SettingsScreen extends StatelessWidget {
             if (context.canPop()) {
               context.pop();
             } else {
-              context.go('/editor');
+              context.go('/routes');
             }
           },
         ),

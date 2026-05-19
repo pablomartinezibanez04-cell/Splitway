@@ -6,6 +6,7 @@ import 'package:splitway_core/splitway_core.dart';
 import '../../data/repositories/local_draft_repository.dart';
 import '../../services/geocoding/reverse_geocoding_service.dart';
 import '../../services/routing/routing_service.dart';
+import '../../services/sync/sync_service.dart';
 import 'draft_segment.dart';
 
 /// Which kind of input the next map tap should produce while drawing a
@@ -44,8 +45,18 @@ class RouteEditorController extends ChangeNotifier {
   /// the route's locationLabel field.
   final ReverseGeocodingService? geocodingService;
 
+  /// Optional: when present, deletions are propagated to the remote backend
+  /// so sync cannot re-download routes the user has deleted.
+  SyncService? syncService;
+
   List<SessionRun> _sessionsForSelected = const [];
   List<SessionRun> get sessionsForSelected => _sessionsForSelected;
+
+  Map<String, int> _routeSessionCounts = const {};
+  Map<String, int> get routeSessionCounts => _routeSessionCounts;
+
+  Map<String, Duration?> _routeBestLaps = const {};
+  Map<String, Duration?> get routeBestLaps => _routeBestLaps;
 
   bool _loading = true;
   bool get loading => _loading;
@@ -130,6 +141,14 @@ class RouteEditorController extends ChangeNotifier {
   DrawInputMode _inputMode = DrawInputMode.appendPath;
   DrawInputMode get inputMode => _inputMode;
 
+  String _routingProfile = 'driving';
+  String get routingProfile => _routingProfile;
+  set routingProfile(String value) {
+    if (_routingProfile == value) return;
+    _routingProfile = value;
+    notifyListeners();
+  }
+
   /// True if a draft can be persisted (≥2 path points and a name).
   bool get draftCanSave =>
       draftPath.length >= 2 && _draftName.trim().isNotEmpty;
@@ -163,6 +182,7 @@ class RouteEditorController extends ChangeNotifier {
     if (_selected != null) {
       _loadSessionsForRoute(_selected!.id);
     }
+    _loadAllRouteSummaries();
   }
 
   void select(RouteTemplate route) {
@@ -173,6 +193,26 @@ class RouteEditorController extends ChangeNotifier {
 
   Future<void> _loadSessionsForRoute(String routeId) async {
     _sessionsForSelected = await _repo.getSessionsByRoute(routeId);
+    notifyListeners();
+  }
+
+  Future<void> _loadAllRouteSummaries() async {
+    final counts = <String, int>{};
+    final bests = <String, Duration?>{};
+    for (final route in _routes) {
+      final sessions = await _repo.getSessionsByRoute(route.id);
+      counts[route.id] = sessions.length;
+      LapSummary? best;
+      for (final s in sessions) {
+        final lap = s.bestLap;
+        if (lap != null && (best == null || lap.duration < best.duration)) {
+          best = lap;
+        }
+      }
+      bests[route.id] = best?.duration;
+    }
+    _routeSessionCounts = counts;
+    _routeBestLaps = bests;
     notifyListeners();
   }
 
@@ -194,6 +234,7 @@ class RouteEditorController extends ChangeNotifier {
     _draftSectorPoints.clear();
     _undoStack.clear();
     _inputMode = DrawInputMode.appendPath;
+    _routingProfile = 'driving';
     notifyListeners();
   }
 
@@ -210,6 +251,7 @@ class RouteEditorController extends ChangeNotifier {
     _draftSectorPoints.clear();
     _undoStack.clear();
     _inputMode = DrawInputMode.appendPath;
+    _routingProfile = 'driving';
     notifyListeners();
   }
 
@@ -293,6 +335,12 @@ class RouteEditorController extends ChangeNotifier {
   void startFreehandStroke() {
     if (!_drawing) return;
     final seg = FreehandSegment();
+    if (_segments.isNotEmpty) {
+      final prev = _segments.last.renderedPath;
+      if (prev.isNotEmpty) {
+        seg.rawPoints.add(prev.last);
+      }
+    }
     _segments.add(seg);
     _activeFreehand = seg;
     notifyListeners();
@@ -385,7 +433,7 @@ class RouteEditorController extends ChangeNotifier {
     _snapping = true;
     notifyListeners();
 
-    final snapped = await routingService!.snapToRoads(waypoints);
+    final snapped = await routingService!.snapToRoads(waypoints, profile: _routingProfile);
 
     if (_snapGeneration != generation) return;
 
@@ -420,7 +468,7 @@ class RouteEditorController extends ChangeNotifier {
           if (routingService != null && effective.length >= 2) {
             _snapping = true;
             notifyListeners();
-            final snapped = await routingService!.snapToRoads(effective);
+            final snapped = await routingService!.snapToRoads(effective, profile: _routingProfile);
             _snapping = false;
             notifyListeners();
             pathParts.add(snapped ?? effective);
@@ -501,6 +549,7 @@ class RouteEditorController extends ChangeNotifier {
     _draftSectorPoints.clear();
     _undoStack.clear();
     _inputMode = DrawInputMode.appendPath;
+    _routingProfile = 'driving';
     _activeFreehand = null;
 
     await load();
@@ -523,7 +572,11 @@ class RouteEditorController extends ChangeNotifier {
   // ---------- CRUD on existing routes ----------
 
   Future<void> deleteRoute(String id) async {
-    await _repo.deleteRoute(id);
+    if (syncService != null) {
+      await syncService!.deleteRoute(id);
+    } else {
+      await _repo.deleteRoute(id);
+    }
     if (_selected?.id == id) {
       _selected = null;
     }

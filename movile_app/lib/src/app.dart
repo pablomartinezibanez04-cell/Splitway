@@ -7,6 +7,7 @@ import 'config/app_config.dart';
 import 'data/local/splitway_local_database.dart';
 import 'data/repositories/local_draft_repository.dart';
 import 'data/repositories/supabase_repository.dart';
+import 'data/services/route_thumbnail_service.dart';
 import 'routing/app_router.dart';
 import 'services/auth/auth_service.dart';
 import 'services/locale/locale_controller.dart';
@@ -87,9 +88,17 @@ class _SplitwayAppState extends State<SplitwayApp> {
   }
 
   void _createSyncService(SupabaseClient client) {
+    RouteThumbnailService? thumbnailService;
+    if (widget.config.hasMapbox) {
+      thumbnailService = RouteThumbnailService(
+        supabase: client,
+        mapboxToken: widget.config.mapboxToken!,
+      );
+    }
+
     _syncService = SyncService(
       local: _repository,
-      remote: SupabaseRepository(client),
+      remote: SupabaseRepository(client, thumbnailService: thumbnailService),
     );
     _syncService!.startPeriodicSync();
   }
