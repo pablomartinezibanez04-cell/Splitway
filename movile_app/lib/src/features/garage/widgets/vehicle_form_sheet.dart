@@ -181,6 +181,7 @@ class _VehicleFormSheetState extends State<VehicleFormSheet> {
               runSpacing: 8,
               children: VehicleType.values.map((type) {
                 return ChoiceChip(
+                  showCheckmark: false,
                   avatar: Icon(vehicleTypeIcon(type), size: 18),
                   label: Text(vehicleTypeLabel(l, type)),
                   selected: _type == type,

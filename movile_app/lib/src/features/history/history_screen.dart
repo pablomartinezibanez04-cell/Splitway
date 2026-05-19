@@ -7,10 +7,13 @@ import 'package:splitway_mobile/l10n/app_localizations.dart';
 import '../../config/app_config.dart';
 import '../../data/repositories/local_draft_repository.dart';
 import '../../services/auth/auth_service.dart';
+import '../../services/garage/garage_service.dart';
+import '../../services/garage/vehicle.dart';
 import '../../services/profile/profile_service.dart';
 import '../../shared/formatters.dart';
 import '../../shared/widgets/empty_state.dart';
 import '../../shared/widgets/splitway_map.dart';
+import '../garage/vehicle_detail_screen.dart';
 import '../home/home_shell.dart';
 
 sealed class _HistoryEntry implements Comparable<_HistoryEntry> {
@@ -43,12 +46,14 @@ class HistoryScreen extends StatefulWidget {
     this.config = const AppConfig(),
     this.authService,
     this.profileService,
+    this.garageService,
   });
 
   final LocalDraftRepository repository;
   final AppConfig config;
   final AuthService? authService;
   final ProfileService? profileService;
+  final GarageService? garageService;
 
   @override
   State<HistoryScreen> createState() => _HistoryScreenState();
@@ -181,11 +186,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           route: _routes[session.routeTemplateId],
                           repository: widget.repository,
                           config: widget.config,
+                          garageService: widget.garageService,
                         ),
                       _FreeRideEntry(:final ride) => _FreeRideTile(
                           ride: ride,
                           repository: widget.repository,
                           config: widget.config,
+                          garageService: widget.garageService,
                         ),
                     };
                   },
@@ -200,12 +207,22 @@ class _SessionTile extends StatelessWidget {
     required this.route,
     required this.repository,
     required this.config,
+    this.garageService,
   });
 
   final SessionRun session;
   final RouteTemplate? route;
   final LocalDraftRepository repository;
   final AppConfig config;
+  final GarageService? garageService;
+
+  Vehicle? get _vehicle {
+    final vid = session.vehicleId;
+    if (vid == null || garageService == null) return null;
+    return garageService!.vehicles
+        .where((v) => v.id == vid)
+        .firstOrNull;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -214,15 +231,49 @@ class _SessionTile extends StatelessWidget {
     final bestLapSuffix = best != null
         ? l.historyBestLapSuffix(Formatters.duration(best.duration))
         : '';
+    final vehicle = _vehicle;
     return Card(
       child: ListTile(
         title: Text(route?.name ?? l.historyDeletedRoute),
-        subtitle: Text(
-          l.historySessionSubtitle(
-            Formatters.dateTime(session.startedAt),
-            session.laps.length,
-            bestLapSuffix,
-          ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l.historySessionSubtitle(
+                Formatters.dateTime(session.startedAt),
+                session.laps.length,
+                bestLapSuffix,
+              ),
+            ),
+            if (vehicle != null)
+              GestureDetector(
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => VehicleDetailScreen(
+                    vehicle: vehicle,
+                    garageService: garageService!,
+                  ),
+                )),
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.directions_car,
+                          size: 14,
+                          color: Theme.of(context).colorScheme.primary),
+                      const SizedBox(width: 4),
+                      Text(
+                        vehicle.name,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
         ),
         trailing: const Icon(Icons.chevron_right),
         onTap: route == null
@@ -244,11 +295,21 @@ class _FreeRideTile extends StatelessWidget {
     required this.ride,
     required this.repository,
     required this.config,
+    this.garageService,
   });
 
   final FreeRideRun ride;
   final LocalDraftRepository repository;
   final AppConfig config;
+  final GarageService? garageService;
+
+  Vehicle? get _vehicle {
+    final vid = ride.vehicleId;
+    if (vid == null || garageService == null) return null;
+    return garageService!.vehicles
+        .where((v) => v.id == vid)
+        .firstOrNull;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -257,15 +318,49 @@ class _FreeRideTile extends StatelessWidget {
     final distStr = isKm
         ? l.unitKilometers(dv.toStringAsFixed(2))
         : l.unitMeters(dv.toStringAsFixed(0));
+    final vehicle = _vehicle;
     return Card(
       child: ListTile(
         leading: const Icon(Icons.explore, color: Colors.teal),
         title: Text(ride.name ?? l.historyFreeRideLabel),
-        subtitle: Text(
-          l.historyFreeRideSubtitle(
-            Formatters.dateTime(ride.startedAt),
-            distStr,
-          ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l.historyFreeRideSubtitle(
+                Formatters.dateTime(ride.startedAt),
+                distStr,
+              ),
+            ),
+            if (vehicle != null)
+              GestureDetector(
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => VehicleDetailScreen(
+                    vehicle: vehicle,
+                    garageService: garageService!,
+                  ),
+                )),
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.directions_car,
+                          size: 14,
+                          color: Theme.of(context).colorScheme.primary),
+                      const SizedBox(width: 4),
+                      Text(
+                        vehicle.name,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
         ),
         trailing: const Icon(Icons.chevron_right),
         onTap: () => Navigator.of(context).push(MaterialPageRoute(

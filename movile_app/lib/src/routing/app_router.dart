@@ -97,6 +97,16 @@ class AppRouter {
         ),
       ),
 
+      GoRoute(
+        path: '/garage',
+        builder: (_, __) => GarageScreen(
+          garageService: garageService!,
+          config: config,
+          authService: authService,
+          profileService: profileService,
+        ),
+      ),
+
       // Main tabbed shell.
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => HomeShell(
@@ -112,19 +122,6 @@ class AppRouter {
                 path: '/routes',
                 builder: (_, __) => RouteEditorScreen(
                   controller: _editorController,
-                  config: config,
-                  authService: authService,
-                  profileService: profileService,
-                ),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/garage',
-                builder: (_, __) => GarageScreen(
-                  garageService: garageService!,
                   config: config,
                   authService: authService,
                   profileService: profileService,
@@ -169,6 +166,7 @@ class AppRouter {
                   config: config,
                   authService: authService,
                   profileService: profileService,
+                  garageService: garageService,
                 ),
               ),
             ],

@@ -83,7 +83,8 @@ class FreeRideController extends ChangeNotifier {
 
     final e = _engine;
     if (e == null) return null;
-    final run = e.finish();
+    final raw = e.finish();
+    final run = raw.copyWith(vehicleId: _selectedVehicleId);
     await _repo.saveFreeRideRun(run);
     _result = run;
     _stage = FreeRideStage.finished;
@@ -141,6 +142,7 @@ class FreeRideController extends ChangeNotifier {
       totalDistanceMeters: run.totalDistanceMeters,
       maxSpeedMps: run.maxSpeedMps,
       avgSpeedMps: run.avgSpeedMps,
+      vehicleId: run.vehicleId,
     );
     await _repo.saveSessionRun(session);
 

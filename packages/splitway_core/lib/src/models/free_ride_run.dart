@@ -27,6 +27,7 @@ class FreeRideRun {
     this.name,
     this.description,
     this.locationLabel,
+    this.vehicleId,
   });
 
   final String id;
@@ -40,6 +41,7 @@ class FreeRideRun {
   final String? name;
   final String? description;
   final String? locationLabel;
+  final String? vehicleId;
 
   Duration? get totalDuration {
     final end = endedAt;
@@ -61,6 +63,7 @@ class FreeRideRun {
     String? name,
     String? description,
     String? locationLabel,
+    String? vehicleId,
   }) {
     return FreeRideRun(
       id: id ?? this.id,
@@ -74,6 +77,7 @@ class FreeRideRun {
       name: name ?? this.name,
       description: description ?? this.description,
       locationLabel: locationLabel ?? this.locationLabel,
+      vehicleId: vehicleId ?? this.vehicleId,
     );
   }
 }

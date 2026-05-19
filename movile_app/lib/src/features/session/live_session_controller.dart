@@ -217,7 +217,8 @@ class LiveSessionController extends ChangeNotifier {
     _autoSimulator = null;
     final t = _tracker;
     if (t == null) return null;
-    final session = t.finishSession();
+    final raw = t.finishSession();
+    final session = raw.copyWith(vehicleId: _selectedVehicleId);
     await _repo.saveSessionRun(session);
     _result = session;
     _stage = LiveSessionStage.finished;

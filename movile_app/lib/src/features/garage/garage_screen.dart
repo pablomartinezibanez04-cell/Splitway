@@ -9,7 +9,6 @@ import '../../services/garage/garage_service.dart';
 import '../../services/garage/vehicle.dart';
 import '../../services/profile/profile_service.dart';
 import '../../shared/widgets/empty_state.dart';
-import '../home/home_shell.dart';
 import 'vehicle_detail_screen.dart';
 import 'widgets/vehicle_form_sheet.dart';
 import 'widgets/vehicle_grid_tile.dart';
@@ -104,6 +103,7 @@ class _GarageScreenState extends State<GarageScreen> {
           content: Text(AppLocalizations.of(context).garageVehicleSavedSnack),
         ),
       );
+      _openVehicleDetail(vehicle);
     }
   }
 
@@ -123,11 +123,6 @@ class _GarageScreenState extends State<GarageScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: buildDrawerLeading(
-          context,
-          widget.authService,
-          widget.profileService,
-        ),
         title: Text(l.garageTitle),
         actions: [
           IconButton(

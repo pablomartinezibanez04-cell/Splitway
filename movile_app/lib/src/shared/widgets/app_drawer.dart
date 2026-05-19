@@ -170,6 +170,14 @@ class _LoggedInContent extends StatelessWidget {
                 },
               ),
               _MenuItem(
+                icon: Icons.garage_outlined,
+                label: l.navGarage,
+                onTap: () {
+                  Navigator.pop(context);
+                  context.push('/garage');
+                },
+              ),
+              _MenuItem(
                 icon: Icons.settings_outlined,
                 label: l.drawerSettings,
                 onTap: () {
