@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:splitway_mobile/l10n/app_localizations.dart';
 
 import '../../services/profile/profile_service.dart';
+import '../../services/profile/user_profile.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key, required this.profileService});
@@ -65,11 +66,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         : 'jpg';
 
     final success = await widget.profileService.uploadAvatar(bytes, extension);
-    if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).profileAvatarUpdated)),
-      );
-    }
+    if (!mounted) return;
+    final l = AppLocalizations.of(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(success ? l.profileAvatarUpdated : l.profileErrorUnexpected)),
+    );
   }
 
   Future<void> _handleSaveNickname() async {
@@ -293,12 +294,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 class _CooldownIndicator extends StatelessWidget {
   const _CooldownIndicator({required this.profile, required this.l});
 
-  final dynamic profile;
+  final UserProfile profile;
   final AppLocalizations l;
 
   @override
   Widget build(BuildContext context) {
-    final remaining = profile.nicknameCooldownRemaining as Duration;
+    final remaining = profile.nicknameCooldownRemaining;
     final text = remaining.inHours >= 24
         ? l.profileNicknameCooldownDays(remaining.inDays)
         : l.profileNicknameCooldownHours(remaining.inHours);

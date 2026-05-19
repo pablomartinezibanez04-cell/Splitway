@@ -36,16 +36,18 @@ class UserProfile {
 
   UserProfile copyWith({
     String? nickname,
-    String? avatarUrl,
-    String? bio,
+    Object? avatarUrl = _sentinel,
+    Object? bio = _sentinel,
     DateTime? nicknameChangedAt,
   }) {
     return UserProfile(
       id: id,
       nickname: nickname ?? this.nickname,
-      avatarUrl: avatarUrl ?? this.avatarUrl,
-      bio: bio ?? this.bio,
+      avatarUrl: avatarUrl == _sentinel ? this.avatarUrl : avatarUrl as String?,
+      bio: bio == _sentinel ? this.bio : bio as String?,
       nicknameChangedAt: nicknameChangedAt ?? this.nicknameChangedAt,
     );
   }
+
+  static const _sentinel = Object();
 }

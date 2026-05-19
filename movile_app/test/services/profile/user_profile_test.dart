@@ -98,5 +98,32 @@ void main() {
       expect(updated.bio, 'Hello');
       expect(updated.id, 'abc');
     });
+
+    test('copyWith can set bio to null', () {
+      final original = UserProfile(
+        id: 'abc',
+        nickname: 'Test',
+        bio: 'Some bio',
+        nicknameChangedAt: DateTime.now(),
+      );
+
+      final updated = original.copyWith(bio: null);
+
+      expect(updated.bio, isNull);
+      expect(updated.nickname, 'Test');
+    });
+
+    test('copyWith preserves bio when not passed', () {
+      final original = UserProfile(
+        id: 'abc',
+        nickname: 'Test',
+        bio: 'Keep this',
+        nicknameChangedAt: DateTime.now(),
+      );
+
+      final updated = original.copyWith(nickname: 'New');
+
+      expect(updated.bio, 'Keep this');
+    });
   });
 }

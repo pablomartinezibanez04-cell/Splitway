@@ -33,10 +33,20 @@ create or replace function public.update_nickname(new_nickname text)
 returns void
 language plpgsql
 security definer
+set search_path = public
 as $$
 declare
   last_change timestamptz;
 begin
+  if new_nickname is null or length(trim(new_nickname)) < 2 then
+    raise exception 'Nickname must be at least 2 characters.'
+      using errcode = 'P0001';
+  end if;
+  if length(trim(new_nickname)) > 24 then
+    raise exception 'Nickname must be at most 24 characters.'
+      using errcode = 'P0001';
+  end if;
+
   select nickname_changed_at into last_change
   from public.profiles
   where id = auth.uid();
@@ -47,7 +57,7 @@ begin
   end if;
 
   update public.profiles
-  set nickname = new_nickname,
+  set nickname = trim(new_nickname),
       nickname_changed_at = now(),
       updated_at = now()
   where id = auth.uid();
