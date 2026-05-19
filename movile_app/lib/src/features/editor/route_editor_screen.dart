@@ -9,6 +9,7 @@ import 'package:splitway_mobile/l10n/app_localizations.dart';
 import '../../config/app_config.dart';
 import '../../routing/app_router.dart';
 import '../../services/auth/auth_service.dart';
+import '../../services/profile/profile_service.dart';
 import '../../services/tracking/location_service.dart';
 import '../../shared/widgets/empty_state.dart';
 import '../../shared/widgets/splitway_map.dart';
@@ -25,11 +26,13 @@ class RouteEditorScreen extends StatefulWidget {
     required this.controller,
     required this.config,
     this.authService,
+    this.profileService,
   });
 
   final RouteEditorController controller;
   final AppConfig config;
   final AuthService? authService;
+  final ProfileService? profileService;
 
   @override
   State<RouteEditorScreen> createState() => _RouteEditorScreenState();
@@ -140,7 +143,11 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
     }
     return Scaffold(
       appBar: AppBar(
-        leading: buildDrawerLeading(context, widget.authService),
+        leading: buildDrawerLeading(
+          context,
+          widget.authService,
+          widget.profileService,
+        ),
         title: Text(l.routesTitle),
         actions: [
           IconButton(

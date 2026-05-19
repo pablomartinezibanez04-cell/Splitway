@@ -7,6 +7,7 @@ import 'package:splitway_mobile/l10n/app_localizations.dart';
 import '../../config/app_config.dart';
 import '../../data/repositories/local_draft_repository.dart';
 import '../../services/auth/auth_service.dart';
+import '../../services/profile/profile_service.dart';
 import '../../shared/formatters.dart';
 import '../../shared/widgets/empty_state.dart';
 import '../../shared/widgets/splitway_map.dart';
@@ -41,11 +42,13 @@ class HistoryScreen extends StatefulWidget {
     required this.repository,
     this.config = const AppConfig(),
     this.authService,
+    this.profileService,
   });
 
   final LocalDraftRepository repository;
   final AppConfig config;
   final AuthService? authService;
+  final ProfileService? profileService;
 
   @override
   State<HistoryScreen> createState() => _HistoryScreenState();
@@ -136,7 +139,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final l = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        leading: buildDrawerLeading(context, widget.authService),
+        leading: buildDrawerLeading(
+          context,
+          widget.authService,
+          widget.profileService,
+        ),
         title: Text(l.historyTitle),
         actions: [
           IconButton(

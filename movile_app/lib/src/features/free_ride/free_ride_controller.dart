@@ -26,6 +26,14 @@ class FreeRideController extends ChangeNotifier {
   LocationPermissionStatus? _permissionStatus;
   LocationPermissionStatus? get permissionStatus => _permissionStatus;
 
+  String? _selectedVehicleId;
+  String? get selectedVehicleId => _selectedVehicleId;
+
+  void selectVehicle(String? vehicleId) {
+    _selectedVehicleId = vehicleId;
+    notifyListeners();
+  }
+
   StreamSubscription<TelemetryPoint>? _gpsSub;
   Timer? _ticker;
 

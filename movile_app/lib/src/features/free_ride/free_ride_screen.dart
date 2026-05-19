@@ -7,10 +7,13 @@ import 'package:splitway_mobile/l10n/app_localizations.dart';
 import '../../config/app_config.dart';
 import '../../routing/app_router.dart';
 import '../../services/auth/auth_service.dart';
+import '../../services/garage/garage_service.dart';
+import '../../services/profile/profile_service.dart';
 import '../../services/tracking/location_service.dart';
 import '../../shared/formatters.dart';
 import '../../shared/widgets/empty_state.dart';
 import '../../shared/widgets/splitway_map.dart';
+import '../../shared/widgets/vehicle_picker_tile.dart';
 import '../home/home_shell.dart';
 import 'free_ride_controller.dart';
 
@@ -20,11 +23,15 @@ class FreeRideScreen extends StatefulWidget {
     required this.controller,
     required this.config,
     this.authService,
+    this.profileService,
+    this.garageService,
   });
 
   final FreeRideController controller;
   final AppConfig config;
   final AuthService? authService;
+  final ProfileService? profileService;
+  final GarageService? garageService;
 
   @override
   State<FreeRideScreen> createState() => _FreeRideScreenState();
@@ -102,7 +109,11 @@ class _FreeRideScreenState extends State<FreeRideScreen> {
     final ctrl = widget.controller;
     return Scaffold(
       appBar: AppBar(
-        leading: buildDrawerLeading(context, widget.authService),
+        leading: buildDrawerLeading(
+          context,
+          widget.authService,
+          widget.profileService,
+        ),
         title: Text(l.freeRideTitle),
       ),
       body: switch (ctrl.stage) {
@@ -130,6 +141,18 @@ class _FreeRideScreenState extends State<FreeRideScreen> {
               ctrl.permissionStatus != LocationPermissionStatus.granted) ...[
             const SizedBox(height: 16),
             _PermissionBanner(status: ctrl.permissionStatus!),
+          ],
+          if (widget.garageService != null &&
+              widget.garageService!.vehicles.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text(l.vehiclePickerLabel,
+                style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 8),
+            VehiclePickerTile(
+              selectedVehicleId: ctrl.selectedVehicleId,
+              vehicles: widget.garageService!.vehicles,
+              onSelected: ctrl.selectVehicle,
+            ),
           ],
           const SizedBox(height: 24),
           FilledButton.icon(

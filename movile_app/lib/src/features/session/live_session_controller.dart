@@ -38,6 +38,14 @@ class LiveSessionController extends ChangeNotifier {
   TrackingSource _source = TrackingSource.simulated;
   TrackingSource get source => _source;
 
+  String? _selectedVehicleId;
+  String? get selectedVehicleId => _selectedVehicleId;
+
+  void selectVehicle(String? vehicleId) {
+    _selectedVehicleId = vehicleId;
+    notifyListeners();
+  }
+
   LocationPermissionStatus? _permissionStatus;
   LocationPermissionStatus? get permissionStatus => _permissionStatus;
 
