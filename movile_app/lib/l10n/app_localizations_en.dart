@@ -108,6 +108,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get drawerSyncNow => 'Sync now';
 
   @override
+  String get drawerProfile => 'Profile';
+
+  @override
   String get loginBannerDefault => 'Sign in to continue';
 
   @override
@@ -156,6 +159,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loginSkipButton => 'Continue without account';
 
   @override
+  String get loginNicknameHint => 'Nickname';
+
+  @override
+  String get loginNicknameRequired => 'Enter a nickname';
+
+  @override
+  String get loginNicknameMinLength => 'Minimum 2 characters';
+
+  @override
   String get loginConfirmationTitle => 'Check your inbox!';
 
   @override
@@ -186,6 +198,71 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get authErrorUnexpected => 'Unexpected error. Try again.';
+
+  @override
+  String get profileTitle => 'Profile';
+
+  @override
+  String get profileAvatarUpdated => 'Avatar updated';
+
+  @override
+  String get profileErrorUnexpected => 'Could not update avatar. Try again.';
+
+  @override
+  String get profileNicknameUpdated => 'Nickname updated';
+
+  @override
+  String get profileErrorCooldown =>
+      'Nickname can only be changed after the cooldown.';
+
+  @override
+  String get profileBioUpdated => 'Bio updated';
+
+  @override
+  String get profileChangeAvatar => 'Change avatar';
+
+  @override
+  String get profileNicknameLabel => 'Nickname';
+
+  @override
+  String get profileNicknameRequired => 'Enter a nickname';
+
+  @override
+  String get profileNicknameMinLength => 'Minimum 2 characters';
+
+  @override
+  String get profileNicknameTooLong => 'Maximum 30 characters';
+
+  @override
+  String get profileBioLabel => 'Bio';
+
+  @override
+  String get profileBioHint => 'Tell others a little bit about yourself';
+
+  @override
+  String profileNicknameCooldownDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days',
+      one: '1 day',
+    );
+    return '$_temp0 until next change';
+  }
+
+  @override
+  String profileNicknameCooldownHours(int hours) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: '$hours hours',
+      one: '1 hour',
+    );
+    return '$_temp0 until next change';
+  }
+
+  @override
+  String get profileNicknameCooldown => 'Nickname change available in';
 
   @override
   String get editorTitle => 'Route editor';
@@ -715,71 +792,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get historyRenameRouteLabel => 'Name';
 
   @override
-  String get profileTitle => 'My profile';
-
-  @override
-  String get profileNicknameLabel => 'Nickname';
-
-  @override
-  String get profileBioLabel => 'About me';
-
-  @override
-  String get profileBioHint => 'Tell others about yourself…';
-
-  @override
-  String get profileChangeAvatar => 'Change photo';
-
-  @override
-  String get profileSaved => 'Profile saved';
-
-  @override
-  String get profileNicknameCooldown => 'You can change your nickname again in:';
-
-  @override
-  String profileNicknameCooldownDays(int days) {
-    return '$days ${days == 1 ? 'day' : 'days'}';
-  }
-
-  @override
-  String profileNicknameCooldownHours(int hours) {
-    return '$hours ${hours == 1 ? 'hour' : 'hours'}';
-  }
-
-  @override
-  String get profileNicknameRequired => 'Enter a nickname';
-
-  @override
-  String get profileNicknameMinLength => 'Minimum 2 characters';
-
-  @override
-  String get profileNicknameTooLong => 'Maximum 24 characters';
-
-  @override
-  String get profileNicknameUpdated => 'Nickname updated';
-
-  @override
-  String get profileBioUpdated => 'Bio updated';
-
-  @override
-  String get profileAvatarUpdated => 'Photo updated';
-
-  @override
-  String get profileErrorCooldown => 'Wait 3 days between nickname changes.';
-
-  @override
-  String get profileErrorUnexpected => 'Something went wrong. Try again.';
-
-  @override
-  String get loginNicknameHint => 'Nickname';
-
-  @override
-  String get loginNicknameRequired => 'Choose a nickname';
-
-  @override
-  String get loginNicknameMinLength => 'Minimum 2 characters';
-
-  @override
-  String get drawerProfile => 'Profile';
   String get routesTitle => 'My routes';
 
   @override
@@ -807,4 +819,145 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get routesDetailTitle => 'Route detail';
+
+  @override
+  String get navGarage => 'Garage';
+
+  @override
+  String get garageTitle => 'My garage';
+
+  @override
+  String get garageNoVehiclesTitle => 'No vehicles yet';
+
+  @override
+  String get garageNoVehiclesMessage =>
+      'Add your first car, bike, or kart to track which vehicle you use on each session.';
+
+  @override
+  String get garageAddVehicleButton => 'Add vehicle';
+
+  @override
+  String get garageViewList => 'List';
+
+  @override
+  String get garageViewGrid => 'Grid';
+
+  @override
+  String get garageDeleteVehicleTitle => 'Delete vehicle';
+
+  @override
+  String garageDeleteVehicleConfirm(String vehicleName) {
+    return 'Delete \"$vehicleName\"? This cannot be undone.';
+  }
+
+  @override
+  String get garageVehicleSavedSnack => 'Vehicle saved';
+
+  @override
+  String get garageVehicleDeletedSnack => 'Vehicle deleted';
+
+  @override
+  String get garagePhotoUpdated => 'Photo updated';
+
+  @override
+  String get garageErrorUnexpected => 'Something went wrong. Try again.';
+
+  @override
+  String get garageChangePhoto => 'Change photo';
+
+  @override
+  String get vehicleFormTitleNew => 'New vehicle';
+
+  @override
+  String get vehicleFormTitleEdit => 'Edit vehicle';
+
+  @override
+  String get vehicleFormNameLabel => 'Name';
+
+  @override
+  String get vehicleFormNameRequired => 'Enter a name';
+
+  @override
+  String get vehicleFormNameMinLength => 'Minimum 2 characters';
+
+  @override
+  String get vehicleFormTypeLabel => 'Type';
+
+  @override
+  String get vehicleFormModelLabel => 'Model (optional)';
+
+  @override
+  String get vehicleFormYearLabel => 'Year (optional)';
+
+  @override
+  String get vehicleFormHorsepowerLabel => 'Horsepower (optional)';
+
+  @override
+  String get vehicleFormTorqueLabel => 'Torque Nm (optional)';
+
+  @override
+  String get vehicleFormWeightLabel => 'Weight kg (optional)';
+
+  @override
+  String get vehicleFormDrivetrainLabel => 'Drivetrain (optional)';
+
+  @override
+  String get vehicleFormNotesLabel => 'Notes (optional)';
+
+  @override
+  String get vehicleFormNotesHint => 'Tire setup, modifications, etc.';
+
+  @override
+  String get vehicleFormSaveButton => 'Save';
+
+  @override
+  String get vehicleTypeCar => 'Car';
+
+  @override
+  String get vehicleTypeMotorcycle => 'Motorcycle';
+
+  @override
+  String get vehicleTypeBicycle => 'Bicycle';
+
+  @override
+  String get vehicleTypeGoKart => 'Go-kart';
+
+  @override
+  String get vehicleTypeOther => 'Other';
+
+  @override
+  String get drivetrainFront => 'Front-wheel drive';
+
+  @override
+  String get drivetrainRear => 'Rear-wheel drive';
+
+  @override
+  String get drivetrainAllWheel => 'All-wheel drive';
+
+  @override
+  String get vehicleDetailSpecs => 'Specs';
+
+  @override
+  String vehicleDetailHorsepower(int hp) {
+    return '$hp hp';
+  }
+
+  @override
+  String vehicleDetailTorque(int nm) {
+    return '$nm Nm';
+  }
+
+  @override
+  String vehicleDetailWeight(int kg) {
+    return '$kg kg';
+  }
+
+  @override
+  String get vehiclePickerLabel => 'Vehicle';
+
+  @override
+  String get vehiclePickerOnFoot => 'On foot';
+
+  @override
+  String get vehiclePickerSelectVehicle => 'Select a vehicle';
 }

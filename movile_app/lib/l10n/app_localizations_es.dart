@@ -108,6 +108,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get drawerSyncNow => 'Sincronizar ahora';
 
   @override
+  String get drawerProfile => 'Perfil';
+
+  @override
   String get loginBannerDefault => 'Inicia sesión para continuar';
 
   @override
@@ -156,6 +159,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get loginSkipButton => 'Continuar sin cuenta';
 
   @override
+  String get loginNicknameHint => 'Apodo';
+
+  @override
+  String get loginNicknameRequired => 'Introduce un apodo';
+
+  @override
+  String get loginNicknameMinLength => 'Mínimo 2 caracteres';
+
+  @override
   String get loginConfirmationTitle => '¡Revisa tu correo!';
 
   @override
@@ -186,6 +198,72 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get authErrorUnexpected => 'Error inesperado. Inténtalo de nuevo.';
+
+  @override
+  String get profileTitle => 'Perfil';
+
+  @override
+  String get profileAvatarUpdated => 'Avatar actualizado';
+
+  @override
+  String get profileErrorUnexpected =>
+      'No se pudo actualizar el avatar. Inténtalo de nuevo.';
+
+  @override
+  String get profileNicknameUpdated => 'Apodo actualizado';
+
+  @override
+  String get profileErrorCooldown =>
+      'El apodo solo se puede cambiar tras el tiempo de espera.';
+
+  @override
+  String get profileBioUpdated => 'Biografía actualizada';
+
+  @override
+  String get profileChangeAvatar => 'Cambiar avatar';
+
+  @override
+  String get profileNicknameLabel => 'Apodo';
+
+  @override
+  String get profileNicknameRequired => 'Introduce un apodo';
+
+  @override
+  String get profileNicknameMinLength => 'Mínimo 2 caracteres';
+
+  @override
+  String get profileNicknameTooLong => 'Máximo 30 caracteres';
+
+  @override
+  String get profileBioLabel => 'Biografía';
+
+  @override
+  String get profileBioHint => 'Cuenta algo sobre ti';
+
+  @override
+  String profileNicknameCooldownDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days días',
+      one: '1 día',
+    );
+    return '$_temp0 hasta el próximo cambio';
+  }
+
+  @override
+  String profileNicknameCooldownHours(int hours) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: '$hours horas',
+      one: '1 hora',
+    );
+    return '$_temp0 hasta el próximo cambio';
+  }
+
+  @override
+  String get profileNicknameCooldown => 'Cambio de apodo disponible en';
 
   @override
   String get editorTitle => 'Editor de rutas';
@@ -716,71 +794,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get historyRenameRouteLabel => 'Nombre';
 
   @override
-  String get profileTitle => 'Mi perfil';
-
-  @override
-  String get profileNicknameLabel => 'Apodo';
-
-  @override
-  String get profileBioLabel => 'Sobre mí';
-
-  @override
-  String get profileBioHint => 'Cuéntanos sobre ti…';
-
-  @override
-  String get profileChangeAvatar => 'Cambiar foto';
-
-  @override
-  String get profileSaved => 'Perfil guardado';
-
-  @override
-  String get profileNicknameCooldown => 'Puedes cambiar tu apodo de nuevo en:';
-
-  @override
-  String profileNicknameCooldownDays(int days) {
-    return '$days ${days == 1 ? 'día' : 'días'}';
-  }
-
-  @override
-  String profileNicknameCooldownHours(int hours) {
-    return '$hours ${hours == 1 ? 'hora' : 'horas'}';
-  }
-
-  @override
-  String get profileNicknameRequired => 'Introduce un apodo';
-
-  @override
-  String get profileNicknameMinLength => 'Mínimo 2 caracteres';
-
-  @override
-  String get profileNicknameTooLong => 'Máximo 24 caracteres';
-
-  @override
-  String get profileNicknameUpdated => 'Apodo actualizado';
-
-  @override
-  String get profileBioUpdated => 'Descripción actualizada';
-
-  @override
-  String get profileAvatarUpdated => 'Foto actualizada';
-
-  @override
-  String get profileErrorCooldown => 'Espera 3 días entre cambios de apodo.';
-
-  @override
-  String get profileErrorUnexpected => 'Algo salió mal. Inténtalo de nuevo.';
-
-  @override
-  String get loginNicknameHint => 'Apodo';
-
-  @override
-  String get loginNicknameRequired => 'Elige un apodo';
-
-  @override
-  String get loginNicknameMinLength => 'Mínimo 2 caracteres';
-
-  @override
-  String get drawerProfile => 'Perfil';
   String get routesTitle => 'Mis rutas';
 
   @override
@@ -808,4 +821,145 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get routesDetailTitle => 'Detalle de ruta';
+
+  @override
+  String get navGarage => 'Garaje';
+
+  @override
+  String get garageTitle => 'Mi garaje';
+
+  @override
+  String get garageNoVehiclesTitle => 'No hay vehículos';
+
+  @override
+  String get garageNoVehiclesMessage =>
+      'Añade tu primer coche, moto o kart para registrar con qué vehículo corres cada sesión.';
+
+  @override
+  String get garageAddVehicleButton => 'Añadir vehículo';
+
+  @override
+  String get garageViewList => 'Lista';
+
+  @override
+  String get garageViewGrid => 'Mosaico';
+
+  @override
+  String get garageDeleteVehicleTitle => 'Eliminar vehículo';
+
+  @override
+  String garageDeleteVehicleConfirm(String vehicleName) {
+    return '¿Eliminar \"$vehicleName\"? Esta acción no se puede deshacer.';
+  }
+
+  @override
+  String get garageVehicleSavedSnack => 'Vehículo guardado';
+
+  @override
+  String get garageVehicleDeletedSnack => 'Vehículo eliminado';
+
+  @override
+  String get garagePhotoUpdated => 'Foto actualizada';
+
+  @override
+  String get garageErrorUnexpected => 'Algo salió mal. Inténtalo de nuevo.';
+
+  @override
+  String get garageChangePhoto => 'Cambiar foto';
+
+  @override
+  String get vehicleFormTitleNew => 'Nuevo vehículo';
+
+  @override
+  String get vehicleFormTitleEdit => 'Editar vehículo';
+
+  @override
+  String get vehicleFormNameLabel => 'Nombre';
+
+  @override
+  String get vehicleFormNameRequired => 'Introduce un nombre';
+
+  @override
+  String get vehicleFormNameMinLength => 'Mínimo 2 caracteres';
+
+  @override
+  String get vehicleFormTypeLabel => 'Tipo';
+
+  @override
+  String get vehicleFormModelLabel => 'Modelo (opcional)';
+
+  @override
+  String get vehicleFormYearLabel => 'Año (opcional)';
+
+  @override
+  String get vehicleFormHorsepowerLabel => 'Caballos (opcional)';
+
+  @override
+  String get vehicleFormTorqueLabel => 'Par motor Nm (opcional)';
+
+  @override
+  String get vehicleFormWeightLabel => 'Peso kg (opcional)';
+
+  @override
+  String get vehicleFormDrivetrainLabel => 'Tracción (opcional)';
+
+  @override
+  String get vehicleFormNotesLabel => 'Notas (opcional)';
+
+  @override
+  String get vehicleFormNotesHint => 'Neumáticos, modificaciones, etc.';
+
+  @override
+  String get vehicleFormSaveButton => 'Guardar';
+
+  @override
+  String get vehicleTypeCar => 'Coche';
+
+  @override
+  String get vehicleTypeMotorcycle => 'Moto';
+
+  @override
+  String get vehicleTypeBicycle => 'Bicicleta';
+
+  @override
+  String get vehicleTypeGoKart => 'Kart';
+
+  @override
+  String get vehicleTypeOther => 'Otro';
+
+  @override
+  String get drivetrainFront => 'Tracción delantera';
+
+  @override
+  String get drivetrainRear => 'Tracción trasera';
+
+  @override
+  String get drivetrainAllWheel => 'Tracción total';
+
+  @override
+  String get vehicleDetailSpecs => 'Especificaciones';
+
+  @override
+  String vehicleDetailHorsepower(int hp) {
+    return '$hp cv';
+  }
+
+  @override
+  String vehicleDetailTorque(int nm) {
+    return '$nm Nm';
+  }
+
+  @override
+  String vehicleDetailWeight(int kg) {
+    return '$kg kg';
+  }
+
+  @override
+  String get vehiclePickerLabel => 'Vehículo';
+
+  @override
+  String get vehiclePickerOnFoot => 'A pie';
+
+  @override
+  String get vehiclePickerSelectVehicle => 'Selecciona un vehículo';
 }
