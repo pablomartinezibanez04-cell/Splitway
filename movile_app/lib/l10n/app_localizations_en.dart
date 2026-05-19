@@ -345,6 +345,18 @@ class AppLocalizationsEn extends AppLocalizations {
       'Could not reach the server to snap the route to roads. Showing straight segments until the connection is restored.';
 
   @override
+  String get editorRoutingProfileTooltip => 'Routing mode';
+
+  @override
+  String get editorRoutingProfileDriving => 'Road';
+
+  @override
+  String get editorRoutingProfileWalking => 'Trail';
+
+  @override
+  String get editorRoutingProfileCycling => 'Cycling';
+
+  @override
   String get editorNewRouteDialogTitle => 'New route';
 
   @override

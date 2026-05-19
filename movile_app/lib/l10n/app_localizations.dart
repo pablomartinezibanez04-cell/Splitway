@@ -686,6 +686,30 @@ abstract class AppLocalizations {
   /// **'Could not reach the server to snap the route to roads. Showing straight segments until the connection is restored.'**
   String get editorSnapFailedMessage;
 
+  /// No description provided for @editorRoutingProfileTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Routing mode'**
+  String get editorRoutingProfileTooltip;
+
+  /// No description provided for @editorRoutingProfileDriving.
+  ///
+  /// In en, this message translates to:
+  /// **'Road'**
+  String get editorRoutingProfileDriving;
+
+  /// No description provided for @editorRoutingProfileWalking.
+  ///
+  /// In en, this message translates to:
+  /// **'Trail'**
+  String get editorRoutingProfileWalking;
+
+  /// No description provided for @editorRoutingProfileCycling.
+  ///
+  /// In en, this message translates to:
+  /// **'Cycling'**
+  String get editorRoutingProfileCycling;
+
   /// No description provided for @editorNewRouteDialogTitle.
   ///
   /// In en, this message translates to:
