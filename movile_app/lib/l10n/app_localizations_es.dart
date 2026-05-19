@@ -699,4 +699,71 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get historyRenameRouteLabel => 'Nombre';
+
+  @override
+  String get profileTitle => 'Mi perfil';
+
+  @override
+  String get profileNicknameLabel => 'Apodo';
+
+  @override
+  String get profileBioLabel => 'Sobre mí';
+
+  @override
+  String get profileBioHint => 'Cuéntanos sobre ti…';
+
+  @override
+  String get profileChangeAvatar => 'Cambiar foto';
+
+  @override
+  String get profileSaved => 'Perfil guardado';
+
+  @override
+  String get profileNicknameCooldown => 'Puedes cambiar tu apodo de nuevo en:';
+
+  @override
+  String profileNicknameCooldownDays(int days) {
+    return '$days ${days == 1 ? 'día' : 'días'}';
+  }
+
+  @override
+  String profileNicknameCooldownHours(int hours) {
+    return '$hours ${hours == 1 ? 'hora' : 'horas'}';
+  }
+
+  @override
+  String get profileNicknameRequired => 'Introduce un apodo';
+
+  @override
+  String get profileNicknameMinLength => 'Mínimo 2 caracteres';
+
+  @override
+  String get profileNicknameTooLong => 'Máximo 24 caracteres';
+
+  @override
+  String get profileNicknameUpdated => 'Apodo actualizado';
+
+  @override
+  String get profileBioUpdated => 'Descripción actualizada';
+
+  @override
+  String get profileAvatarUpdated => 'Foto actualizada';
+
+  @override
+  String get profileErrorCooldown => 'Espera 3 días entre cambios de apodo.';
+
+  @override
+  String get profileErrorUnexpected => 'Algo salió mal. Inténtalo de nuevo.';
+
+  @override
+  String get loginNicknameHint => 'Apodo';
+
+  @override
+  String get loginNicknameRequired => 'Elige un apodo';
+
+  @override
+  String get loginNicknameMinLength => 'Mínimo 2 caracteres';
+
+  @override
+  String get drawerProfile => 'Perfil';
 }

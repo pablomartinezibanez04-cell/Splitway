@@ -698,4 +698,71 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get historyRenameRouteLabel => 'Name';
+
+  @override
+  String get profileTitle => 'My profile';
+
+  @override
+  String get profileNicknameLabel => 'Nickname';
+
+  @override
+  String get profileBioLabel => 'About me';
+
+  @override
+  String get profileBioHint => 'Tell others about yourself…';
+
+  @override
+  String get profileChangeAvatar => 'Change photo';
+
+  @override
+  String get profileSaved => 'Profile saved';
+
+  @override
+  String get profileNicknameCooldown => 'You can change your nickname again in:';
+
+  @override
+  String profileNicknameCooldownDays(int days) {
+    return '$days ${days == 1 ? 'day' : 'days'}';
+  }
+
+  @override
+  String profileNicknameCooldownHours(int hours) {
+    return '$hours ${hours == 1 ? 'hour' : 'hours'}';
+  }
+
+  @override
+  String get profileNicknameRequired => 'Enter a nickname';
+
+  @override
+  String get profileNicknameMinLength => 'Minimum 2 characters';
+
+  @override
+  String get profileNicknameTooLong => 'Maximum 24 characters';
+
+  @override
+  String get profileNicknameUpdated => 'Nickname updated';
+
+  @override
+  String get profileBioUpdated => 'Bio updated';
+
+  @override
+  String get profileAvatarUpdated => 'Photo updated';
+
+  @override
+  String get profileErrorCooldown => 'Wait 3 days between nickname changes.';
+
+  @override
+  String get profileErrorUnexpected => 'Something went wrong. Try again.';
+
+  @override
+  String get loginNicknameHint => 'Nickname';
+
+  @override
+  String get loginNicknameRequired => 'Choose a nickname';
+
+  @override
+  String get loginNicknameMinLength => 'Minimum 2 characters';
+
+  @override
+  String get drawerProfile => 'Profile';
 }

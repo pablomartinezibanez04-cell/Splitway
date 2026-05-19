@@ -1285,6 +1285,33 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Name'**
   String get historyRenameRouteLabel;
+
+  // Profile
+  String get profileTitle;
+  String get profileNicknameLabel;
+  String get profileBioLabel;
+  String get profileBioHint;
+  String get profileChangeAvatar;
+  String get profileSaved;
+  String get profileNicknameCooldown;
+  String profileNicknameCooldownDays(int days);
+  String profileNicknameCooldownHours(int hours);
+  String get profileNicknameRequired;
+  String get profileNicknameMinLength;
+  String get profileNicknameTooLong;
+  String get profileNicknameUpdated;
+  String get profileBioUpdated;
+  String get profileAvatarUpdated;
+  String get profileErrorCooldown;
+  String get profileErrorUnexpected;
+
+  // Signup nickname
+  String get loginNicknameHint;
+  String get loginNicknameRequired;
+  String get loginNicknameMinLength;
+
+  // Drawer
+  String get drawerProfile;
 }
 
 class _AppLocalizationsDelegate
