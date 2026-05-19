@@ -10,6 +10,8 @@ import 'data/repositories/supabase_repository.dart';
 import 'routing/app_router.dart';
 import 'services/auth/auth_service.dart';
 import 'services/locale/locale_controller.dart';
+import 'data/repositories/profile_repository.dart';
+import 'services/profile/profile_service.dart';
 import 'services/sync/sync_service.dart';
 
 class SplitwayApp extends StatefulWidget {
@@ -33,6 +35,7 @@ class _SplitwayAppState extends State<SplitwayApp> {
   late final AppRouter _router;
   AuthService? _authService;
   SyncService? _syncService;
+  ProfileService? _profileService;
 
   @override
   void initState() {
@@ -46,6 +49,7 @@ class _SplitwayAppState extends State<SplitwayApp> {
       if (client.auth.currentUser != null) {
         _repository.userId = client.auth.currentUser!.id;
         _createSyncService(client);
+        _createProfileService(client, updateRouter: false);
       }
     }
 
@@ -54,6 +58,7 @@ class _SplitwayAppState extends State<SplitwayApp> {
       config: widget.config,
       authService: _authService,
       syncService: _syncService,
+      profileService: _profileService,
       localeController: widget.localeController,
     );
   }
@@ -65,11 +70,18 @@ class _SplitwayAppState extends State<SplitwayApp> {
       _repository.userId = Supabase.instance.client.auth.currentUser?.id;
       _createSyncService(Supabase.instance.client);
       _router.syncService = _syncService;
+      if (_profileService == null && widget.config.hasSupabase) {
+        _createProfileService(Supabase.instance.client);
+      }
     } else if (!isLoggedIn && _syncService != null) {
       _syncService!.stopPeriodicSync();
       _syncService!.dispose();
       _syncService = null;
       _router.syncService = null;
+      _profileService?.clear();
+      _profileService?.dispose();
+      _profileService = null;
+      _router.profileService = null;
       _repository.userId = null;
     }
   }
@@ -82,11 +94,25 @@ class _SplitwayAppState extends State<SplitwayApp> {
     _syncService!.startPeriodicSync();
   }
 
+  void _createProfileService(SupabaseClient client, {bool updateRouter = true}) {
+    final repo = ProfileRepository(client);
+    _profileService = ProfileService(repo);
+    if (updateRouter) _router.profileService = _profileService;
+
+    final user = client.auth.currentUser;
+    final nickname = user?.userMetadata?['nickname'] as String? ??
+        user?.userMetadata?['full_name'] as String? ??
+        user?.email?.split('@').first ??
+        'User';
+    _profileService!.ensureProfile(fallbackNickname: nickname);
+  }
+
   @override
   void dispose() {
     _authService?.removeListener(_onAuthStateChanged);
     _authService?.dispose();
     _syncService?.dispose();
+    _profileService?.dispose();
     _router.dispose();
     _repository.dispose();
     widget.database.close();

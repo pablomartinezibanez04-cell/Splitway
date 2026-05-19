@@ -17,6 +17,8 @@ import '../services/auth/auth_service.dart';
 import '../services/locale/locale_controller.dart';
 import '../services/geocoding/reverse_geocoding_service.dart';
 import '../services/routing/routing_service.dart';
+import '../features/profile/profile_screen.dart';
+import '../services/profile/profile_service.dart';
 import '../services/sync/sync_service.dart';
 
 class AppRouter {
@@ -25,7 +27,8 @@ class AppRouter {
     required this.config,
     required this.localeController,
     this.authService,
-    this.syncService,
+    SyncService? syncService,
+    ProfileService? profileService,
   })  : _editorController = RouteEditorController(
           repository,
           routingService: config.hasMapbox
@@ -36,7 +39,10 @@ class AppRouter {
               : null,
         ),
         _sessionController = LiveSessionController(repository),
-        _freeRideController = FreeRideController(repository);
+        _freeRideController = FreeRideController(repository) {
+    if (syncService != null) this.syncService = syncService;
+    if (profileService != null) this.profileService = profileService;
+  }
 
   final LocalDraftRepository repository;
   final AppConfig config;
@@ -45,6 +51,7 @@ class AppRouter {
 
   /// Mutable so [SplitwayApp] can attach/detach after login/logout.
   SyncService? syncService;
+  ProfileService? profileService;
 
   final RouteEditorController _editorController;
   final LiveSessionController _sessionController;
@@ -72,12 +79,20 @@ class AppRouter {
         builder: (_, __) => SettingsScreen(localeController: localeController),
       ),
 
+      GoRoute(
+        path: '/profile',
+        builder: (_, __) => ProfileScreen(
+          profileService: profileService!,
+        ),
+      ),
+
       // Main tabbed shell.
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => HomeShell(
           shell: shell,
           authService: authService,
           syncService: syncService,
+          profileService: profileService,
         ),
         branches: [
           StatefulShellBranch(

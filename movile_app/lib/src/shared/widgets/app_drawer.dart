@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:splitway_mobile/l10n/app_localizations.dart';
 
 import '../../services/auth/auth_service.dart';
+import '../../services/profile/profile_service.dart';
 import '../../services/sync/sync_service.dart';
 
 /// Dark-minimal drawer for Splitway.
@@ -14,11 +15,13 @@ class AppDrawer extends StatelessWidget {
     super.key,
     required this.authService,
     this.syncService,
+    this.profileService,
     required this.onLoginTap,
   });
 
   final AuthService authService;
   final SyncService? syncService;
+  final ProfileService? profileService;
   final VoidCallback onLoginTap;
 
   @override
@@ -30,6 +33,7 @@ class AppDrawer extends StatelessWidget {
             ? _LoggedInContent(
                 authService: authService,
                 syncService: syncService,
+                profileService: profileService,
               )
             : _LoggedOutContent(onLoginTap: onLoginTap),
       ),
@@ -45,17 +49,21 @@ class _LoggedInContent extends StatelessWidget {
   const _LoggedInContent({
     required this.authService,
     this.syncService,
+    this.profileService,
   });
 
   final AuthService authService;
   final SyncService? syncService;
+  final ProfileService? profileService;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final user = authService.currentUser!;
     final initials = _initials(user);
-    final displayName = user.userMetadata?['full_name'] as String? ??
+    final profile = profileService?.profile;
+    final displayName = profile?.nickname ??
+        user.userMetadata?['full_name'] as String? ??
         user.email ??
         l.drawerDefaultUser;
     final email = user.email ?? '';
@@ -75,23 +83,33 @@ class _LoggedInContent extends StatelessWidget {
               Container(
                 width: 36,
                 height: 36,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF1565C0), Color(0xFF42A5F5)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                decoration: BoxDecoration(
+                  gradient: profile?.avatarUrl == null
+                      ? const LinearGradient(
+                          colors: [Color(0xFF1565C0), Color(0xFF42A5F5)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        )
+                      : null,
                   shape: BoxShape.circle,
+                  image: profile?.avatarUrl != null
+                      ? DecorationImage(
+                          image: NetworkImage(profile!.avatarUrl!),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
                 ),
                 alignment: Alignment.center,
-                child: Text(
-                  initials,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                child: profile?.avatarUrl == null
+                    ? Text(
+                        initials,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      )
+                    : null,
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -143,6 +161,14 @@ class _LoggedInContent extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
             children: [
+              _MenuItem(
+                icon: Icons.person_outline,
+                label: l.drawerProfile,
+                onTap: () {
+                  Navigator.pop(context);
+                  context.push('/profile');
+                },
+              ),
               _MenuItem(
                 icon: Icons.settings_outlined,
                 label: l.drawerSettings,

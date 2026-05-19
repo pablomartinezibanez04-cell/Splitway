@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:splitway_mobile/l10n/app_localizations.dart';
 
 import '../../services/auth/auth_service.dart';
+import '../../services/profile/profile_service.dart';
 import '../../services/sync/sync_service.dart';
 import '../../shared/widgets/app_drawer.dart';
 import '../auth/login_screen.dart';
@@ -19,11 +20,13 @@ class HomeShell extends StatelessWidget {
     required this.shell,
     this.authService,
     this.syncService,
+    this.profileService,
   });
 
   final StatefulNavigationShell shell;
   final AuthService? authService;
   final SyncService? syncService;
+  final ProfileService? profileService;
 
   @override
   Widget build(BuildContext context) {
@@ -41,6 +44,7 @@ class HomeShell extends StatelessWidget {
           ? AppDrawer(
               authService: authService!,
               syncService: syncService,
+              profileService: profileService,
               onLoginTap: () {
                 Navigator.pop(context); // close drawer
                 _navigateToLogin(context);
