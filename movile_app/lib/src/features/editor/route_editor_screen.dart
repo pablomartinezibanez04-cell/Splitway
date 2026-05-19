@@ -373,10 +373,20 @@ class _DrawingViewState extends State<_DrawingView> {
                 Positioned(
                   right: 12,
                   bottom: 12,
-                  child: FloatingActionButton.small(
-                    heroTag: 'center_on_user',
-                    onPressed: _centerOnUser,
-                    child: const Icon(Icons.my_location),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _RoutingProfileFab(
+                        profile: controller.routingProfile,
+                        onChanged: (p) => controller.routingProfile = p,
+                      ),
+                      const SizedBox(width: 12),
+                      FloatingActionButton.small(
+                        heroTag: 'center_on_user',
+                        onPressed: _centerOnUser,
+                        child: const Icon(Icons.my_location),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -542,6 +552,68 @@ class _InfoBanner extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _RoutingProfileFab extends StatelessWidget {
+  const _RoutingProfileFab({
+    required this.profile,
+    required this.onChanged,
+  });
+
+  final String profile;
+  final ValueChanged<String> onChanged;
+
+  static const _profiles = [
+    ('driving', Icons.directions_car),
+    ('walking', Icons.directions_walk),
+    ('cycling', Icons.directions_bike),
+  ];
+
+  IconData get _activeIcon =>
+      _profiles.firstWhere((p) => p.$1 == profile).$2;
+
+  String _label(AppLocalizations l, String key) => switch (key) {
+        'driving' => l.editorRoutingProfileDriving,
+        'walking' => l.editorRoutingProfileWalking,
+        'cycling' => l.editorRoutingProfileCycling,
+        _ => key,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    return PopupMenuButton<String>(
+      onSelected: onChanged,
+      tooltip: l.editorRoutingProfileTooltip,
+      position: PopupMenuPosition.over,
+      offset: const Offset(0, -160),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      itemBuilder: (_) => [
+        for (final (key, icon) in _profiles)
+          PopupMenuItem<String>(
+            value: key,
+            child: Row(
+              children: [
+                Icon(icon, color: key == profile
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurfaceVariant),
+                const SizedBox(width: 12),
+                Expanded(child: Text(_label(l, key))),
+                if (key == profile)
+                  Icon(Icons.check, size: 18, color: theme.colorScheme.primary),
+              ],
+            ),
+          ),
+      ],
+      child: FloatingActionButton.small(
+        heroTag: 'routing_profile',
+        onPressed: null,
+        backgroundColor: theme.colorScheme.primaryContainer,
+        child: Icon(_activeIcon, color: theme.colorScheme.onPrimaryContainer),
       ),
     );
   }
