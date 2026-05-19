@@ -121,7 +121,12 @@ class SyncService extends ChangeNotifier {
       if (route.id == 'demo-oval') continue; // never push demo route
       final remoteUpdated = remoteRouteTs[route.id];
       if (remoteUpdated == null || route.createdAt.isAfter(remoteUpdated)) {
-        await remote.upsertRoute(route);
+        final updated = await remote.upsertRoute(route);
+        // Persist generated thumbnail URL back to local DB
+        if (updated.thumbnailUrl != null &&
+            updated.thumbnailUrl != route.thumbnailUrl) {
+          await local.saveRouteTemplate(updated);
+        }
         transferred++;
       }
     }
