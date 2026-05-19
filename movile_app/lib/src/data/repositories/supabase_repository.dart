@@ -1,7 +1,9 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:splitway_core/splitway_core.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/route_thumbnail_service.dart';
 
 /// Remote repository backed by Supabase Postgres + RLS.
 /// Each row has an `owner_id` populated from the current [User].
@@ -11,16 +13,31 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 /// - Pulling remote data that may have been created on another device.
 /// - Last-write-wins conflict resolution via `updated_at`.
 class SupabaseRepository {
-  SupabaseRepository(this._client);
+  SupabaseRepository(this._client, {this.thumbnailService});
 
   final SupabaseClient _client;
+  final RouteThumbnailService? thumbnailService;
 
   String get _uid => _client.auth.currentUser!.id;
 
   // ---------- Routes ----------
 
   /// Upserts a route template (with sectors) to Supabase.
-  Future<void> upsertRoute(RouteTemplate route) async {
+  /// If [thumbnailUrl] is null and [thumbnailService] is configured,
+  /// generates a thumbnail before upserting. Returns the (possibly updated)
+  /// route.
+  Future<RouteTemplate> upsertRoute(RouteTemplate route) async {
+    // Generate thumbnail if missing and service is available
+    if (route.thumbnailUrl == null && thumbnailService != null) {
+      try {
+        final url = await thumbnailService!.generate(route, _uid);
+        route = route.copyWith(thumbnailUrl: url);
+      } catch (e) {
+        // Log but continue — route sync must not fail because of thumbnail
+        debugPrint('Thumbnail generation failed: $e');
+      }
+    }
+
     await _client.from('route_templates').upsert({
       'id': route.id,
       'owner_id': _uid,
@@ -31,6 +48,7 @@ class SupabaseRepository {
       'difficulty': route.difficulty.id,
       'created_at': route.createdAt.toUtc().toIso8601String(),
       'updated_at': DateTime.now().toUtc().toIso8601String(),
+      'thumbnail_url': route.thumbnailUrl,
     });
 
     // Delete old sectors and re-insert
@@ -46,6 +64,8 @@ class SupabaseRepository {
         }).toList(),
       );
     }
+
+    return route;
   }
 
   /// Fetches all routes belonging to the current user.
@@ -320,6 +340,7 @@ class SupabaseRepository {
       sectors: sectors,
       difficulty: RouteDifficultyX.fromId(row['difficulty'] as String),
       createdAt: DateTime.parse(row['created_at'] as String).toLocal(),
+      thumbnailUrl: row['thumbnail_url'] as String?,
     );
   }
 
