@@ -51,6 +51,7 @@ String _localizedAuthError(AppLocalizations l, AuthErrorCode code) {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
+  final _nicknameCtrl = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
   bool _isSignUp = false;
@@ -67,6 +68,7 @@ class _LoginScreenState extends State<LoginScreen> {
     widget.authService.removeListener(_onAuthChanged);
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
+    _nicknameCtrl.dispose();
     super.dispose();
   }
 
@@ -98,7 +100,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final bool success;
     if (_isSignUp) {
-      success = await widget.authService.signUpWithEmail(email, password);
+      final nickname = _nicknameCtrl.text.trim();
+      success = await widget.authService.signUpWithEmail(
+        email,
+        password,
+        nickname: nickname.isNotEmpty ? nickname : null,
+      );
       // Show "check your inbox" dialog if confirmation email was sent.
       if (!success &&
           widget.authService.pendingEmailConfirmation &&
@@ -291,6 +298,25 @@ class _LoginScreenState extends State<LoginScreen> {
                             ],
                           ),
                           const SizedBox(height: 16),
+
+                          // Nickname field (signup only)
+                          if (_isSignUp) ...[
+                            TextFormField(
+                              controller: _nicknameCtrl,
+                              style: const TextStyle(color: Colors.white),
+                              decoration: _inputDecoration(l.loginNicknameHint),
+                              validator: (v) {
+                                if (v == null || v.trim().isEmpty) {
+                                  return l.loginNicknameRequired;
+                                }
+                                if (v.trim().length < 2) {
+                                  return l.loginNicknameMinLength;
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 10),
+                          ],
 
                           // Email field
                           TextFormField(

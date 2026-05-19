@@ -128,7 +128,11 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  Future<bool> signUpWithEmail(String email, String password) async {
+  Future<bool> signUpWithEmail(
+    String email,
+    String password, {
+    String? nickname,
+  }) async {
     _loading = true;
     _errorCode = null;
     notifyListeners();
@@ -137,6 +141,7 @@ class AuthService extends ChangeNotifier {
       final response = await _client.auth.signUp(
         email: email,
         password: password,
+        data: nickname != null ? {'nickname': nickname} : null,
       );
       // When email enumeration protection is ON, Supabase returns
       // session=null for BOTH new users and duplicate emails.
