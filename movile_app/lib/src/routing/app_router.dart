@@ -12,8 +12,10 @@ import '../features/free_ride/free_ride_controller.dart';
 import '../features/free_ride/free_ride_screen.dart';
 import '../features/session/live_session_controller.dart';
 import '../features/session/live_session_screen.dart';
+import '../features/garage/garage_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../services/auth/auth_service.dart';
+import '../services/garage/garage_service.dart';
 import '../services/locale/locale_controller.dart';
 import '../services/geocoding/reverse_geocoding_service.dart';
 import '../services/routing/routing_service.dart';
@@ -29,6 +31,7 @@ class AppRouter {
     this.authService,
     SyncService? syncService,
     ProfileService? profileService,
+    GarageService? garageService,
   })  : _editorController = RouteEditorController(
           repository,
           routingService: config.hasMapbox
@@ -42,29 +45,15 @@ class AppRouter {
         _freeRideController = FreeRideController(repository) {
     if (syncService != null) this.syncService = syncService;
     if (profileService != null) this.profileService = profileService;
-  }) {
-    _editorController = RouteEditorController(
-      repository,
-      routingService: config.hasMapbox
-          ? RoutingService(mapboxToken: config.mapboxToken!)
-          : null,
-      geocodingService: config.hasMapbox
-          ? ReverseGeocodingService(accessToken: config.mapboxToken!)
-          : null,
-    );
-    _sessionController = LiveSessionController(repository);
-    _freeRideController = FreeRideController(repository);
-    if (syncService != null) this.syncService = syncService;
+    if (garageService != null) this.garageService = garageService;
   }
 
   final LocalDraftRepository repository;
   final AppConfig config;
   final LocaleController localeController;
   final AuthService? authService;
-
-  /// Mutable so [SplitwayApp] can attach/detach after login/logout.
-  SyncService? syncService;
   ProfileService? profileService;
+  GarageService? garageService;
   late final RouteEditorController _editorController;
   late final LiveSessionController _sessionController;
   late final FreeRideController _freeRideController;
@@ -125,6 +114,20 @@ class AppRouter {
                   controller: _editorController,
                   config: config,
                   authService: authService,
+                  profileService: profileService,
+                ),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/garage',
+                builder: (_, __) => GarageScreen(
+                  garageService: garageService!,
+                  config: config,
+                  authService: authService,
+                  profileService: profileService,
                 ),
               ),
             ],
@@ -137,6 +140,7 @@ class AppRouter {
                   controller: _sessionController,
                   config: config,
                   authService: authService,
+                  profileService: profileService,
                 ),
               ),
             ],
@@ -149,6 +153,7 @@ class AppRouter {
                   controller: _freeRideController,
                   config: config,
                   authService: authService,
+                  profileService: profileService,
                 ),
               ),
             ],
@@ -161,6 +166,7 @@ class AppRouter {
                   repository: repository,
                   config: config,
                   authService: authService,
+                  profileService: profileService,
                 ),
               ),
             ],

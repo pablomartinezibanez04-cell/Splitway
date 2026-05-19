@@ -30,12 +30,16 @@ class HomeShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return authService != null
-        ? ListenableBuilder(
-            listenable: authService!,
-            builder: (context, _) => _buildScaffold(context),
-          )
-        : _buildScaffold(context);
+    if (authService == null) return _buildScaffold(context);
+
+    final listenable = profileService != null
+        ? Listenable.merge([authService!, profileService!])
+        : authService!;
+
+    return ListenableBuilder(
+      listenable: listenable,
+      builder: (context, _) => _buildScaffold(context),
+    );
   }
 
   Widget _buildScaffold(BuildContext context) {
@@ -63,6 +67,11 @@ class HomeShell extends StatelessWidget {
             icon: const Icon(Icons.route_outlined),
             selectedIcon: const Icon(Icons.route),
             label: AppLocalizations.of(context).navRoutes,
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.garage_outlined),
+            selectedIcon: const Icon(Icons.garage),
+            label: AppLocalizations.of(context).navGarage,
           ),
           NavigationDestination(
             icon: const Icon(Icons.play_circle_outline),
@@ -101,11 +110,16 @@ class HomeShell extends StatelessWidget {
 ///
 /// **Important**: [context] must be the State's build context (above the
 /// inner Scaffold), not a context from within the AppBar.
-Widget? buildDrawerLeading(BuildContext context, AuthService? authService) {
+Widget? buildDrawerLeading(
+  BuildContext context,
+  AuthService? authService,
+  ProfileService? profileService,
+) {
   if (authService == null) return null;
 
   final user = authService.currentUser;
   final isLoggedIn = user != null;
+  final avatarUrl = profileService?.profile?.avatarUrl;
 
   return IconButton(
     tooltip: AppLocalizations.of(context).drawerMenu,
@@ -113,14 +127,18 @@ Widget? buildDrawerLeading(BuildContext context, AuthService? authService) {
         ? CircleAvatar(
             radius: 14,
             backgroundColor: const Color(0xFF1565C0),
-            child: Text(
-              _userInitials(user),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            backgroundImage:
+                avatarUrl != null ? NetworkImage(avatarUrl) : null,
+            child: avatarUrl == null
+                ? Text(
+                    _userInitials(user),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  )
+                : null,
           )
         : const Icon(Icons.menu),
     onPressed: () => Scaffold.of(context).openDrawer(),

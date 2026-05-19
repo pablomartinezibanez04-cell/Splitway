@@ -11,7 +11,9 @@ import 'data/services/route_thumbnail_service.dart';
 import 'routing/app_router.dart';
 import 'services/auth/auth_service.dart';
 import 'services/locale/locale_controller.dart';
+import 'data/repositories/garage_repository.dart';
 import 'data/repositories/profile_repository.dart';
+import 'services/garage/garage_service.dart';
 import 'services/profile/profile_service.dart';
 import 'services/sync/sync_service.dart';
 
@@ -37,6 +39,7 @@ class _SplitwayAppState extends State<SplitwayApp> {
   AuthService? _authService;
   SyncService? _syncService;
   ProfileService? _profileService;
+  GarageService? _garageService;
 
   @override
   void initState() {
@@ -60,6 +63,7 @@ class _SplitwayAppState extends State<SplitwayApp> {
       authService: _authService,
       syncService: _syncService,
       profileService: _profileService,
+      garageService: _garageService,
       localeController: widget.localeController,
     );
   }
@@ -83,6 +87,10 @@ class _SplitwayAppState extends State<SplitwayApp> {
       _profileService?.dispose();
       _profileService = null;
       _router.profileService = null;
+      _garageService?.clear();
+      _garageService?.dispose();
+      _garageService = null;
+      _router.garageService = null;
       _repository.userId = null;
     }
   }
@@ -114,6 +122,11 @@ class _SplitwayAppState extends State<SplitwayApp> {
         user?.email?.split('@').first ??
         'User';
     _profileService!.ensureProfile(fallbackNickname: nickname);
+
+    final garageRepo = GarageRepository(client);
+    _garageService = GarageService(garageRepo);
+    if (updateRouter) _router.garageService = _garageService;
+    _garageService!.loadVehicles();
   }
 
   @override
@@ -122,6 +135,7 @@ class _SplitwayAppState extends State<SplitwayApp> {
     _authService?.dispose();
     _syncService?.dispose();
     _profileService?.dispose();
+    _garageService?.dispose();
     _router.dispose();
     _repository.dispose();
     widget.database.close();
