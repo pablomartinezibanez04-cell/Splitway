@@ -7,6 +7,7 @@ import '../../routing/app_router.dart';
 import '../../services/auth/auth_service.dart';
 import '../../services/garage/garage_service.dart';
 import '../../services/profile/profile_service.dart';
+import '../../services/settings/app_settings_controller.dart';
 import '../../services/tracking/live_tracking_controller.dart';
 import '../../shared/widgets/vehicle_picker_tile.dart';
 import '../../services/tracking/location_service.dart';
@@ -21,6 +22,7 @@ class LiveSessionScreen extends StatefulWidget {
     super.key,
     required this.controller,
     required this.config,
+    required this.settingsController,
     this.authService,
     this.profileService,
     this.garageService,
@@ -28,6 +30,7 @@ class LiveSessionScreen extends StatefulWidget {
 
   final LiveSessionController controller;
   final AppConfig config;
+  final AppSettingsController settingsController;
   final AuthService? authService;
   final ProfileService? profileService;
   final GarageService? garageService;
@@ -54,25 +57,47 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
 
   void _onChange() => setState(() {});
 
+  String _speedLabel(AppLocalizations l, double mps) {
+    final v = Formatters.speedMps(mps, unit: widget.settingsController.unitSystem);
+    return widget.settingsController.unitSystem == UnitSystem.imperial
+        ? l.unitMph(v)
+        : l.unitKmh(v);
+  }
+
+  String _distanceLabel(AppLocalizations l, double meters) {
+    final (value, isLarge) = Formatters.distanceMeters(
+      meters,
+      unit: widget.settingsController.unitSystem,
+    );
+    final formatted = value.toStringAsFixed(value >= 10 ? 1 : 2);
+    if (widget.settingsController.unitSystem == UnitSystem.imperial) {
+      return isLarge ? l.unitMiles(formatted) : l.unitFeet(formatted);
+    }
+    return isLarge ? l.unitKilometers(formatted) : l.unitMeters(formatted);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final ctrl = widget.controller;
-    return Scaffold(
-      appBar: AppBar(
-        leading: buildDrawerLeading(
-          context,
-          widget.authService,
-          widget.profileService,
+    return ListenableBuilder(
+      listenable: widget.settingsController,
+      builder: (context, _) => Scaffold(
+        appBar: AppBar(
+          leading: buildDrawerLeading(
+            context,
+            widget.authService,
+            widget.profileService,
+          ),
+          title: Text(l.sessionTitle),
         ),
-        title: Text(l.sessionTitle),
+        body: switch (ctrl.stage) {
+          LiveSessionStage.selecting => _buildEmpty(context),
+          LiveSessionStage.ready => _buildReady(context, ctrl),
+          LiveSessionStage.running => _buildRunning(context, ctrl),
+          LiveSessionStage.finished => _buildFinished(context, ctrl),
+        },
       ),
-      body: switch (ctrl.stage) {
-        LiveSessionStage.selecting => _buildEmpty(context),
-        LiveSessionStage.ready => _buildReady(context, ctrl),
-        LiveSessionStage.running => _buildRunning(context, ctrl),
-        LiveSessionStage.finished => _buildFinished(context, ctrl),
-      },
     );
   }
 
@@ -205,9 +230,15 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          _MetricsRow(snapshot: snapshot),
+          _MetricsRow(
+            snapshot: snapshot,
+            settingsController: widget.settingsController,
+          ),
           const SizedBox(height: 8),
-          _LastEventTile(snapshot: snapshot),
+          _LastEventTile(
+            snapshot: snapshot,
+            settingsController: widget.settingsController,
+          ),
           const SizedBox(height: 12),
           if (ctrl.source == TrackingSource.simulated) ...[
             // Progress bar (visible only while auto-simulating)
@@ -327,20 +358,23 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        _StatsGrid(session: result),
+        _StatsGrid(
+          session: result,
+          settingsController: widget.settingsController,
+        ),
         const SizedBox(height: 16),
         Text(l.sessionLapsLabel,
             style: Theme.of(context).textTheme.titleMedium),
         for (final lap in result.laps)
           ListTile(
             leading: CircleAvatar(child: Text('${lap.lapNumber}')),
-            title: Text(Formatters.duration(lap.duration)),
+            title: Text(Formatters.duration(
+              lap.duration,
+              dotSeparator: widget.settingsController.timeFormatDot,
+            )),
             subtitle: Text(() {
-                  final (dv, isKm) = Formatters.distanceMeters(lap.distanceMeters);
-                  final dist = isKm
-                      ? l.unitKilometers(dv.toStringAsFixed(2))
-                      : l.unitMeters(dv.toStringAsFixed(0));
-                  final speed = l.unitKmh(Formatters.speedMps(lap.avgSpeedMps));
+                  final dist = _distanceLabel(l, lap.distanceMeters);
+                  final speed = _speedLabel(l, lap.avgSpeedMps);
                   return '$dist · $speed';
                 }()),
             trailing: lap.completed
@@ -359,9 +393,13 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
 }
 
 class _MetricsRow extends StatelessWidget {
-  const _MetricsRow({required this.snapshot});
+  const _MetricsRow({
+    required this.snapshot,
+    required this.settingsController,
+  });
 
   final TrackingSnapshot snapshot;
+  final AppSettingsController settingsController;
 
   @override
   Widget build(BuildContext context) {
@@ -379,7 +417,10 @@ class _MetricsRow extends StatelessWidget {
         Expanded(
           child: _MetricCard(
             label: l.sessionLapTimeLabel,
-            value: Formatters.duration(snapshot.currentLapElapsed),
+            value: Formatters.duration(
+              snapshot.currentLapElapsed,
+              dotSeparator: settingsController.timeFormatDot,
+            ),
           ),
         ),
         Expanded(
@@ -387,7 +428,10 @@ class _MetricsRow extends StatelessWidget {
             label: l.sessionBestLapLabel,
             value: snapshot.bestLap == null
                 ? l.sessionNoLapYet
-                : Formatters.duration(snapshot.bestLap!),
+                : Formatters.duration(
+                    snapshot.bestLap!,
+                    dotSeparator: settingsController.timeFormatDot,
+                  ),
           ),
         ),
       ],
@@ -422,9 +466,13 @@ class _MetricCard extends StatelessWidget {
 }
 
 class _LastEventTile extends StatelessWidget {
-  const _LastEventTile({required this.snapshot});
+  const _LastEventTile({
+    required this.snapshot,
+    required this.settingsController,
+  });
 
   final TrackingSnapshot snapshot;
+  final AppSettingsController settingsController;
 
   @override
   Widget build(BuildContext context) {
@@ -445,28 +493,51 @@ class _LastEventTile extends StatelessWidget {
         Text(l.sessionLastSector(last)),
         const Spacer(),
         if (snapshot.lastSectorTime != null)
-          Text(Formatters.duration(snapshot.lastSectorTime!)),
+          Text(Formatters.duration(
+            snapshot.lastSectorTime!,
+            dotSeparator: settingsController.timeFormatDot,
+          )),
       ],
     );
   }
 }
 
 class _StatsGrid extends StatelessWidget {
-  const _StatsGrid({required this.session});
+  const _StatsGrid({
+    required this.session,
+    required this.settingsController,
+  });
 
   final SessionRun session;
+  final AppSettingsController settingsController;
+
+  String _speedLabel(AppLocalizations l, double mps) {
+    final v = Formatters.speedMps(mps, unit: settingsController.unitSystem);
+    return settingsController.unitSystem == UnitSystem.imperial
+        ? l.unitMph(v)
+        : l.unitKmh(v);
+  }
+
+  String _distanceLabel(AppLocalizations l, double meters) {
+    final (value, isLarge) = Formatters.distanceMeters(
+      meters,
+      unit: settingsController.unitSystem,
+    );
+    final formatted = value.toStringAsFixed(value >= 10 ? 1 : 2);
+    if (settingsController.unitSystem == UnitSystem.imperial) {
+      return isLarge ? l.unitMiles(formatted) : l.unitFeet(formatted);
+    }
+    return isLarge ? l.unitKilometers(formatted) : l.unitMeters(formatted);
+  }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final (dv, isKm) = Formatters.distanceMeters(session.totalDistanceMeters);
-    final distStr = isKm
-        ? l.unitKilometers(dv.toStringAsFixed(2))
-        : l.unitMeters(dv.toStringAsFixed(0));
+    final distStr = _distanceLabel(l, session.totalDistanceMeters);
     final children = [
       _Stat(l.sessionDistanceLabel, distStr),
-      _Stat(l.sessionMaxSpeedLabel, l.unitKmh(Formatters.speedMps(session.maxSpeedMps))),
-      _Stat(l.sessionAvgSpeedLabel, l.unitKmh(Formatters.speedMps(session.avgSpeedMps))),
+      _Stat(l.sessionMaxSpeedLabel, _speedLabel(l, session.maxSpeedMps)),
+      _Stat(l.sessionAvgSpeedLabel, _speedLabel(l, session.avgSpeedMps)),
       _Stat(l.sessionLapsCountLabel, '${session.laps.length}'),
     ];
     return GridView.count(

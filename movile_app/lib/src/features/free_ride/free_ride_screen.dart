@@ -9,6 +9,7 @@ import '../../routing/app_router.dart';
 import '../../services/auth/auth_service.dart';
 import '../../services/garage/garage_service.dart';
 import '../../services/profile/profile_service.dart';
+import '../../services/settings/app_settings_controller.dart';
 import '../../services/tracking/location_service.dart';
 import '../../shared/formatters.dart';
 import '../../shared/widgets/empty_state.dart';
@@ -22,6 +23,7 @@ class FreeRideScreen extends StatefulWidget {
     super.key,
     required this.controller,
     required this.config,
+    required this.settingsController,
     this.authService,
     this.profileService,
     this.garageService,
@@ -29,6 +31,7 @@ class FreeRideScreen extends StatefulWidget {
 
   final FreeRideController controller;
   final AppConfig config;
+  final AppSettingsController settingsController;
   final AuthService? authService;
   final ProfileService? profileService;
   final GarageService? garageService;
@@ -103,24 +106,46 @@ class _FreeRideScreenState extends State<FreeRideScreen> {
     }
   }
 
+  String _speedLabel(AppLocalizations l, double mps) {
+    final v = Formatters.speedMps(mps, unit: widget.settingsController.unitSystem);
+    return widget.settingsController.unitSystem == UnitSystem.imperial
+        ? l.unitMph(v)
+        : l.unitKmh(v);
+  }
+
+  String _distanceLabel(AppLocalizations l, double meters) {
+    final (value, isLarge) = Formatters.distanceMeters(
+      meters,
+      unit: widget.settingsController.unitSystem,
+    );
+    final formatted = value.toStringAsFixed(value >= 10 ? 1 : 2);
+    if (widget.settingsController.unitSystem == UnitSystem.imperial) {
+      return isLarge ? l.unitMiles(formatted) : l.unitFeet(formatted);
+    }
+    return isLarge ? l.unitKilometers(formatted) : l.unitMeters(formatted);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final ctrl = widget.controller;
-    return Scaffold(
-      appBar: AppBar(
-        leading: buildDrawerLeading(
-          context,
-          widget.authService,
-          widget.profileService,
+    return ListenableBuilder(
+      listenable: widget.settingsController,
+      builder: (context, _) => Scaffold(
+        appBar: AppBar(
+          leading: buildDrawerLeading(
+            context,
+            widget.authService,
+            widget.profileService,
+          ),
+          title: Text(l.freeRideTitle),
         ),
-        title: Text(l.freeRideTitle),
+        body: switch (ctrl.stage) {
+          FreeRideStage.idle => _buildIdle(context, ctrl),
+          FreeRideStage.recording => _buildRecording(context, ctrl),
+          FreeRideStage.finished => _buildFinished(context, ctrl),
+        },
       ),
-      body: switch (ctrl.stage) {
-        FreeRideStage.idle => _buildIdle(context, ctrl),
-        FreeRideStage.recording => _buildRecording(context, ctrl),
-        FreeRideStage.finished => _buildFinished(context, ctrl),
-      },
     );
   }
 
@@ -217,27 +242,22 @@ class _FreeRideScreenState extends State<FreeRideScreen> {
               Expanded(
                 child: _MetricCard(
                   label: l.freeRideElapsedLabel,
-                  value: Formatters.duration(snap.elapsed),
+                  value: Formatters.duration(
+                    snap.elapsed,
+                    dotSeparator: widget.settingsController.timeFormatDot,
+                  ),
                 ),
               ),
               Expanded(
                 child: _MetricCard(
                   label: l.freeRideDistanceLabel,
-                  value: () {
-                    final (dv, isKm) =
-                        Formatters.distanceMeters(snap.totalDistanceMeters);
-                    return isKm
-                        ? l.unitKilometers(dv.toStringAsFixed(2))
-                        : l.unitMeters(dv.toStringAsFixed(0));
-                  }(),
+                  value: _distanceLabel(l, snap.totalDistanceMeters),
                 ),
               ),
               Expanded(
                 child: _MetricCard(
                   label: l.freeRideSpeedLabel,
-                  value: l.unitKmh(
-                    Formatters.speedMps(snap.currentSpeedMps),
-                  ),
+                  value: _speedLabel(l, snap.currentSpeedMps),
                 ),
               ),
             ],
@@ -270,10 +290,7 @@ class _FreeRideScreenState extends State<FreeRideScreen> {
   Widget _buildFinished(BuildContext context, FreeRideController ctrl) {
     final l = AppLocalizations.of(context);
     final result = ctrl.result!;
-    final (dv, isKm) = Formatters.distanceMeters(result.totalDistanceMeters);
-    final distStr = isKm
-        ? l.unitKilometers(dv.toStringAsFixed(2))
-        : l.unitMeters(dv.toStringAsFixed(0));
+    final distStr = _distanceLabel(l, result.totalDistanceMeters);
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -301,13 +318,13 @@ class _FreeRideScreenState extends State<FreeRideScreen> {
             Expanded(
               child: _StatCard(
                 l.freeRideMaxSpeedLabel,
-                l.unitKmh(Formatters.speedMps(result.maxSpeedMps)),
+                _speedLabel(l, result.maxSpeedMps),
               ),
             ),
             Expanded(
               child: _StatCard(
                 l.freeRideAvgSpeedLabel,
-                l.unitKmh(Formatters.speedMps(result.avgSpeedMps)),
+                _speedLabel(l, result.avgSpeedMps),
               ),
             ),
           ],
@@ -316,7 +333,10 @@ class _FreeRideScreenState extends State<FreeRideScreen> {
           const SizedBox(height: 8),
           _StatCard(
             l.freeRideElapsedLabel,
-            Formatters.duration(result.totalDuration!),
+            Formatters.duration(
+              result.totalDuration!,
+              dotSeparator: widget.settingsController.timeFormatDot,
+            ),
           ),
         ],
         const SizedBox(height: 24),
