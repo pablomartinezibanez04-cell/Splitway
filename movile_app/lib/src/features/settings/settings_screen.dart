@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:splitway_mobile/l10n/app_localizations.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/repositories/local_draft_repository.dart';
 import '../../services/auth/auth_service.dart';
@@ -235,11 +236,12 @@ class SettingsScreen extends StatelessWidget {
             // ── Account ──────────────────────────────────────────────────
             if (authService?.isLoggedIn == true) ...[
               _SectionHeader(l.settingsAccountSection),
-              ListTile(
-                title: Text(l.settingsChangePasswordLabel),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => _showChangePasswordDialog(context, l),
-              ),
+              if (authService!.currentUser?.appMetadata['provider'] == 'email')
+                ListTile(
+                  title: Text(l.settingsChangePasswordLabel),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _showChangePasswordDialog(context, l),
+                ),
               ListTile(
                 title: Text(
                   l.settingsDeleteAccountLabel,
@@ -313,7 +315,31 @@ class SettingsScreen extends StatelessWidget {
   }
 
   Future<void> _deleteAccount(BuildContext context, AppLocalizations l) async {
-    // Implemented in Task 15
+    try {
+      final session = Supabase.instance.client.auth.currentSession;
+      if (session == null) return;
+
+      final response = await Supabase.instance.client.functions.invoke(
+        'delete-user',
+        headers: {'Authorization': 'Bearer ${session.accessToken}'},
+      );
+
+      if (response.status != 200) throw Exception('status ${response.status}');
+
+      // Sign out locally (the account is already gone server-side)
+      await authService!.signOut();
+
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l.settingsDeleteAccountSuccess)),
+      );
+      context.go('/routes');
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l.settingsDeleteAccountError)),
+      );
+    }
   }
 
   Future<void> _exportHistory(BuildContext context, AppLocalizations l) async {
@@ -403,10 +429,22 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
       _loading = true;
       _error = null;
     });
+
     try {
-      // Actual Supabase call added in Task 14
-    } finally {
-      if (mounted) setState(() => _loading = false);
+      await Supabase.instance.client.auth.updateUser(
+        UserAttributes(password: _newCtrl.text),
+      );
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(widget.l.settingsChangePasswordSuccess)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _error = widget.l.settingsChangePasswordError;
+        _loading = false;
+      });
     }
   }
 
