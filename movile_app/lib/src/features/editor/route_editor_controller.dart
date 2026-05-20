@@ -28,7 +28,13 @@ enum DrawInputMode {
 enum _UndoOp { pathPoint, sector }
 
 class RouteEditorController extends ChangeNotifier {
-  RouteEditorController(this._repo, {this.routingService, this.geocodingService}) {
+  RouteEditorController(
+    this._repo, {
+    this.routingService,
+    this.geocodingService,
+    String defaultRoutingProfile = 'driving',
+  }) {
+    _routingProfile = defaultRoutingProfile;
     _changesSub = _repo.changes.listen((_) => _onRepoChanged());
   }
 

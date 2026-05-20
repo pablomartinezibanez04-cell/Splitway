@@ -207,7 +207,9 @@ class _FreeRideScreenState extends State<FreeRideScreen> {
               _initialCenter = await _getCurrentLocation();
               _followUser = true;
               _lastPointCount = 0;
-              await ctrl.startRecording();
+              await ctrl.startRecording(
+                distanceFilterMeters: widget.settingsController.gpsSamplingDistanceFilter,
+              );
             },
             icon: const Icon(Icons.play_arrow),
             label: Text(l.freeRideStartButton),

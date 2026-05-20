@@ -43,7 +43,7 @@ class FreeRideController extends ChangeNotifier {
   FreeRideSnapshot get snapshot =>
       _engine?.snapshot ?? FreeRideSnapshot.initial;
 
-  Future<void> startRecording() async {
+  Future<void> startRecording({int distanceFilterMeters = 0}) async {
     _permissionStatus = await LocationService.ensurePermission();
     if (_permissionStatus != LocationPermissionStatus.granted) {
       notifyListeners();
@@ -57,7 +57,9 @@ class FreeRideController extends ChangeNotifier {
     _stage = FreeRideStage.recording;
     notifyListeners();
 
-    _gpsSub = LocationService.positionStream().listen((point) {
+    _gpsSub = LocationService.positionStream(
+      distanceFilterMeters: distanceFilterMeters,
+    ).listen((point) {
       ingestPoint(point);
     }, onError: (_) {
       // GPS error — keep recording what we have.

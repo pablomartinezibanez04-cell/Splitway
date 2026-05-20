@@ -106,7 +106,7 @@ class LiveSessionController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> startSession() async {
+  Future<void> startSession({int distanceFilterMeters = 0}) async {
     final route = _selected;
     if (route == null) return;
     _tracker?.dispose();
@@ -117,7 +117,9 @@ class LiveSessionController extends ChangeNotifier {
     notifyListeners();
 
     if (_source == TrackingSource.realGps) {
-      _gpsSub = LocationService.positionStream().listen((p) {
+      _gpsSub = LocationService.positionStream(
+        distanceFilterMeters: distanceFilterMeters,
+      ).listen((p) {
         _tracker?.ingestSimulatedPoint(p);
         notifyListeners();
       }, onError: (_) {

@@ -42,6 +42,7 @@ class AppRouter {
           geocodingService: config.hasMapbox
               ? ReverseGeocodingService(accessToken: config.mapboxToken!)
               : null,
+          defaultRoutingProfile: settingsController.defaultRoutingProfile,
         ),
         _sessionController = LiveSessionController(repository),
         _freeRideController = FreeRideController(repository) {

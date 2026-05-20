@@ -243,7 +243,9 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
                     if (!allowed || !mounted) return;
                     _lastEventCount = 0;
                     // ignore: discarded_futures
-                    ctrl.startSession();
+                    ctrl.startSession(
+                      distanceFilterMeters: widget.settingsController.gpsSamplingDistanceFilter,
+                    );
                   },
             icon: const Icon(Icons.play_arrow),
             label: Text(l.sessionStartButton),
