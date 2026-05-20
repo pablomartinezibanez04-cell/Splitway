@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:splitway_core/splitway_core.dart';
@@ -65,6 +68,7 @@ class LiveSessionScreen extends StatefulWidget {
 
 class _LiveSessionScreenState extends State<LiveSessionScreen> {
   int _lastEventCount = 0;
+  final _audioPlayer = AudioPlayer();
 
   @override
   void initState() {
@@ -81,12 +85,13 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
     widget.authService?.removeListener(_onChange);
     widget.settingsController.removeListener(_onSettingsChanged);
     WakelockPlus.disable().catchError((_) {});
+    _audioPlayer.dispose();
     super.dispose();
   }
 
   void _onChange() {
     _updateWakelock();
-    _checkHaptic();
+    _onNewEvents();
     setState(() {});
   }
 
@@ -95,21 +100,30 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
     setState(() {});
   }
 
-  void _checkHaptic() {
-    if (!widget.settingsController.hapticFeedback) return;
+  void _onNewEvents() {
     final tracker = widget.controller.tracker;
     if (tracker == null) return;
     final events = tracker.events;
-    if (events.length > _lastEventCount) {
-      final newEvents = events.sublist(_lastEventCount);
-      for (final evt in newEvents) {
-        if (evt is SectorCrossed || evt is LapClosed) {
-          HapticFeedback.mediumImpact();
-          break; // one haptic pulse per notification cycle is enough
-        }
+    if (events.length <= _lastEventCount) return;
+
+    final newEvents = events.sublist(_lastEventCount);
+    bool hasCrossing = false;
+    for (final evt in newEvents) {
+      if (evt is SectorCrossed || evt is LapClosed) {
+        hasCrossing = true;
+        break;
       }
     }
     _lastEventCount = events.length;
+
+    if (hasCrossing) {
+      if (widget.settingsController.hapticFeedback) {
+        HapticFeedback.mediumImpact();
+      }
+      if (widget.settingsController.audioAlerts) {
+        unawaited(_audioPlayer.play(AssetSource('sounds/beep.mp3')));
+      }
+    }
   }
 
   void _updateWakelock() {
