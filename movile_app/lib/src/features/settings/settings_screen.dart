@@ -200,15 +200,19 @@ class SettingsScreen extends StatelessWidget {
             ),
 
             // ── Garage ──────────────────────────────────────────────────────────────
-            if (garageService != null)
+            if (garageService != null) ...[
+              _SectionHeader(l.settingsGarageSection),
               ListenableBuilder(
                 listenable: garageService!,
                 builder: (context, _) {
                   final vehicles = garageService!.vehicles;
+                  // Resolve: fall back to null if the stored ID no longer exists in the garage
+                  final currentId = settingsController.defaultVehicleId;
+                  final resolvedId = vehicles.any((v) => v.id == currentId) ? currentId : null;
                   return ListTile(
                     title: Text(l.settingsDefaultVehicleLabel),
                     trailing: DropdownButton<String?>(
-                      value: settingsController.defaultVehicleId,
+                      value: resolvedId,
                       underline: const SizedBox(),
                       onChanged: (v) => settingsController.setDefaultVehicleId(v),
                       items: [
@@ -226,6 +230,7 @@ class SettingsScreen extends StatelessWidget {
                   );
                 },
               ),
+            ],
 
             // ── Account ──────────────────────────────────────────────────
             if (authService?.isLoggedIn == true) ...[
