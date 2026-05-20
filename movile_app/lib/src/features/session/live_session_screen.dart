@@ -68,6 +68,7 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
     super.initState();
     widget.controller.addListener(_onChange);
     widget.authService?.addListener(_onChange);
+    widget.settingsController.addListener(_onSettingsChanged);
     widget.controller.load();
   }
 
@@ -75,7 +76,8 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
   void dispose() {
     widget.controller.removeListener(_onChange);
     widget.authService?.removeListener(_onChange);
-    WakelockPlus.disable();
+    widget.settingsController.removeListener(_onSettingsChanged);
+    WakelockPlus.disable().catchError((_) {});
     super.dispose();
   }
 
@@ -84,10 +86,15 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
     setState(() {});
   }
 
+  void _onSettingsChanged() {
+    _updateWakelock();
+    setState(() {});
+  }
+
   void _updateWakelock() {
     final shouldKeep = widget.settingsController.keepScreenAwake &&
         widget.controller.stage == LiveSessionStage.running;
-    WakelockPlus.toggle(enable: shouldKeep);
+    WakelockPlus.toggle(enable: shouldKeep).catchError((_) {});
   }
 
   @override

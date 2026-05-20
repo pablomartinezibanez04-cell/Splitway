@@ -51,12 +51,14 @@ class _FreeRideScreenState extends State<FreeRideScreen> {
   void initState() {
     super.initState();
     widget.controller.addListener(_onChange);
+    widget.settingsController.addListener(_onSettingsChanged);
   }
 
   @override
   void dispose() {
     widget.controller.removeListener(_onChange);
-    WakelockPlus.disable();
+    widget.settingsController.removeListener(_onSettingsChanged);
+    WakelockPlus.disable().catchError((_) {});
     _flyToNotifier.dispose();
     super.dispose();
   }
@@ -74,10 +76,15 @@ class _FreeRideScreenState extends State<FreeRideScreen> {
     setState(() {});
   }
 
+  void _onSettingsChanged() {
+    _updateWakelock();
+    setState(() {});
+  }
+
   void _updateWakelock() {
     final shouldKeep = widget.settingsController.keepScreenAwake &&
         widget.controller.stage == FreeRideStage.recording;
-    WakelockPlus.toggle(enable: shouldKeep);
+    WakelockPlus.toggle(enable: shouldKeep).catchError((_) {});
   }
 
   Future<GeoPoint?> _getCurrentLocation() async {
