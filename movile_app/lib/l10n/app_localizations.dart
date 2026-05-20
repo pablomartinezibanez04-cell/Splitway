@@ -2131,6 +2131,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{value} ft'**
   String elevationRangeValueFeet(String value);
+
+  /// No description provided for @backgroundNotificationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Splitway · Recording route'**
+  String get backgroundNotificationTitle;
+
+  /// No description provided for @backgroundActiveChip.
+  ///
+  /// In en, this message translates to:
+  /// **'Background recording active'**
+  String get backgroundActiveChip;
+
+  /// No description provided for @backgroundDeniedBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Recording will stop if you leave the app. Grant \"Always\" location permission for background recording.'**
+  String get backgroundDeniedBanner;
+
+  /// No description provided for @backgroundOpenSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open settings'**
+  String get backgroundOpenSettings;
 }
 
 class _AppLocalizationsDelegate

@@ -1177,4 +1177,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String elevationRangeValueFeet(String value) {
     return '$value ft';
   }
+
+  @override
+  String get backgroundNotificationTitle => 'Splitway · Recording route';
+
+  @override
+  String get backgroundActiveChip => 'Background recording active';
+
+  @override
+  String get backgroundDeniedBanner =>
+      'Recording will stop if you leave the app. Grant \"Always\" location permission for background recording.';
+
+  @override
+  String get backgroundOpenSettings => 'Open settings';
 }

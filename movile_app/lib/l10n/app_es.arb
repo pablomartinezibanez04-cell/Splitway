@@ -412,5 +412,10 @@
   "elevationRangeValue": "{value} m",
   "@elevationRangeValue": { "placeholders": { "value": { "type": "String" } } },
   "elevationRangeValueFeet": "{value} ft",
-  "@elevationRangeValueFeet": { "placeholders": { "value": { "type": "String" } } }
+  "@elevationRangeValueFeet": { "placeholders": { "value": { "type": "String" } } },
+
+  "backgroundNotificationTitle": "Splitway · Grabando ruta",
+  "backgroundActiveChip": "Grabación en segundo plano activa",
+  "backgroundDeniedBanner": "La grabación se detendrá si sales de la app. Concede permiso \"Siempre\" para grabar en segundo plano.",
+  "backgroundOpenSettings": "Abrir ajustes"
 }

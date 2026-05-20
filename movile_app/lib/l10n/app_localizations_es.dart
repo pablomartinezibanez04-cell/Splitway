@@ -1180,4 +1180,17 @@ class AppLocalizationsEs extends AppLocalizations {
   String elevationRangeValueFeet(String value) {
     return '$value ft';
   }
+
+  @override
+  String get backgroundNotificationTitle => 'Splitway · Grabando ruta';
+
+  @override
+  String get backgroundActiveChip => 'Grabación en segundo plano activa';
+
+  @override
+  String get backgroundDeniedBanner =>
+      'La grabación se detendrá si sales de la app. Concede permiso \"Siempre\" para grabar en segundo plano.';
+
+  @override
+  String get backgroundOpenSettings => 'Abrir ajustes';
 }
