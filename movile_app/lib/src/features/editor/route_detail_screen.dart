@@ -4,6 +4,7 @@ import 'package:splitway_mobile/l10n/app_localizations.dart';
 
 import '../../config/app_config.dart';
 import '../../data/repositories/local_draft_repository.dart';
+import '../../services/settings/app_settings_controller.dart';
 import '../../shared/formatters.dart';
 import '../../shared/widgets/splitway_map.dart';
 import '../history/history_screen.dart';
@@ -17,11 +18,13 @@ class RouteDetailScreen extends StatefulWidget {
     required this.route,
     required this.controller,
     required this.config,
+    this.settingsController,
   });
 
   final RouteTemplate route;
   final RouteEditorController controller;
   final AppConfig config;
+  final AppSettingsController? settingsController;
 
   @override
   State<RouteDetailScreen> createState() => _RouteDetailScreenState();
@@ -142,8 +145,8 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
                 width: _halfWidth(context),
                 child: BentoTile(
                   icon: Icons.straighten,
-                  label: 'Distancia',
-                  value: _formatDistance(route.totalDistanceMeters),
+                  label: l.historyDistanceLabel,
+                  value: _distanceLabel(l, route.totalDistanceMeters, widget.settingsController),
                 ),
               ),
               SizedBox(
@@ -155,6 +158,14 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
                   onTap: route.sectors.isNotEmpty
                       ? () => setState(() => _showSectors = !_showSectors)
                       : null,
+                ),
+              ),
+              SizedBox(
+                width: _halfWidth(context),
+                child: BentoTile(
+                  icon: Icons.terrain,
+                  label: l.elevationRangeLabel,
+                  value: _elevationLabel(l, route.elevationRangeMeters, widget.settingsController),
                 ),
               ),
               SizedBox(
@@ -186,7 +197,7 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
                 child: BentoTile(
                   icon: Icons.bolt_outlined,
                   label: 'Dificultad',
-                  value: _difficultyLabel(route.difficulty),
+                  value: _difficultyLabel(l, route.difficulty),
                 ),
               ),
               SizedBox(
@@ -194,7 +205,7 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
                 child: BentoTileWide(
                   icon: Icons.emoji_events_outlined,
                   label: 'Sesiones',
-                  value: _sessionsValue(sessions),
+                  value: _sessionsValue(l, sessions),
                   trailingLabel: sessions.isNotEmpty ? 'Mejor' : null,
                   trailingText: sessions.isNotEmpty ? _bestLapText(bestLap) : null,
                   onTap: sessions.isNotEmpty
@@ -232,23 +243,14 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
     return available / 2;
   }
 
-  String _formatDistance(double meters) {
-    if (meters >= 1000) {
-      return '${(meters / 1000).toStringAsFixed(1)} km';
-    }
-    return '${meters.toStringAsFixed(0)} m';
-  }
-
-  String _difficultyLabel(RouteDifficulty d) => switch (d) {
-        RouteDifficulty.easy => 'Fácil',
-        RouteDifficulty.medium => 'Media',
-        RouteDifficulty.hard => 'Difícil',
+  String _difficultyLabel(AppLocalizations l, RouteDifficulty d) => switch (d) {
+        RouteDifficulty.easy => l.editorDifficultyEasy,
+        RouteDifficulty.medium => l.editorDifficultyMedium,
+        RouteDifficulty.hard => l.editorDifficultyHard,
       };
 
-  String _sessionsValue(List<SessionRun> sessions) {
-    if (sessions.isEmpty) return 'Sin sesiones';
-    return '${sessions.length} sesión${sessions.length > 1 ? "es" : ""}';
-  }
+  String _sessionsValue(AppLocalizations l, List<SessionRun> sessions) =>
+      l.routesSessionsCount(sessions.length);
 
   String _bestLapText(LapSummary? bestLap) {
     if (bestLap == null) return '—';
@@ -354,6 +356,28 @@ class _RouteSessionsScreen extends StatelessWidget {
             ),
     );
   }
+}
+
+String _distanceLabel(
+    AppLocalizations l, double meters, AppSettingsController? ctrl) {
+  final unit = ctrl?.unitSystem ?? UnitSystem.metric;
+  final (value, isLarge) = Formatters.distanceMeters(meters, unit: unit);
+  final formatted = value.toStringAsFixed(value >= 10 ? 1 : 2);
+  if (unit == UnitSystem.imperial) {
+    return isLarge ? l.unitMiles(formatted) : l.unitFeet(formatted);
+  }
+  return isLarge ? l.unitKilometers(formatted) : l.unitMeters(formatted);
+}
+
+String _elevationLabel(
+    AppLocalizations l, double? meters, AppSettingsController? ctrl) {
+  if (meters == null) return '—';
+  final unit = ctrl?.unitSystem ?? UnitSystem.metric;
+  if (unit == UnitSystem.imperial) {
+    final feet = meters * 3.28084;
+    return l.elevationRangeValueFeet(feet.toStringAsFixed(0));
+  }
+  return l.elevationRangeValue(meters.toStringAsFixed(0));
 }
 
 class _EditRouteResult {

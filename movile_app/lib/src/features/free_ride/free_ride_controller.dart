@@ -128,6 +128,7 @@ class FreeRideController extends ChangeNotifier {
       difficulty: difficulty,
       createdAt: DateTime.now(),
       locationLabel: locationLabel ?? run.locationLabel,
+      elevationRangeMeters: run.elevationRangeMeters,
     );
 
     await _repo.saveRouteTemplate(route);

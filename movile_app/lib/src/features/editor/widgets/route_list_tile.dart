@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:splitway_core/splitway_core.dart';
 import 'package:splitway_mobile/l10n/app_localizations.dart';
 
+import '../../../services/settings/app_settings_controller.dart';
 import '../../../shared/formatters.dart';
 
 class RouteListTile extends StatelessWidget {
@@ -11,12 +12,14 @@ class RouteListTile extends StatelessWidget {
     required this.sessionCount,
     this.bestLap,
     required this.onTap,
+    this.settingsController,
   });
 
   final RouteTemplate route;
   final int sessionCount;
   final Duration? bestLap;
   final VoidCallback onTap;
+  final AppSettingsController? settingsController;
 
   @override
   Widget build(BuildContext context) {
@@ -106,18 +109,35 @@ class RouteListTile extends StatelessWidget {
 
   String _subtitle(AppLocalizations l) {
     final parts = <String>[];
-    parts.add(_formatDistance(route.totalDistanceMeters));
+    parts.add(_distanceLabel(l, route.totalDistanceMeters, settingsController));
+    if (route.elevationRangeMeters != null) {
+      parts.add(_elevationLabel(l, route.elevationRangeMeters!, settingsController));
+    }
     if (route.locationLabel != null) {
       parts.add(route.locationLabel!);
     }
     parts.add(route.isClosed ? l.editorClosedLoop : l.editorOpenRoute);
     return parts.join(' · ');
   }
+}
 
-  String _formatDistance(double meters) {
-    if (meters >= 1000) {
-      return '${(meters / 1000).toStringAsFixed(1)} km';
-    }
-    return '${meters.toStringAsFixed(0)} m';
+String _distanceLabel(
+    AppLocalizations l, double meters, AppSettingsController? ctrl) {
+  final unit = ctrl?.unitSystem ?? UnitSystem.metric;
+  final (value, isLarge) = Formatters.distanceMeters(meters, unit: unit);
+  final formatted = value.toStringAsFixed(value >= 10 ? 1 : 2);
+  if (unit == UnitSystem.imperial) {
+    return isLarge ? l.unitMiles(formatted) : l.unitFeet(formatted);
   }
+  return isLarge ? l.unitKilometers(formatted) : l.unitMeters(formatted);
+}
+
+String _elevationLabel(
+    AppLocalizations l, double meters, AppSettingsController? ctrl) {
+  final unit = ctrl?.unitSystem ?? UnitSystem.metric;
+  if (unit == UnitSystem.imperial) {
+    final feet = meters * 3.28084;
+    return '↕ ${l.elevationRangeValueFeet(feet.toStringAsFixed(0))}';
+  }
+  return '↕ ${l.elevationRangeValue(meters.toStringAsFixed(0))}';
 }

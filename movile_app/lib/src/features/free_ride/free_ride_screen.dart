@@ -150,6 +150,14 @@ class _FreeRideScreenState extends State<FreeRideScreen> {
     return isLarge ? l.unitKilometers(formatted) : l.unitMeters(formatted);
   }
 
+  String _elevationLabel(AppLocalizations l, double meters) {
+    if (widget.settingsController.unitSystem == UnitSystem.imperial) {
+      final feet = meters * 3.28084;
+      return l.elevationRangeValueFeet(feet.toStringAsFixed(0));
+    }
+    return l.elevationRangeValue(meters.toStringAsFixed(0));
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -356,6 +364,13 @@ class _FreeRideScreenState extends State<FreeRideScreen> {
             ),
           ],
         ),
+        if (result.elevationRangeMeters != null) ...[
+          const SizedBox(height: 8),
+          _StatCard(
+            l.elevationRangeLabel,
+            _elevationLabel(l, result.elevationRangeMeters!),
+          ),
+        ],
         if (result.totalDuration != null) ...[
           const SizedBox(height: 8),
           _StatCard(

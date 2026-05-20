@@ -234,6 +234,16 @@ String _distanceLabel(
   return isLarge ? l.unitKilometers(formatted) : l.unitMeters(formatted);
 }
 
+String _elevationLabel(
+    AppLocalizations l, double meters, AppSettingsController? ctrl) {
+  final unit = ctrl?.unitSystem ?? UnitSystem.metric;
+  if (unit == UnitSystem.imperial) {
+    final feet = meters * 3.28084;
+    return l.elevationRangeValueFeet(feet.toStringAsFixed(0));
+  }
+  return l.elevationRangeValue(meters.toStringAsFixed(0));
+}
+
 // ---------------------------------------------------------------------------
 
 class _SessionTile extends StatelessWidget {
@@ -595,25 +605,50 @@ class _FreeRideSummaryRow extends StatelessWidget {
       (l.historyMaxSpeedLabel, _speedLabel(l, ride.maxSpeedMps, settingsController)),
       (l.historyAvgSpeedLabel, _speedLabel(l, ride.avgSpeedMps, settingsController)),
     ];
-    return Row(
+    final elevation = ride.elevationRangeMeters;
+    return Column(
       children: [
-        for (final e in entries)
-          Expanded(
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Column(
-                  children: [
-                    Text(e.$1,
-                        style: Theme.of(context).textTheme.labelSmall),
-                    const SizedBox(height: 4),
-                    Text(e.$2,
-                        style: Theme.of(context).textTheme.titleMedium),
-                  ],
+        Row(
+          children: [
+            for (final e in entries)
+              Expanded(
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Column(
+                      children: [
+                        Text(e.$1,
+                            style: Theme.of(context).textTheme.labelSmall),
+                        const SizedBox(height: 4),
+                        Text(e.$2,
+                            style: Theme.of(context).textTheme.titleMedium),
+                      ],
+                    ),
+                  ),
                 ),
+              ),
+          ],
+        ),
+        if (elevation != null) ...[
+          const SizedBox(height: 8),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(l.elevationRangeLabel,
+                      style: Theme.of(context).textTheme.labelSmall),
+                  const SizedBox(width: 8),
+                  Text(
+                    _elevationLabel(l, elevation, settingsController),
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ],
               ),
             ),
           ),
+        ],
       ],
     );
   }

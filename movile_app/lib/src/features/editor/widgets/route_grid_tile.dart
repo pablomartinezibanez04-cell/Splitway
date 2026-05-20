@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:splitway_core/splitway_core.dart';
 import 'package:splitway_mobile/l10n/app_localizations.dart';
 
+import '../../../services/settings/app_settings_controller.dart';
+import '../../../shared/formatters.dart';
+
 class RouteGridTile extends StatelessWidget {
   const RouteGridTile({
     super.key,
@@ -9,12 +12,14 @@ class RouteGridTile extends StatelessWidget {
     required this.sessionCount,
     this.bestLap,
     required this.onTap,
+    this.settingsController,
   });
 
   final RouteTemplate route;
   final int sessionCount;
   final Duration? bestLap;
   final VoidCallback onTap;
+  final AppSettingsController? settingsController;
 
   @override
   Widget build(BuildContext context) {
@@ -65,11 +70,20 @@ class RouteGridTile extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                _formatDistance(route.totalDistanceMeters),
+                _distanceLabel(l, route.totalDistanceMeters, settingsController),
                 style: theme.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w500,
                 ),
               ),
+              if (route.elevationRangeMeters != null) ...[
+                const SizedBox(height: 2),
+                Text(
+                  '↕ ${_elevationLabel(l, route.elevationRangeMeters!, settingsController)}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
               const SizedBox(height: 4),
               if (route.locationLabel != null)
                 Text(
@@ -153,10 +167,25 @@ class RouteGridTile extends StatelessWidget {
     );
   }
 
-  String _formatDistance(double meters) {
-    if (meters >= 1000) {
-      return '${(meters / 1000).toStringAsFixed(1)} km';
-    }
-    return '${meters.toStringAsFixed(0)} m';
+}
+
+String _distanceLabel(
+    AppLocalizations l, double meters, AppSettingsController? ctrl) {
+  final unit = ctrl?.unitSystem ?? UnitSystem.metric;
+  final (value, isLarge) = Formatters.distanceMeters(meters, unit: unit);
+  final formatted = value.toStringAsFixed(value >= 10 ? 1 : 2);
+  if (unit == UnitSystem.imperial) {
+    return isLarge ? l.unitMiles(formatted) : l.unitFeet(formatted);
   }
+  return isLarge ? l.unitKilometers(formatted) : l.unitMeters(formatted);
+}
+
+String _elevationLabel(
+    AppLocalizations l, double meters, AppSettingsController? ctrl) {
+  final unit = ctrl?.unitSystem ?? UnitSystem.metric;
+  if (unit == UnitSystem.imperial) {
+    final feet = meters * 3.28084;
+    return l.elevationRangeValueFeet(feet.toStringAsFixed(0));
+  }
+  return l.elevationRangeValue(meters.toStringAsFixed(0));
 }

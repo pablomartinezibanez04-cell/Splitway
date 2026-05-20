@@ -10,6 +10,7 @@ import '../../config/app_config.dart';
 import '../../routing/app_router.dart';
 import '../../services/auth/auth_service.dart';
 import '../../services/profile/profile_service.dart';
+import '../../services/settings/app_settings_controller.dart';
 import '../../services/tracking/location_service.dart';
 import '../../shared/widgets/empty_state.dart';
 import '../../shared/widgets/splitway_map.dart';
@@ -27,12 +28,14 @@ class RouteEditorScreen extends StatefulWidget {
     required this.config,
     this.authService,
     this.profileService,
+    this.settingsController,
   });
 
   final RouteEditorController controller;
   final AppConfig config;
   final AuthService? authService;
   final ProfileService? profileService;
+  final AppSettingsController? settingsController;
 
   @override
   State<RouteEditorScreen> createState() => _RouteEditorScreenState();
@@ -205,6 +208,7 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
           sessionCount: ctrl.routeSessionCounts[route.id] ?? 0,
           bestLap: ctrl.routeBestLaps[route.id],
           onTap: () => _openRouteDetail(route),
+          settingsController: widget.settingsController,
         );
       },
     );
@@ -227,6 +231,7 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
           sessionCount: ctrl.routeSessionCounts[route.id] ?? 0,
           bestLap: ctrl.routeBestLaps[route.id],
           onTap: () => _openRouteDetail(route),
+          settingsController: widget.settingsController,
         );
       },
     );
@@ -238,6 +243,7 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
         route: route,
         controller: widget.controller,
         config: widget.config,
+        settingsController: widget.settingsController,
       ),
     ));
   }

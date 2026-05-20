@@ -12,10 +12,14 @@ class FreeRideEngine {
   final String _sessionId;
   final DateTime Function() _clock;
 
+  static const _gapThreshold = Duration(seconds: 5);
+  static const _recoveryDuration = Duration(seconds: 3);
+
   final List<TelemetryPoint> _points = [];
 
   FreeRideTrackingStatus _status = FreeRideTrackingStatus.idle;
   TelemetryPoint? _previous;
+  DateTime? _recoveringUntil;
   double _totalDistanceMeters = 0;
   double _maxSpeedMps = 0;
   double _lastSpeedMps = 0;
@@ -48,16 +52,34 @@ class FreeRideEngine {
     if (_status != FreeRideTrackingStatus.recording) return;
 
     _points.add(point);
+
+    final prev = _previous;
+    if (prev == null) {
+      _previous = point;
+      return;
+    }
+
+    if (point.timestamp.difference(prev.timestamp) >= _gapThreshold) {
+      _recoveringUntil = point.timestamp.add(_recoveryDuration);
+      _previous = point;
+      return;
+    }
+
+    if (_recoveringUntil != null) {
+      if (point.timestamp.isBefore(_recoveringUntil!)) {
+        _previous = point;
+        return;
+      }
+      _recoveringUntil = null;
+    }
+
     _lastSpeedMps = point.speedMps ?? _lastSpeedMps;
 
     if ((point.speedMps ?? 0) > _maxSpeedMps) {
       _maxSpeedMps = point.speedMps!;
     }
 
-    final prev = _previous;
-    if (prev != null) {
-      _totalDistanceMeters += prev.location.distanceTo(point.location);
-    }
+    _totalDistanceMeters += prev.location.distanceTo(point.location);
     _previous = point;
   }
 

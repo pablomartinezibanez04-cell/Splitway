@@ -136,6 +136,7 @@ class AppRouter {
                   config: config,
                   authService: authService,
                   profileService: profileService,
+                  settingsController: settingsController,
                 ),
               ),
             ],

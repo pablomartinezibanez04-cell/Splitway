@@ -2113,6 +2113,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Select a vehicle'**
   String get vehiclePickerSelectVehicle;
+
+  /// No description provided for @elevationRangeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Elevation'**
+  String get elevationRangeLabel;
+
+  /// No description provided for @elevationRangeValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{value} m'**
+  String elevationRangeValue(String value);
+
+  /// No description provided for @elevationRangeValueFeet.
+  ///
+  /// In en, this message translates to:
+  /// **'{value} ft'**
+  String elevationRangeValueFeet(String value);
 }
 
 class _AppLocalizationsDelegate

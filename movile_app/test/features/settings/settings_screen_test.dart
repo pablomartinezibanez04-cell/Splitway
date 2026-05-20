@@ -71,12 +71,10 @@ void main() {
     expect(find.text('Español'), findsOneWidget);
     expect(find.text('Inglés'), findsOneWidget);
 
-    final spanishTile = tester.widget<RadioListTile<Locale>>(
-      find.byWidgetPredicate(
-        (w) => w is RadioListTile<Locale> && w.value == const Locale('es'),
-      ),
+    final radioGroup = tester.widget<RadioGroup<Locale>>(
+      find.byType(RadioGroup<Locale>),
     );
-    expect(spanishTile.groupValue, const Locale('es'));
+    expect(radioGroup.groupValue, const Locale('es'));
     await tester.runAsync(() async {
       await boot.repo.dispose();
       await boot.db.close();

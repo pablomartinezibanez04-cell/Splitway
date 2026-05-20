@@ -84,6 +84,10 @@ class TrackingEngine {
   /// Prevents double-counting from GPS noise or rapid simulation steps.
   static const _crossingCooldown = Duration(seconds: 3);
 
+  static const _gapThreshold = Duration(seconds: 5);
+  static const _recoveryDuration = Duration(seconds: 3);
+  DateTime? _recoveringUntil;
+
   TrackingSnapshot get snapshot {
     final lapElapsed = _lapStartedAt == null
         ? Duration.zero
@@ -114,13 +118,28 @@ class TrackingEngine {
       return;
     }
     _points.add(point);
-    _lastSpeedMps = point.speedMps ?? _lastSpeedMps;
 
     final prev = _previous;
     if (prev == null) {
       _previous = point;
       return;
     }
+
+    if (point.timestamp.difference(prev.timestamp) >= _gapThreshold) {
+      _recoveringUntil = point.timestamp.add(_recoveryDuration);
+      _previous = point;
+      return;
+    }
+
+    if (_recoveringUntil != null) {
+      if (point.timestamp.isBefore(_recoveringUntil!)) {
+        _previous = point;
+        return;
+      }
+      _recoveringUntil = null;
+    }
+
+    _lastSpeedMps = point.speedMps ?? _lastSpeedMps;
 
     final stepDistance = prev.location.distanceTo(point.location);
     _totalDistanceMeters += stepDistance;

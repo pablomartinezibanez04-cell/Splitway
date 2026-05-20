@@ -1164,4 +1164,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get vehiclePickerSelectVehicle => 'Select a vehicle';
+
+  @override
+  String get elevationRangeLabel => 'Elevation';
+
+  @override
+  String elevationRangeValue(String value) {
+    return '$value m';
+  }
+
+  @override
+  String elevationRangeValueFeet(String value) {
+    return '$value ft';
+  }
 }

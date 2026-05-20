@@ -406,5 +406,11 @@
 
   "vehiclePickerLabel": "Vehicle",
   "vehiclePickerOnFoot": "On foot",
-  "vehiclePickerSelectVehicle": "Select a vehicle"
+  "vehiclePickerSelectVehicle": "Select a vehicle",
+
+  "elevationRangeLabel": "Elevation",
+  "elevationRangeValue": "{value} m",
+  "@elevationRangeValue": { "placeholders": { "value": { "type": "String" } } },
+  "elevationRangeValueFeet": "{value} ft",
+  "@elevationRangeValueFeet": { "placeholders": { "value": { "type": "String" } } }
 }

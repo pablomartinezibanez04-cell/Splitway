@@ -51,6 +51,19 @@ class FreeRideRun {
 
   List<GeoPoint> get path => points.map((p) => p.location).toList();
 
+  double? get elevationRangeMeters {
+    double? min;
+    double? max;
+    for (final p in points) {
+      final alt = p.altitudeMeters;
+      if (alt == null) continue;
+      if (min == null || alt < min) min = alt;
+      if (max == null || alt > max) max = alt;
+    }
+    if (min == null || max == null) return null;
+    return max - min;
+  }
+
   FreeRideRun copyWith({
     String? id,
     DateTime? startedAt,

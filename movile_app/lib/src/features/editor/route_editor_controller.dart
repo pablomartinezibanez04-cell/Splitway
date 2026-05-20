@@ -522,6 +522,18 @@ class RouteEditorController extends ChangeNotifier {
 
     final startFinishGate = _perpendicularGate(finalPath[0], finalPath[1]);
 
+    double? elevMin;
+    double? elevMax;
+    for (final p in finalPath) {
+      final alt = p.altitudeMeters;
+      if (alt == null) continue;
+      if (elevMin == null || alt < elevMin) elevMin = alt;
+      if (elevMax == null || alt > elevMax) elevMax = alt;
+    }
+    final elevationRange = (elevMin != null && elevMax != null)
+        ? elevMax - elevMin
+        : null;
+
     final id = 'route-${DateTime.now().microsecondsSinceEpoch}';
     final route = RouteTemplate(
       id: id,
@@ -543,6 +555,7 @@ class RouteEditorController extends ChangeNotifier {
       ],
       difficulty: _draftDifficulty,
       createdAt: DateTime.now(),
+      elevationRangeMeters: elevationRange,
     );
 
     await _repo.saveRouteTemplate(route);
