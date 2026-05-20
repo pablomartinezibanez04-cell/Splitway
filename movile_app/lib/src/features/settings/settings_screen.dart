@@ -13,6 +13,9 @@ import '../../services/garage/garage_service.dart';
 import '../../services/locale/locale_controller.dart';
 import '../../services/settings/app_settings_controller.dart';
 
+/// Wraps a CSV cell value in double-quotes and escapes internal double-quotes.
+String _csvCell(String value) => '"${value.replaceAll('"', '""')}"';
+
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({
     super.key,
@@ -370,29 +373,29 @@ class SettingsScreen extends StatelessWidget {
               .reduce((a, b) => a < b ? a : b)
               .toString();
       buffer.writeln([
-        'session',
-        s.startedAt.toIso8601String(),
-        routeIndex[s.routeTemplateId] ?? s.routeTemplateId,
-        s.laps.length,
-        bestMs,
-        s.totalDistanceMeters.toStringAsFixed(0),
-        s.maxSpeedMps.toStringAsFixed(2),
-        s.avgSpeedMps.toStringAsFixed(2),
-        s.vehicleId ?? '',
+        'session',                                                     // type — no quotes needed (no special chars)
+        _csvCell(s.startedAt.toIso8601String()),                       // date
+        _csvCell(routeIndex[s.routeTemplateId] ?? s.routeTemplateId), // route name (user-defined, must escape)
+        s.laps.length,                                                 // laps — numeric
+        bestMs,                                                        // best_lap_ms — numeric or empty
+        s.totalDistanceMeters.toStringAsFixed(0),                      // distance_m — numeric
+        s.maxSpeedMps.toStringAsFixed(2),                              // max_speed_mps — numeric
+        s.avgSpeedMps.toStringAsFixed(2),                              // avg_speed_mps — numeric
+        _csvCell(s.vehicleId ?? ''),                                   // vehicle_id — may be UUID or empty
       ].join(','));
     }
 
     for (final r in freeRides) {
       buffer.writeln([
         'free_ride',
-        r.startedAt.toIso8601String(),
-        '',
-        '',
-        '',
+        _csvCell(r.startedAt.toIso8601String()),
+        '',   // route — always empty for free rides
+        '',   // laps
+        '',   // best_lap_ms
         r.totalDistanceMeters.toStringAsFixed(0),
         r.maxSpeedMps.toStringAsFixed(2),
         r.avgSpeedMps.toStringAsFixed(2),
-        r.vehicleId ?? '',
+        _csvCell(r.vehicleId ?? ''),
       ].join(','));
     }
 
@@ -433,22 +436,32 @@ class SettingsScreen extends StatelessWidget {
   }
 
   Future<void> _clearCache(BuildContext context, AppLocalizations l) async {
-    final sessions = await repository.getAllSessions();
-    for (final s in sessions) {
-      await repository.deleteSession(s.id);
+    try {
+      final sessions = await repository.getAllSessions();
+      for (final s in sessions) {
+        await repository.deleteSession(s.id);
+      }
+
+      final rides = await repository.getAllFreeRides();
+      for (final r in rides) {
+        await repository.deleteFreeRide(r.id);
+      }
+
+      final routes = await repository.getAllRoutes();
+      for (final r in routes) {
+        await repository.deleteRoute(r.id);
+      }
+
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l.settingsClearCacheDone)),
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l.profileErrorUnexpected)),
+      );
     }
-    final rides = await repository.getAllFreeRides();
-    for (final r in rides) {
-      await repository.deleteFreeRide(r.id);
-    }
-    final routes = await repository.getAllRoutes();
-    for (final r in routes) {
-      await repository.deleteRoute(r.id);
-    }
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l.settingsClearCacheDone)),
-    );
   }
 }
 
