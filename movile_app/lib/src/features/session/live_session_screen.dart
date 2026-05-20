@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:splitway_core/splitway_core.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:splitway_mobile/l10n/app_localizations.dart';
 
 import '../../config/app_config.dart';
@@ -74,10 +75,20 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
   void dispose() {
     widget.controller.removeListener(_onChange);
     widget.authService?.removeListener(_onChange);
+    WakelockPlus.disable();
     super.dispose();
   }
 
-  void _onChange() => setState(() {});
+  void _onChange() {
+    _updateWakelock();
+    setState(() {});
+  }
+
+  void _updateWakelock() {
+    final shouldKeep = widget.settingsController.keepScreenAwake &&
+        widget.controller.stage == LiveSessionStage.running;
+    WakelockPlus.toggle(enable: shouldKeep);
+  }
 
   @override
   Widget build(BuildContext context) {

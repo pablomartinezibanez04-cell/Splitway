@@ -1,6 +1,7 @@
 // movile_app/lib/src/features/free_ride/free_ride_screen.dart
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:splitway_core/splitway_core.dart';
 import 'package:splitway_mobile/l10n/app_localizations.dart';
 
@@ -55,11 +56,13 @@ class _FreeRideScreenState extends State<FreeRideScreen> {
   @override
   void dispose() {
     widget.controller.removeListener(_onChange);
+    WakelockPlus.disable();
     _flyToNotifier.dispose();
     super.dispose();
   }
 
   void _onChange() {
+    _updateWakelock();
     final ctrl = widget.controller;
     if (ctrl.stage == FreeRideStage.recording && _followUser) {
       final points = ctrl.ingested;
@@ -69,6 +72,12 @@ class _FreeRideScreenState extends State<FreeRideScreen> {
       _lastPointCount = points.length;
     }
     setState(() {});
+  }
+
+  void _updateWakelock() {
+    final shouldKeep = widget.settingsController.keepScreenAwake &&
+        widget.controller.stage == FreeRideStage.recording;
+    WakelockPlus.toggle(enable: shouldKeep);
   }
 
   Future<GeoPoint?> _getCurrentLocation() async {
