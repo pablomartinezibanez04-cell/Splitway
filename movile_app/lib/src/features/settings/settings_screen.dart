@@ -64,84 +64,88 @@ class SettingsScreen extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ),
-            RadioListTile<Locale>(
-              title: Text(l.languageSpanish),
-              value: const Locale('es'),
+            RadioGroup<Locale>(
               groupValue: localeController.locale,
               onChanged: (v) {
                 if (v != null) localeController.setLocale(v);
               },
-            ),
-            RadioListTile<Locale>(
-              title: Text(l.languageEnglish),
-              value: const Locale('en'),
-              groupValue: localeController.locale,
-              onChanged: (v) {
-                if (v != null) localeController.setLocale(v);
-              },
+              child: Column(
+                children: [
+                  RadioListTile<Locale>(
+                    title: Text(l.languageSpanish),
+                    value: const Locale('es'),
+                  ),
+                  RadioListTile<Locale>(
+                    title: Text(l.languageEnglish),
+                    value: const Locale('en'),
+                  ),
+                ],
+              ),
             ),
 
             // ── Appearance ───────────────────────────────────────────────
             _SectionHeader(l.settingsAppearanceSection),
-            RadioListTile<AppThemeMode>(
-              title: Text(l.settingsThemeSystem),
-              value: AppThemeMode.system,
+            RadioGroup<AppThemeMode>(
               groupValue: settingsController.themeMode,
               onChanged: (v) {
                 if (v != null) settingsController.setThemeMode(v);
               },
-            ),
-            RadioListTile<AppThemeMode>(
-              title: Text(l.settingsThemeLight),
-              value: AppThemeMode.light,
-              groupValue: settingsController.themeMode,
-              onChanged: (v) {
-                if (v != null) settingsController.setThemeMode(v);
-              },
-            ),
-            RadioListTile<AppThemeMode>(
-              title: Text(l.settingsThemeDark),
-              value: AppThemeMode.dark,
-              groupValue: settingsController.themeMode,
-              onChanged: (v) {
-                if (v != null) settingsController.setThemeMode(v);
-              },
+              child: Column(
+                children: [
+                  RadioListTile<AppThemeMode>(
+                    title: Text(l.settingsThemeSystem),
+                    value: AppThemeMode.system,
+                  ),
+                  RadioListTile<AppThemeMode>(
+                    title: Text(l.settingsThemeLight),
+                    value: AppThemeMode.light,
+                  ),
+                  RadioListTile<AppThemeMode>(
+                    title: Text(l.settingsThemeDark),
+                    value: AppThemeMode.dark,
+                  ),
+                ],
+              ),
             ),
 
             // ── Measurement ──────────────────────────────────────────────
             _SectionHeader(l.settingsMeasurementSection),
-            RadioListTile<UnitSystem>(
-              title: Text(l.settingsUnitMetric),
-              value: UnitSystem.metric,
+            RadioGroup<UnitSystem>(
               groupValue: settingsController.unitSystem,
               onChanged: (v) {
                 if (v != null) settingsController.setUnitSystem(v);
               },
-            ),
-            RadioListTile<UnitSystem>(
-              title: Text(l.settingsUnitImperial),
-              value: UnitSystem.imperial,
-              groupValue: settingsController.unitSystem,
-              onChanged: (v) {
-                if (v != null) settingsController.setUnitSystem(v);
-              },
+              child: Column(
+                children: [
+                  RadioListTile<UnitSystem>(
+                    title: Text(l.settingsUnitMetric),
+                    value: UnitSystem.metric,
+                  ),
+                  RadioListTile<UnitSystem>(
+                    title: Text(l.settingsUnitImperial),
+                    value: UnitSystem.imperial,
+                  ),
+                ],
+              ),
             ),
             const Divider(indent: 16, endIndent: 16, height: 8),
-            RadioListTile<bool>(
-              title: Text(l.settingsTimeFormatDot),
-              value: true,
+            RadioGroup<bool>(
               groupValue: settingsController.timeFormatDot,
               onChanged: (v) {
                 if (v != null) settingsController.setTimeFormatDot(v);
               },
-            ),
-            RadioListTile<bool>(
-              title: Text(l.settingsTimeFormatComma),
-              value: false,
-              groupValue: settingsController.timeFormatDot,
-              onChanged: (v) {
-                if (v != null) settingsController.setTimeFormatDot(v);
-              },
+              child: Column(
+                children: [
+                  RadioListTile<bool>(
+                    title: Text(l.settingsTimeFormatDot),
+                    value: true,
+                  ),
+                  RadioListTile<bool>(
+                    title: Text(l.settingsTimeFormatComma),
+                    value: false,
+                  ),
+                ],
+              ),
             ),
 
             // ── Session behaviour ────────────────────────────────────────
