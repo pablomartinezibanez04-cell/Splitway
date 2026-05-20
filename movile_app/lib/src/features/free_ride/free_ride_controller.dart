@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:splitway_core/splitway_core.dart';
 
 import '../../data/repositories/local_draft_repository.dart';
+import '../../services/tracking/background_tracking_service.dart';
 import '../../services/tracking/location_service.dart';
 
 enum FreeRideStage { idle, recording, finished }
@@ -29,6 +30,9 @@ class FreeRideController extends ChangeNotifier {
   String? _selectedVehicleId;
   String? get selectedVehicleId => _selectedVehicleId;
 
+  bool _backgroundActive = false;
+  bool get backgroundActive => _backgroundActive;
+
   void selectVehicle(String? vehicleId) {
     _selectedVehicleId = vehicleId;
     notifyListeners();
@@ -50,6 +54,16 @@ class FreeRideController extends ChangeNotifier {
       return;
     }
 
+    final bgStatus = await LocationService.ensureBackgroundPermission();
+    _backgroundActive = bgStatus == LocationPermissionStatus.granted;
+
+    if (_backgroundActive) {
+      await BackgroundTrackingService.startTracking(
+        title: 'Splitway · Grabando ruta',
+        body: '0.0 km · 00:00:00',
+      );
+    }
+
     final id = 'fr-${DateTime.now().microsecondsSinceEpoch}';
     _engine = FreeRideEngine(sessionId: id);
     _engine!.start();
@@ -59,6 +73,7 @@ class FreeRideController extends ChangeNotifier {
 
     _gpsSub = LocationService.positionStream(
       distanceFilterMeters: distanceFilterMeters,
+      backgroundMode: _backgroundActive,
     ).listen((point) {
       ingestPoint(point);
     }, onError: (_) {
@@ -66,6 +81,14 @@ class FreeRideController extends ChangeNotifier {
     });
 
     _ticker = Timer.periodic(const Duration(milliseconds: 500), (_) {
+      if (_backgroundActive) {
+        final snap = snapshot;
+        final distKm = (snap.totalDistanceMeters / 1000).toStringAsFixed(1);
+        BackgroundTrackingService.updateNotification(
+          distance: '$distKm km',
+          time: _formatElapsed(snap.elapsed),
+        );
+      }
       notifyListeners();
     });
   }
@@ -82,6 +105,11 @@ class FreeRideController extends ChangeNotifier {
     _gpsSub = null;
     _ticker?.cancel();
     _ticker = null;
+
+    if (_backgroundActive) {
+      await BackgroundTrackingService.stopTracking();
+      _backgroundActive = false;
+    }
 
     final e = _engine;
     if (e == null) return null;
@@ -164,14 +192,25 @@ class FreeRideController extends ChangeNotifier {
     _result = null;
     _ingested.clear();
     _permissionStatus = null;
+    _backgroundActive = false;
     _stage = FreeRideStage.idle;
     notifyListeners();
+  }
+
+  static String _formatElapsed(Duration d) {
+    final h = d.inHours;
+    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return h > 0 ? '$h:$m:$s' : '$m:$s';
   }
 
   @override
   void dispose() {
     _gpsSub?.cancel();
     _ticker?.cancel();
+    if (_backgroundActive) {
+      BackgroundTrackingService.stopTracking();
+    }
     super.dispose();
   }
 }
