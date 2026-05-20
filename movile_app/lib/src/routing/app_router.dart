@@ -96,6 +96,7 @@ class AppRouter {
           settingsController: settingsController,
           authService: authService,
           repository: repository,
+          garageService: garageService,
         ),
       ),
 

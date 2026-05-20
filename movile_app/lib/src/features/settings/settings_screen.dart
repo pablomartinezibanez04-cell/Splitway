@@ -4,6 +4,7 @@ import 'package:splitway_mobile/l10n/app_localizations.dart';
 
 import '../../data/repositories/local_draft_repository.dart';
 import '../../services/auth/auth_service.dart';
+import '../../services/garage/garage_service.dart';
 import '../../services/locale/locale_controller.dart';
 import '../../services/settings/app_settings_controller.dart';
 
@@ -14,12 +15,14 @@ class SettingsScreen extends StatelessWidget {
     required this.settingsController,
     this.authService,
     required this.repository,
+    this.garageService,
   });
 
   final LocaleController localeController;
   final AppSettingsController settingsController;
   final AuthService? authService;
   final LocalDraftRepository repository;
+  final GarageService? garageService;
 
   @override
   Widget build(BuildContext context) {
@@ -195,6 +198,34 @@ class SettingsScreen extends StatelessWidget {
                 ],
               ),
             ),
+
+            // ── Garage ──────────────────────────────────────────────────────────────
+            if (garageService != null)
+              ListenableBuilder(
+                listenable: garageService!,
+                builder: (context, _) {
+                  final vehicles = garageService!.vehicles;
+                  return ListTile(
+                    title: Text(l.settingsDefaultVehicleLabel),
+                    trailing: DropdownButton<String?>(
+                      value: settingsController.defaultVehicleId,
+                      underline: const SizedBox(),
+                      onChanged: (v) => settingsController.setDefaultVehicleId(v),
+                      items: [
+                        DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text(l.settingsDefaultVehicleNone),
+                        ),
+                        for (final v in vehicles)
+                          DropdownMenuItem<String?>(
+                            value: v.id,
+                            child: Text(v.name),
+                          ),
+                      ],
+                    ),
+                  );
+                },
+              ),
 
             // ── Account ──────────────────────────────────────────────────
             if (authService?.isLoggedIn == true) ...[

@@ -76,7 +76,15 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
     widget.controller.addListener(_onChange);
     widget.authService?.addListener(_onChange);
     widget.settingsController.addListener(_onSettingsChanged);
-    widget.controller.load();
+    widget.controller.load().then((_) {
+      if (!mounted) return;
+      if (widget.controller.selectedVehicleId == null) {
+        final defaultId = widget.settingsController.defaultVehicleId;
+        if (defaultId != null) {
+          widget.controller.selectVehicle(defaultId);
+        }
+      }
+    });
   }
 
   @override

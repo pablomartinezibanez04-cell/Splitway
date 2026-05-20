@@ -52,6 +52,15 @@ class _FreeRideScreenState extends State<FreeRideScreen> {
     super.initState();
     widget.controller.addListener(_onChange);
     widget.settingsController.addListener(_onSettingsChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (widget.controller.selectedVehicleId == null) {
+        final defaultId = widget.settingsController.defaultVehicleId;
+        if (defaultId != null) {
+          widget.controller.selectVehicle(defaultId);
+        }
+      }
+    });
   }
 
   @override
