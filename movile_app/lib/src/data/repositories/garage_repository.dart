@@ -95,13 +95,24 @@ class GarageRepository {
     Uint8List bytes,
     String extension,
   ) async {
+    try {
+      final old = await _client.storage
+          .from(_photoBucket)
+          .list(path: '$_uid/$vehicleId');
+      if (old.isNotEmpty) {
+        await _client.storage.from(_photoBucket).remove(
+              old.map((o) => '$_uid/$vehicleId/${o.name}').toList(),
+            );
+      }
+    } catch (_) {}
+
     final path = '$_uid/$vehicleId/photo.$extension';
     await _client.storage.from(_photoBucket).uploadBinary(
           path,
           bytes,
-          fileOptions: const FileOptions(
+          fileOptions: FileOptions(
             upsert: true,
-            contentType: 'image/*',
+            contentType: 'image/$extension',
           ),
         );
     final signedUrl = await _client.storage

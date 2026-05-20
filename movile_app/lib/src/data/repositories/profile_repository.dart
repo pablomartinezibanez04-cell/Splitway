@@ -24,11 +24,18 @@ class ProfileRepository {
     return UserProfile.fromJson(response);
   }
 
-  Future<UserProfile> createProfile({required String nickname}) async {
-    final data = {
+  Future<UserProfile> createProfile({
+    required String nickname,
+    DateTime? dateOfBirth,
+  }) async {
+    final data = <String, dynamic>{
       'id': _uid,
       'nickname': nickname,
     };
+    if (dateOfBirth != null) {
+      data['date_of_birth'] =
+          '${dateOfBirth.year}-${dateOfBirth.month.toString().padLeft(2, '0')}-${dateOfBirth.day.toString().padLeft(2, '0')}';
+    }
     final response =
         await _client.from('profiles').insert(data).select().single();
     return UserProfile.fromJson(response);
@@ -48,13 +55,22 @@ class ProfileRepository {
   }
 
   Future<String> uploadAvatar(Uint8List bytes, String extension) async {
+    try {
+      final old = await _client.storage.from(_avatarBucket).list(path: _uid);
+      if (old.isNotEmpty) {
+        await _client.storage.from(_avatarBucket).remove(
+              old.map((o) => '$_uid/${o.name}').toList(),
+            );
+      }
+    } catch (_) {}
+
     final path = '$_uid/avatar.$extension';
     await _client.storage.from(_avatarBucket).uploadBinary(
           path,
           bytes,
-          fileOptions: const FileOptions(
+          fileOptions: FileOptions(
             upsert: true,
-            contentType: 'image/*',
+            contentType: 'image/$extension',
           ),
         );
     final signedUrl = await _client.storage

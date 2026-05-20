@@ -1,15 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart' as intl;
 import 'package:splitway_mobile/l10n/app_localizations.dart';
 
+import '../../services/auth/auth_service.dart';
 import '../../services/profile/profile_service.dart';
 import '../../services/profile/user_profile.dart';
+import '../../shared/image_utils.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key, required this.profileService});
+  const ProfileScreen({
+    super.key,
+    required this.profileService,
+    required this.authService,
+  });
 
   final ProfileService profileService;
+  final AuthService authService;
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -19,6 +27,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _nicknameCtrl = TextEditingController();
   final _bioCtrl = TextEditingController();
   final _nicknameFormKey = GlobalKey<FormState>();
+  bool _showCooldownWarning = false;
 
   @override
   void initState() {
@@ -60,12 +69,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (image == null) return;
 
     final bytes = await image.readAsBytes();
-    final ext = image.name.split('.').last.toLowerCase();
-    final extension = ['jpg', 'jpeg', 'png', 'webp'].contains(ext)
-        ? ext
-        : 'jpg';
+    final compressed = await compressToWebp(bytes, maxWidth: 512, maxHeight: 512);
+    if (compressed == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).profileErrorUnexpected)),
+      );
+      return;
+    }
 
-    final success = await widget.profileService.uploadAvatar(bytes, extension);
+    final success = await widget.profileService.uploadAvatar(compressed, 'webp');
     if (!mounted) return;
     final l = AppLocalizations.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
@@ -78,6 +91,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final newNickname = _nicknameCtrl.text.trim();
     final profile = widget.profileService.profile;
     if (profile == null || newNickname == profile.nickname) return;
+
+    if (!profile.canChangeNickname) {
+      if (!mounted) return;
+      setState(() => _showCooldownWarning = true);
+      return;
+    }
 
     final l = AppLocalizations.of(context);
     final success = await widget.profileService.updateNickname(newNickname);
@@ -109,6 +128,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final l = AppLocalizations.of(context);
     final service = widget.profileService;
     final profile = service.profile;
+    final email = widget.authService.currentUser?.email ?? '';
 
     return Scaffold(
       appBar: AppBar(
@@ -216,7 +236,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           Expanded(
                             child: TextFormField(
                               controller: _nicknameCtrl,
-                              enabled: profile.canChangeNickname,
                               decoration: const InputDecoration(
                                 border: OutlineInputBorder(),
                                 isDense: true,
@@ -237,14 +256,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           const SizedBox(width: 8),
                           IconButton.filled(
-                            onPressed: profile.canChangeNickname
-                                ? _handleSaveNickname
-                                : null,
+                            onPressed: _handleSaveNickname,
                             icon: const Icon(Icons.check, size: 20),
                           ),
                         ],
                       ),
-                      if (!profile.canChangeNickname) ...[
+                      if (_showCooldownWarning &&
+                          !profile.canChangeNickname) ...[
                         const SizedBox(height: 8),
                         _CooldownIndicator(profile: profile, l: l),
                       ],
@@ -275,6 +293,69 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     onPressed: _handleSaveBio,
                     icon: const Icon(Icons.save_outlined, size: 18),
                     label: Text(l.commonSave),
+                  ),
+                ),
+                const SizedBox(height: 28),
+
+                // Email section
+                Text(
+                  l.profileEmailLabel,
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Theme.of(context).dividerColor),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.email_outlined,
+                          size: 18, color: Theme.of(context).hintColor),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          email,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 28),
+
+                // Date of birth section
+                Text(
+                  l.profileDateOfBirthLabel,
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Theme.of(context).dividerColor),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.cake_outlined,
+                          size: 18, color: Theme.of(context).hintColor),
+                      const SizedBox(width: 8),
+                      Text(
+                        profile.dateOfBirth != null
+                            ? intl.DateFormat.yMMMd(
+                                    Localizations.localeOf(context)
+                                        .toLanguageTag())
+                                .format(profile.dateOfBirth!)
+                            : '—',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
                   ),
                 ),
               ],

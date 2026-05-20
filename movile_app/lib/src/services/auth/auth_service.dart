@@ -132,16 +132,22 @@ class AuthService extends ChangeNotifier {
     String email,
     String password, {
     String? nickname,
+    DateTime? dateOfBirth,
   }) async {
     _loading = true;
     _errorCode = null;
     notifyListeners();
 
     try {
+      final metadata = <String, dynamic>{};
+      if (nickname != null) metadata['nickname'] = nickname;
+      if (dateOfBirth != null) {
+        metadata['date_of_birth'] = dateOfBirth.toIso8601String();
+      }
       final response = await _client.auth.signUp(
         email: email,
         password: password,
-        data: nickname != null ? {'nickname': nickname} : null,
+        data: metadata.isNotEmpty ? metadata : null,
       );
       // When email enumeration protection is ON, Supabase returns
       // session=null for BOTH new users and duplicate emails.

@@ -49,6 +49,7 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
     super.initState();
     widget.controller.addListener(_onChange);
     widget.authService?.addListener(_onChange);
+    widget.profileService?.addListener(_onChange);
     widget.controller.load();
   }
 
@@ -56,6 +57,7 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
   void dispose() {
     widget.controller.removeListener(_onChange);
     widget.authService?.removeListener(_onChange);
+    widget.profileService?.removeListener(_onChange);
     super.dispose();
   }
 

@@ -33,7 +33,10 @@ class ProfileService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> ensureProfile({required String fallbackNickname}) async {
+  Future<bool> ensureProfile({
+    required String fallbackNickname,
+    DateTime? dateOfBirth,
+  }) async {
     if (_profile != null) return true;
 
     try {
@@ -43,7 +46,10 @@ class ProfileService extends ChangeNotifier {
         return true;
       }
 
-      _profile = await _repository.createProfile(nickname: fallbackNickname);
+      _profile = await _repository.createProfile(
+        nickname: fallbackNickname,
+        dateOfBirth: dateOfBirth,
+      );
       notifyListeners();
       return true;
     } catch (e) {

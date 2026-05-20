@@ -4,6 +4,7 @@ import 'package:splitway_mobile/l10n/app_localizations.dart';
 
 import '../../services/garage/garage_service.dart';
 import '../../services/garage/vehicle.dart';
+import '../../shared/image_utils.dart';
 import 'widgets/vehicle_form_sheet.dart';
 
 class VehicleDetailScreen extends StatefulWidget {
@@ -40,15 +41,19 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
     if (image == null) return;
 
     final bytes = await image.readAsBytes();
-    final rawExt = image.name.split('.').last.toLowerCase();
-    final extension = ['jpg', 'jpeg', 'png', 'webp'].contains(rawExt)
-        ? rawExt
-        : 'jpg';
+    final compressed = await compressToWebp(bytes);
+    if (compressed == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).garageErrorUnexpected)),
+      );
+      return;
+    }
 
     final success = await widget.garageService.uploadPhoto(
       _vehicle.id,
-      bytes,
-      extension,
+      compressed,
+      'webp',
     );
     if (!mounted) return;
 

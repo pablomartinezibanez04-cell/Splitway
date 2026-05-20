@@ -56,6 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _isSignUp = false;
   bool _obscurePassword = true;
+  DateTime? _dateOfBirth;
 
   @override
   void initState() {
@@ -105,6 +106,7 @@ class _LoginScreenState extends State<LoginScreen> {
         email,
         password,
         nickname: nickname.isNotEmpty ? nickname : null,
+        dateOfBirth: _dateOfBirth,
       );
       // Show "check your inbox" dialog if confirmation email was sent.
       if (!success &&
@@ -299,7 +301,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           const SizedBox(height: 16),
 
-                          // Nickname field (signup only)
+                          // Nickname + date of birth fields (signup only)
                           if (_isSignUp) ...[
                             TextFormField(
                               controller: _nicknameCtrl,
@@ -314,6 +316,42 @@ class _LoginScreenState extends State<LoginScreen> {
                                 }
                                 return null;
                               },
+                            ),
+                            const SizedBox(height: 10),
+                            GestureDetector(
+                              onTap: () async {
+                                final now = DateTime.now();
+                                final picked = await showDatePicker(
+                                  context: context,
+                                  initialDate: _dateOfBirth ??
+                                      DateTime(now.year - 18, now.month, now.day),
+                                  firstDate: DateTime(1900),
+                                  lastDate: now,
+                                );
+                                if (picked != null) {
+                                  setState(() => _dateOfBirth = picked);
+                                }
+                              },
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  _dateOfBirth != null
+                                      ? '${_dateOfBirth!.day.toString().padLeft(2, '0')}/${_dateOfBirth!.month.toString().padLeft(2, '0')}/${_dateOfBirth!.year}'
+                                      : l.loginDateOfBirthHint,
+                                  style: TextStyle(
+                                    color: _dateOfBirth != null
+                                        ? Colors.white
+                                        : Colors.white.withValues(alpha: 0.5),
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
                             ),
                             const SizedBox(height: 10),
                           ],

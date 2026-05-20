@@ -88,8 +88,13 @@ class SupabaseRepository {
     return routes;
   }
 
-  /// Deletes a route from the cloud.
+  /// Deletes a route from the cloud and its thumbnail from storage.
   Future<void> deleteRoute(String id) async {
+    try {
+      await _client.storage
+          .from('route-thumbnails')
+          .remove(['$_uid/$id.png']);
+    } catch (_) {}
     await _client.from('route_templates').delete().eq('id', id);
   }
 
