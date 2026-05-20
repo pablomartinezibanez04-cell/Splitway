@@ -90,7 +90,12 @@ class AppRouter {
 
       GoRoute(
         path: '/settings',
-        builder: (_, __) => SettingsScreen(localeController: localeController),
+        builder: (_, __) => SettingsScreen(
+          localeController: localeController,
+          settingsController: settingsController,
+          authService: authService,
+          repository: repository,
+        ),
       ),
 
       GoRoute(
