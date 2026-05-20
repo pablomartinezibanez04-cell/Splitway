@@ -242,6 +242,9 @@
 
   "settingsRoutesSection": "Rutas",
   "settingsDefaultRoutingProfileLabel": "Modo de ruta por defecto",
+  "settingsRoutingProfileRoad": "Carretera",
+  "settingsRoutingProfileTrail": "Sendero",
+  "settingsRoutingProfileCycling": "Ciclismo",
 
   "settingsGarageSection": "Garaje",
   "settingsDefaultVehicleLabel": "Vehículo por defecto",

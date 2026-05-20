@@ -775,6 +775,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsDefaultRoutingProfileLabel => 'Modo de ruta por defecto';
 
   @override
+  String get settingsRoutingProfileRoad => 'Carretera';
+
+  @override
+  String get settingsRoutingProfileTrail => 'Sendero';
+
+  @override
+  String get settingsRoutingProfileCycling => 'Ciclismo';
+
+  @override
   String get settingsGarageSection => 'Garaje';
 
   @override

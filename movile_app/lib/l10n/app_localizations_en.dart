@@ -773,6 +773,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsDefaultRoutingProfileLabel => 'Default routing mode';
 
   @override
+  String get settingsRoutingProfileRoad => 'Road';
+
+  @override
+  String get settingsRoutingProfileTrail => 'Trail';
+
+  @override
+  String get settingsRoutingProfileCycling => 'Cycling';
+
+  @override
   String get settingsGarageSection => 'Garage';
 
   @override

@@ -263,6 +263,9 @@
 
   "settingsRoutesSection": "Routes",
   "settingsDefaultRoutingProfileLabel": "Default routing mode",
+  "settingsRoutingProfileRoad": "Road",
+  "settingsRoutingProfileTrail": "Trail",
+  "settingsRoutingProfileCycling": "Cycling",
 
   "settingsGarageSection": "Garage",
   "settingsDefaultVehicleLabel": "Default vehicle",

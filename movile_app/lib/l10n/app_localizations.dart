@@ -1412,6 +1412,24 @@ abstract class AppLocalizations {
   /// **'Default routing mode'**
   String get settingsDefaultRoutingProfileLabel;
 
+  /// No description provided for @settingsRoutingProfileRoad.
+  ///
+  /// In en, this message translates to:
+  /// **'Road'**
+  String get settingsRoutingProfileRoad;
+
+  /// No description provided for @settingsRoutingProfileTrail.
+  ///
+  /// In en, this message translates to:
+  /// **'Trail'**
+  String get settingsRoutingProfileTrail;
+
+  /// No description provided for @settingsRoutingProfileCycling.
+  ///
+  /// In en, this message translates to:
+  /// **'Cycling'**
+  String get settingsRoutingProfileCycling;
+
   /// No description provided for @settingsGarageSection.
   ///
   /// In en, this message translates to:

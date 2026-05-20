@@ -188,10 +188,10 @@ class SettingsScreen extends StatelessWidget {
                 onChanged: (v) {
                   if (v != null) settingsController.setDefaultRoutingProfile(v);
                 },
-                items: const [
-                  DropdownMenuItem(value: 'driving', child: Text('Road')),
-                  DropdownMenuItem(value: 'walking', child: Text('Trail')),
-                  DropdownMenuItem(value: 'cycling', child: Text('Cycling')),
+                items: [
+                  DropdownMenuItem(value: 'driving', child: Text(l.settingsRoutingProfileRoad)),
+                  DropdownMenuItem(value: 'walking', child: Text(l.settingsRoutingProfileTrail)),
+                  DropdownMenuItem(value: 'cycling', child: Text(l.settingsRoutingProfileCycling)),
                 ],
               ),
             ),
@@ -367,7 +367,11 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
       _loading = true;
       _error = null;
     });
-    // Actual Supabase call added in Task 14
+    try {
+      // Actual Supabase call added in Task 14
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   @override
