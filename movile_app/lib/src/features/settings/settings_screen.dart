@@ -1,5 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:splitway_mobile/l10n/app_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -343,7 +347,63 @@ class SettingsScreen extends StatelessWidget {
   }
 
   Future<void> _exportHistory(BuildContext context, AppLocalizations l) async {
-    // Implemented in Task 16
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l.settingsExportSharing)),
+    );
+
+    final routes = await repository.getAllRoutes();
+    final sessions = await repository.getAllSessions();
+    final freeRides = await repository.getAllFreeRides();
+
+    final routeIndex = {for (final r in routes) r.id: r.name};
+
+    final buffer = StringBuffer();
+    buffer.writeln(
+      'type,date,route,laps,best_lap_ms,distance_m,max_speed_mps,avg_speed_mps,vehicle_id',
+    );
+
+    for (final s in sessions) {
+      final bestMs = s.laps.isEmpty
+          ? ''
+          : s.laps
+              .map((lap) => lap.duration.inMilliseconds)
+              .reduce((a, b) => a < b ? a : b)
+              .toString();
+      buffer.writeln([
+        'session',
+        s.startedAt.toIso8601String(),
+        routeIndex[s.routeTemplateId] ?? s.routeTemplateId,
+        s.laps.length,
+        bestMs,
+        s.totalDistanceMeters.toStringAsFixed(0),
+        s.maxSpeedMps.toStringAsFixed(2),
+        s.avgSpeedMps.toStringAsFixed(2),
+        s.vehicleId ?? '',
+      ].join(','));
+    }
+
+    for (final r in freeRides) {
+      buffer.writeln([
+        'free_ride',
+        r.startedAt.toIso8601String(),
+        '',
+        '',
+        '',
+        r.totalDistanceMeters.toStringAsFixed(0),
+        r.maxSpeedMps.toStringAsFixed(2),
+        r.avgSpeedMps.toStringAsFixed(2),
+        r.vehicleId ?? '',
+      ].join(','));
+    }
+
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/splitway_history.csv');
+    await file.writeAsString(buffer.toString());
+
+    await Share.shareXFiles(
+      [XFile(file.path, mimeType: 'text/csv')],
+      subject: 'Splitway history export',
+    );
   }
 
   void _confirmClearCache(BuildContext context, AppLocalizations l) {
@@ -373,7 +433,22 @@ class SettingsScreen extends StatelessWidget {
   }
 
   Future<void> _clearCache(BuildContext context, AppLocalizations l) async {
-    // Implemented in Task 17
+    final sessions = await repository.getAllSessions();
+    for (final s in sessions) {
+      await repository.deleteSession(s.id);
+    }
+    final rides = await repository.getAllFreeRides();
+    for (final r in rides) {
+      await repository.deleteFreeRide(r.id);
+    }
+    final routes = await repository.getAllRoutes();
+    for (final r in routes) {
+      await repository.deleteRoute(r.id);
+    }
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l.settingsClearCacheDone)),
+    );
   }
 }
 
