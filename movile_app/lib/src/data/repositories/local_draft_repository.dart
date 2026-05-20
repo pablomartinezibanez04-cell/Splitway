@@ -47,6 +47,7 @@ class LocalDraftRepository {
           'created_at': route.createdAt.toUtc().millisecondsSinceEpoch,
           'location_label': route.locationLabel,
           'owner_id': _userId,
+          'thumbnail_url': route.thumbnailUrl,
         },
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
@@ -124,6 +125,7 @@ class LocalDraftRepository {
         isUtc: true,
       ).toLocal(),
       locationLabel: row['location_label'] as String?,
+      thumbnailUrl: row['thumbnail_url'] as String?,
     );
   }
 
@@ -162,6 +164,7 @@ class LocalDraftRepository {
           'total_distance_m': session.totalDistanceMeters,
           'max_speed_mps': session.maxSpeedMps,
           'avg_speed_mps': session.avgSpeedMps,
+          'vehicle_id': session.vehicleId,
           'owner_id': _userId,
         },
         conflictAlgorithm: ConflictAlgorithm.replace,
@@ -285,6 +288,7 @@ class LocalDraftRepository {
       totalDistanceMeters: (row['total_distance_m']! as num).toDouble(),
       maxSpeedMps: (row['max_speed_mps']! as num).toDouble(),
       avgSpeedMps: (row['avg_speed_mps']! as num).toDouble(),
+      vehicleId: row['vehicle_id'] as String?,
     );
   }
 
@@ -310,6 +314,7 @@ class LocalDraftRepository {
           'name': ride.name,
           'description': ride.description,
           'location_label': ride.locationLabel,
+          'vehicle_id': ride.vehicleId,
           'owner_id': _userId,
         },
         conflictAlgorithm: ConflictAlgorithm.replace,
@@ -437,6 +442,7 @@ class LocalDraftRepository {
       name: row['name'] as String?,
       description: row['description'] as String?,
       locationLabel: row['location_label'] as String?,
+      vehicleId: row['vehicle_id'] as String?,
     );
   }
 

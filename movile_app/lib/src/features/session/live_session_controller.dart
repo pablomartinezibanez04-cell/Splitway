@@ -38,6 +38,14 @@ class LiveSessionController extends ChangeNotifier {
   TrackingSource _source = TrackingSource.simulated;
   TrackingSource get source => _source;
 
+  String? _selectedVehicleId;
+  String? get selectedVehicleId => _selectedVehicleId;
+
+  void selectVehicle(String? vehicleId) {
+    _selectedVehicleId = vehicleId;
+    notifyListeners();
+  }
+
   LocationPermissionStatus? _permissionStatus;
   LocationPermissionStatus? get permissionStatus => _permissionStatus;
 
@@ -98,7 +106,7 @@ class LiveSessionController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> startSession() async {
+  Future<void> startSession({int distanceFilterMeters = 0}) async {
     final route = _selected;
     if (route == null) return;
     _tracker?.dispose();
@@ -109,7 +117,9 @@ class LiveSessionController extends ChangeNotifier {
     notifyListeners();
 
     if (_source == TrackingSource.realGps) {
-      _gpsSub = LocationService.positionStream().listen((p) {
+      _gpsSub = LocationService.positionStream(
+        distanceFilterMeters: distanceFilterMeters,
+      ).listen((p) {
         _tracker?.ingestSimulatedPoint(p);
         notifyListeners();
       }, onError: (_) {
@@ -209,7 +219,8 @@ class LiveSessionController extends ChangeNotifier {
     _autoSimulator = null;
     final t = _tracker;
     if (t == null) return null;
-    final session = t.finishSession();
+    final raw = t.finishSession();
+    final session = raw.copyWith(vehicleId: _selectedVehicleId);
     await _repo.saveSessionRun(session);
     _result = session;
     _stage = LiveSessionStage.finished;

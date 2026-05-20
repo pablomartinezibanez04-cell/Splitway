@@ -61,7 +61,7 @@ void main() {
       });
       await tester.pump();
     }
-    expect(find.text('Editor de rutas'), findsOneWidget);
+    expect(find.text('Mis rutas'), findsOneWidget);
     controller.dispose();
     await tester.runAsync(() => boot.db.close());
   });
@@ -87,7 +87,7 @@ void main() {
       });
       await tester.pump();
     }
-    expect(find.text('Route editor'), findsOneWidget);
+    expect(find.text('My routes'), findsOneWidget);
     controller.dispose();
     await tester.runAsync(() => boot.db.close());
   });

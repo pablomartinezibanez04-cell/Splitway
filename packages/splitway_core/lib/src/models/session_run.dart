@@ -28,6 +28,7 @@ class SessionRun {
     required this.maxSpeedMps,
     required this.avgSpeedMps,
     this.endedAt,
+    this.vehicleId,
   });
 
   final String id;
@@ -41,6 +42,7 @@ class SessionRun {
   final double totalDistanceMeters;
   final double maxSpeedMps;
   final double avgSpeedMps;
+  final String? vehicleId;
 
   SessionRun copyWith({
     String? id,
@@ -54,6 +56,7 @@ class SessionRun {
     double? totalDistanceMeters,
     double? maxSpeedMps,
     double? avgSpeedMps,
+    String? vehicleId,
   }) {
     return SessionRun(
       id: id ?? this.id,
@@ -67,6 +70,7 @@ class SessionRun {
       totalDistanceMeters: totalDistanceMeters ?? this.totalDistanceMeters,
       maxSpeedMps: maxSpeedMps ?? this.maxSpeedMps,
       avgSpeedMps: avgSpeedMps ?? this.avgSpeedMps,
+      vehicleId: vehicleId ?? this.vehicleId,
     );
   }
 

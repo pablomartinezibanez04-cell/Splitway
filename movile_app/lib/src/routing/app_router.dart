@@ -12,11 +12,16 @@ import '../features/free_ride/free_ride_controller.dart';
 import '../features/free_ride/free_ride_screen.dart';
 import '../features/session/live_session_controller.dart';
 import '../features/session/live_session_screen.dart';
+import '../features/garage/garage_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../services/auth/auth_service.dart';
+import '../services/garage/garage_service.dart';
 import '../services/locale/locale_controller.dart';
+import '../services/settings/app_settings_controller.dart';
 import '../services/geocoding/reverse_geocoding_service.dart';
 import '../services/routing/routing_service.dart';
+import '../features/profile/profile_screen.dart';
+import '../services/profile/profile_service.dart';
 import '../services/sync/sync_service.dart';
 
 class AppRouter {
@@ -24,8 +29,11 @@ class AppRouter {
     required this.repository,
     required this.config,
     required this.localeController,
+    required this.settingsController,
     this.authService,
-    this.syncService,
+    SyncService? syncService,
+    ProfileService? profileService,
+    GarageService? garageService,
   })  : _editorController = RouteEditorController(
           repository,
           routingService: config.hasMapbox
@@ -34,24 +42,38 @@ class AppRouter {
           geocodingService: config.hasMapbox
               ? ReverseGeocodingService(accessToken: config.mapboxToken!)
               : null,
+          defaultRoutingProfile: settingsController.defaultRoutingProfile,
         ),
         _sessionController = LiveSessionController(repository),
-        _freeRideController = FreeRideController(repository);
+        _freeRideController = FreeRideController(repository) {
+    if (syncService != null) this.syncService = syncService;
+    if (profileService != null) this.profileService = profileService;
+    if (garageService != null) this.garageService = garageService;
+  }
 
   final LocalDraftRepository repository;
   final AppConfig config;
   final LocaleController localeController;
+  final AppSettingsController settingsController;
   final AuthService? authService;
+  ProfileService? profileService;
+  GarageService? garageService;
+  late final RouteEditorController _editorController;
+  late final LiveSessionController _sessionController;
+  late final FreeRideController _freeRideController;
+
+  SyncService? _syncService;
 
   /// Mutable so [SplitwayApp] can attach/detach after login/logout.
-  SyncService? syncService;
-
-  final RouteEditorController _editorController;
-  final LiveSessionController _sessionController;
-  final FreeRideController _freeRideController;
+  /// Propagates to [_editorController] so route deletions also hit the remote.
+  SyncService? get syncService => _syncService;
+  set syncService(SyncService? value) {
+    _syncService = value;
+    _editorController.syncService = value;
+  }
 
   late final GoRouter router = GoRouter(
-    initialLocation: '/editor',
+    initialLocation: '/routes',
     routes: [
       // Login screen (outside the shell — no bottom nav).
       GoRoute(
@@ -69,7 +91,31 @@ class AppRouter {
 
       GoRoute(
         path: '/settings',
-        builder: (_, __) => SettingsScreen(localeController: localeController),
+        builder: (_, __) => SettingsScreen(
+          localeController: localeController,
+          settingsController: settingsController,
+          authService: authService,
+          repository: repository,
+          garageService: garageService,
+        ),
+      ),
+
+      GoRoute(
+        path: '/profile',
+        builder: (_, __) => ProfileScreen(
+          profileService: profileService!,
+          authService: authService!,
+        ),
+      ),
+
+      GoRoute(
+        path: '/garage',
+        builder: (_, __) => GarageScreen(
+          garageService: garageService!,
+          config: config,
+          authService: authService,
+          profileService: profileService,
+        ),
       ),
 
       // Main tabbed shell.
@@ -78,16 +124,19 @@ class AppRouter {
           shell: shell,
           authService: authService,
           syncService: syncService,
+          profileService: profileService,
         ),
         branches: [
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: '/editor',
+                path: '/routes',
                 builder: (_, __) => RouteEditorScreen(
                   controller: _editorController,
                   config: config,
                   authService: authService,
+                  profileService: profileService,
+                  settingsController: settingsController,
                 ),
               ),
             ],
@@ -100,6 +149,9 @@ class AppRouter {
                   controller: _sessionController,
                   config: config,
                   authService: authService,
+                  profileService: profileService,
+                  garageService: garageService,
+                  settingsController: settingsController,
                 ),
               ),
             ],
@@ -112,6 +164,9 @@ class AppRouter {
                   controller: _freeRideController,
                   config: config,
                   authService: authService,
+                  profileService: profileService,
+                  garageService: garageService,
+                  settingsController: settingsController,
                 ),
               ),
             ],
@@ -124,6 +179,9 @@ class AppRouter {
                   repository: repository,
                   config: config,
                   authService: authService,
+                  profileService: profileService,
+                  garageService: garageService,
+                  settingsController: settingsController,
                 ),
               ),
             ],

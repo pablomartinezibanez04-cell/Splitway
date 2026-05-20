@@ -26,6 +26,14 @@ class FreeRideController extends ChangeNotifier {
   LocationPermissionStatus? _permissionStatus;
   LocationPermissionStatus? get permissionStatus => _permissionStatus;
 
+  String? _selectedVehicleId;
+  String? get selectedVehicleId => _selectedVehicleId;
+
+  void selectVehicle(String? vehicleId) {
+    _selectedVehicleId = vehicleId;
+    notifyListeners();
+  }
+
   StreamSubscription<TelemetryPoint>? _gpsSub;
   Timer? _ticker;
 
@@ -35,7 +43,7 @@ class FreeRideController extends ChangeNotifier {
   FreeRideSnapshot get snapshot =>
       _engine?.snapshot ?? FreeRideSnapshot.initial;
 
-  Future<void> startRecording() async {
+  Future<void> startRecording({int distanceFilterMeters = 0}) async {
     _permissionStatus = await LocationService.ensurePermission();
     if (_permissionStatus != LocationPermissionStatus.granted) {
       notifyListeners();
@@ -49,7 +57,9 @@ class FreeRideController extends ChangeNotifier {
     _stage = FreeRideStage.recording;
     notifyListeners();
 
-    _gpsSub = LocationService.positionStream().listen((point) {
+    _gpsSub = LocationService.positionStream(
+      distanceFilterMeters: distanceFilterMeters,
+    ).listen((point) {
       ingestPoint(point);
     }, onError: (_) {
       // GPS error — keep recording what we have.
@@ -75,7 +85,8 @@ class FreeRideController extends ChangeNotifier {
 
     final e = _engine;
     if (e == null) return null;
-    final run = e.finish();
+    final raw = e.finish();
+    final run = raw.copyWith(vehicleId: _selectedVehicleId);
     await _repo.saveFreeRideRun(run);
     _result = run;
     _stage = FreeRideStage.finished;
@@ -117,6 +128,7 @@ class FreeRideController extends ChangeNotifier {
       difficulty: difficulty,
       createdAt: DateTime.now(),
       locationLabel: locationLabel ?? run.locationLabel,
+      elevationRangeMeters: run.elevationRangeMeters,
     );
 
     await _repo.saveRouteTemplate(route);
@@ -133,6 +145,7 @@ class FreeRideController extends ChangeNotifier {
       totalDistanceMeters: run.totalDistanceMeters,
       maxSpeedMps: run.maxSpeedMps,
       avgSpeedMps: run.avgSpeedMps,
+      vehicleId: run.vehicleId,
     );
     await _repo.saveSessionRun(session);
 

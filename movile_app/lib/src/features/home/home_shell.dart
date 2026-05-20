@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:splitway_mobile/l10n/app_localizations.dart';
 
 import '../../services/auth/auth_service.dart';
+import '../../services/profile/profile_service.dart';
 import '../../services/sync/sync_service.dart';
 import '../../shared/widgets/app_drawer.dart';
 import '../auth/login_screen.dart';
@@ -19,20 +20,26 @@ class HomeShell extends StatelessWidget {
     required this.shell,
     this.authService,
     this.syncService,
+    this.profileService,
   });
 
   final StatefulNavigationShell shell;
   final AuthService? authService;
   final SyncService? syncService;
+  final ProfileService? profileService;
 
   @override
   Widget build(BuildContext context) {
-    return authService != null
-        ? ListenableBuilder(
-            listenable: authService!,
-            builder: (context, _) => _buildScaffold(context),
-          )
-        : _buildScaffold(context);
+    if (authService == null) return _buildScaffold(context);
+
+    final listenable = profileService != null
+        ? Listenable.merge([authService!, profileService!])
+        : authService!;
+
+    return ListenableBuilder(
+      listenable: listenable,
+      builder: (context, _) => _buildScaffold(context),
+    );
   }
 
   Widget _buildScaffold(BuildContext context) {
@@ -41,6 +48,7 @@ class HomeShell extends StatelessWidget {
           ? AppDrawer(
               authService: authService!,
               syncService: syncService,
+              profileService: profileService,
               onLoginTap: () {
                 Navigator.pop(context); // close drawer
                 _navigateToLogin(context);
@@ -56,9 +64,9 @@ class HomeShell extends StatelessWidget {
         ),
         destinations: [
           NavigationDestination(
-            icon: const Icon(Icons.edit_location_alt_outlined),
-            selectedIcon: const Icon(Icons.edit_location_alt),
-            label: AppLocalizations.of(context).navEditor,
+            icon: const Icon(Icons.route_outlined),
+            selectedIcon: const Icon(Icons.route),
+            label: AppLocalizations.of(context).navRoutes,
           ),
           NavigationDestination(
             icon: const Icon(Icons.play_circle_outline),
@@ -97,11 +105,16 @@ class HomeShell extends StatelessWidget {
 ///
 /// **Important**: [context] must be the State's build context (above the
 /// inner Scaffold), not a context from within the AppBar.
-Widget? buildDrawerLeading(BuildContext context, AuthService? authService) {
+Widget? buildDrawerLeading(
+  BuildContext context,
+  AuthService? authService,
+  ProfileService? profileService,
+) {
   if (authService == null) return null;
 
   final user = authService.currentUser;
   final isLoggedIn = user != null;
+  final avatarUrl = profileService?.profile?.avatarUrl;
 
   return IconButton(
     tooltip: AppLocalizations.of(context).drawerMenu,
@@ -109,14 +122,18 @@ Widget? buildDrawerLeading(BuildContext context, AuthService? authService) {
         ? CircleAvatar(
             radius: 14,
             backgroundColor: const Color(0xFF1565C0),
-            child: Text(
-              _userInitials(user),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            backgroundImage:
+                avatarUrl != null ? NetworkImage(avatarUrl) : null,
+            child: avatarUrl == null
+                ? Text(
+                    _userInitials(user),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  )
+                : null,
           )
         : const Icon(Icons.menu),
     onPressed: () => Scaffold.of(context).openDrawer(),

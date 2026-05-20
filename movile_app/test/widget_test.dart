@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:splitway_mobile/l10n/app_localizations.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:splitway_core/splitway_core.dart';
@@ -12,6 +13,7 @@ import 'package:splitway_mobile/src/data/repositories/local_draft_repository.dar
 import 'package:splitway_mobile/src/features/editor/route_editor_controller.dart';
 import 'package:splitway_mobile/src/features/editor/route_editor_screen.dart';
 import 'package:splitway_mobile/src/features/history/history_screen.dart';
+import 'package:splitway_mobile/src/services/settings/app_settings_controller.dart';
 
 /// Iter 1 test strategy: pure-Dart tests for the data layer, and widget tests
 /// that mount individual screens (NOT the full SplitwayApp). The full app
@@ -140,9 +142,12 @@ void main() {
 
   testWidgets('HistoryScreen shows the empty state with no sessions',
       (tester) async {
+    SharedPreferences.setMockInitialValues({});
     late ({SplitwayLocalDatabase db, LocalDraftRepository repo}) boot;
+    late AppSettingsController settings;
     await tester.runAsync(() async {
       boot = await _bootRepo(seed: false);
+      settings = await AppSettingsController.load();
     });
 
     await tester.pumpWidget(MaterialApp(
@@ -154,7 +159,7 @@ void main() {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [Locale('es'), Locale('en')],
-      home: HistoryScreen(repository: boot.repo),
+      home: HistoryScreen(repository: boot.repo, settingsController: settings),
     ));
     for (var i = 0; i < 5; i++) {
       await tester.runAsync(() async {

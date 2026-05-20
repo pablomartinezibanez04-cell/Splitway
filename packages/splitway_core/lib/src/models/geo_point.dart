@@ -1,10 +1,15 @@
 import 'dart:math' as math;
 
 class GeoPoint {
-  const GeoPoint({required this.latitude, required this.longitude});
+  const GeoPoint({
+    required this.latitude,
+    required this.longitude,
+    this.altitudeMeters,
+  });
 
   final double latitude;
   final double longitude;
+  final double? altitudeMeters;
 
   static const double _earthRadiusMeters = 6371000.0;
 
@@ -59,11 +64,13 @@ class GeoPoint {
   Map<String, dynamic> toJson() => {
         'latitude': latitude,
         'longitude': longitude,
+        'altitudeMeters': altitudeMeters,
       };
 
   factory GeoPoint.fromJson(Map<String, dynamic> json) => GeoPoint(
         latitude: (json['latitude'] as num).toDouble(),
         longitude: (json['longitude'] as num).toDouble(),
+        altitudeMeters: (json['altitudeMeters'] as num?)?.toDouble(),
       );
 
   @override

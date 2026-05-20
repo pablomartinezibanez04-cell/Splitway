@@ -47,7 +47,11 @@ class LocationService {
     return Geolocator.getPositionStream(locationSettings: settings).map(
       (p) => TelemetryPoint(
         timestamp: p.timestamp,
-        location: GeoPoint(latitude: p.latitude, longitude: p.longitude),
+        location: GeoPoint(
+          latitude: p.latitude,
+          longitude: p.longitude,
+          altitudeMeters: p.altitude,
+        ),
         speedMps: p.speed,
         accuracyMeters: p.accuracy,
         bearingDeg: p.heading,

@@ -193,6 +193,82 @@ void main() {
     await engine.dispose();
   });
 
+  group('gap detection', () {
+    test('gap skips distance and speed updates', () async {
+      final route = _buildTestRoute();
+      final base = DateTime.parse('2026-04-29T10:00:00Z');
+      final engine =
+          TrackingEngine(route: route, sessionId: 'gap-1', clock: () => base);
+
+      engine.start();
+      engine.ingest(_p(-0.0005, 0, base));
+      engine.ingest(_p(-0.0004, 0, base.add(const Duration(seconds: 1))));
+
+      final preGapSnapshot = engine.snapshot;
+
+      // 10-second gap — exceeds the 5 s threshold
+      engine.ingest(_p(0.01, 0, base.add(const Duration(seconds: 11)),
+          speed: 99));
+
+      expect(engine.snapshot.totalDistanceMeters,
+          preGapSnapshot.totalDistanceMeters);
+      expect(engine.snapshot.lastSpeedMps, preGapSnapshot.lastSpeedMps);
+      await engine.dispose();
+    });
+
+    test('recovery window skips metrics for subsequent points', () async {
+      final route = _buildTestRoute();
+      final base = DateTime.parse('2026-04-29T10:00:00Z');
+      final engine =
+          TrackingEngine(route: route, sessionId: 'gap-2', clock: () => base);
+
+      engine.start();
+      engine.ingest(_p(-0.0005, 0, base));
+      engine.ingest(_p(-0.0004, 0, base.add(const Duration(seconds: 1))));
+
+      final preGapDistance = engine.snapshot.totalDistanceMeters;
+
+      // Trigger gap at t=11s — recovery until t=14s
+      engine.ingest(_p(0.01, 0, base.add(const Duration(seconds: 11)),
+          speed: 50));
+      // Still recovering at t=13s
+      engine.ingest(_p(0.011, 0, base.add(const Duration(seconds: 13)),
+          speed: 40));
+
+      expect(engine.snapshot.totalDistanceMeters, preGapDistance);
+      await engine.dispose();
+    });
+
+    test('normal tracking resumes after recovery window', () async {
+      final route = _buildTestRoute();
+      final base = DateTime.parse('2026-04-29T10:00:00Z');
+      final engine =
+          TrackingEngine(route: route, sessionId: 'gap-3', clock: () => base);
+
+      engine.start();
+      engine.ingest(_p(-0.0005, 0, base));
+      engine.ingest(_p(-0.0004, 0, base.add(const Duration(seconds: 1))));
+
+      // Trigger gap at t=11s — recovery until t=14s
+      engine.ingest(_p(0.01, 0, base.add(const Duration(seconds: 11)),
+          speed: 50));
+      // Still recovering at t=13s
+      engine.ingest(_p(0.0101, 0, base.add(const Duration(seconds: 13)),
+          speed: 40));
+
+      final preResumeDistance = engine.snapshot.totalDistanceMeters;
+
+      // Past recovery at t=15s
+      engine.ingest(_p(0.0102, 0, base.add(const Duration(seconds: 15)),
+          speed: 12));
+
+      expect(engine.snapshot.totalDistanceMeters,
+          greaterThan(preResumeDistance));
+      expect(engine.snapshot.lastSpeedMps, 12);
+      await engine.dispose();
+    });
+  });
+
   test('gate cooldown: crossing after 3+ s is accepted and closes lap', () async {
     final gate = GateDefinition(
       left: GeoPoint(latitude: 0.0, longitude: -0.0001),

@@ -1,0 +1,147 @@
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+enum UnitSystem { metric, imperial }
+
+enum AppThemeMode { system, light, dark }
+
+enum GpsSamplingInterval { oneSecond, twoSeconds, fiveSeconds }
+
+class AppSettingsController extends ChangeNotifier {
+  AppSettingsController._(this._prefs) {
+    _unitSystem = UnitSystem.values.byName(
+      _prefs.getString(_kUnitSystem) ?? UnitSystem.metric.name,
+    );
+    _themeMode = AppThemeMode.values.byName(
+      _prefs.getString(_kThemeMode) ?? AppThemeMode.system.name,
+    );
+    _timeFormatDot = _prefs.getBool(_kTimeFormatDot) ?? true;
+    _keepScreenAwake = _prefs.getBool(_kKeepScreenAwake) ?? true;
+    _hapticFeedback = _prefs.getBool(_kHapticFeedback) ?? true;
+    _audioAlerts = _prefs.getBool(_kAudioAlerts) ?? false;
+    _gpsSamplingInterval = GpsSamplingInterval.values.byName(
+      _prefs.getString(_kGpsSamplingInterval) ??
+          GpsSamplingInterval.oneSecond.name,
+    );
+    _defaultVehicleId = _prefs.getString(_kDefaultVehicleId);
+    _defaultRoutingProfile =
+        _prefs.getString(_kDefaultRoutingProfile) ?? 'driving';
+  }
+
+  static const _kUnitSystem = 'unit_system';
+  static const _kThemeMode = 'app_theme_mode';
+  static const _kTimeFormatDot = 'time_format_dot';
+  static const _kKeepScreenAwake = 'keep_screen_awake';
+  static const _kHapticFeedback = 'haptic_feedback';
+  static const _kAudioAlerts = 'audio_alerts';
+  static const _kGpsSamplingInterval = 'gps_sampling_interval';
+  static const _kDefaultVehicleId = 'default_vehicle_id';
+  static const _kDefaultRoutingProfile = 'default_routing_profile';
+
+  final SharedPreferences _prefs;
+
+  late UnitSystem _unitSystem;
+  late AppThemeMode _themeMode;
+  late bool _timeFormatDot;
+  late bool _keepScreenAwake;
+  late bool _hapticFeedback;
+  late bool _audioAlerts;
+  late GpsSamplingInterval _gpsSamplingInterval;
+  String? _defaultVehicleId;
+  late String _defaultRoutingProfile;
+
+  UnitSystem get unitSystem => _unitSystem;
+  AppThemeMode get themeMode => _themeMode;
+  bool get timeFormatDot => _timeFormatDot;
+  bool get keepScreenAwake => _keepScreenAwake;
+  bool get hapticFeedback => _hapticFeedback;
+  bool get audioAlerts => _audioAlerts;
+  GpsSamplingInterval get gpsSamplingInterval => _gpsSamplingInterval;
+  String? get defaultVehicleId => _defaultVehicleId;
+  String get defaultRoutingProfile => _defaultRoutingProfile;
+
+  ThemeMode get flutterThemeMode => switch (_themeMode) {
+        AppThemeMode.system => ThemeMode.system,
+        AppThemeMode.light => ThemeMode.light,
+        AppThemeMode.dark => ThemeMode.dark,
+      };
+
+  /// Distance filter in meters passed to geolocator's position stream.
+  int get gpsSamplingDistanceFilter => switch (_gpsSamplingInterval) {
+        GpsSamplingInterval.oneSecond => 0,
+        GpsSamplingInterval.twoSeconds => 5,
+        GpsSamplingInterval.fiveSeconds => 15,
+      };
+
+  static Future<AppSettingsController> load() async {
+    final prefs = await SharedPreferences.getInstance();
+    return AppSettingsController._(prefs);
+  }
+
+  Future<void> setUnitSystem(UnitSystem v) async {
+    if (_unitSystem == v) return;
+    _unitSystem = v;
+    await _prefs.setString(_kUnitSystem, v.name);
+    notifyListeners();
+  }
+
+  Future<void> setThemeMode(AppThemeMode v) async {
+    if (_themeMode == v) return;
+    _themeMode = v;
+    await _prefs.setString(_kThemeMode, v.name);
+    notifyListeners();
+  }
+
+  Future<void> setTimeFormatDot(bool v) async {
+    if (_timeFormatDot == v) return;
+    _timeFormatDot = v;
+    await _prefs.setBool(_kTimeFormatDot, v);
+    notifyListeners();
+  }
+
+  Future<void> setKeepScreenAwake(bool v) async {
+    if (_keepScreenAwake == v) return;
+    _keepScreenAwake = v;
+    await _prefs.setBool(_kKeepScreenAwake, v);
+    notifyListeners();
+  }
+
+  Future<void> setHapticFeedback(bool v) async {
+    if (_hapticFeedback == v) return;
+    _hapticFeedback = v;
+    await _prefs.setBool(_kHapticFeedback, v);
+    notifyListeners();
+  }
+
+  Future<void> setAudioAlerts(bool v) async {
+    if (_audioAlerts == v) return;
+    _audioAlerts = v;
+    await _prefs.setBool(_kAudioAlerts, v);
+    notifyListeners();
+  }
+
+  Future<void> setGpsSamplingInterval(GpsSamplingInterval v) async {
+    if (_gpsSamplingInterval == v) return;
+    _gpsSamplingInterval = v;
+    await _prefs.setString(_kGpsSamplingInterval, v.name);
+    notifyListeners();
+  }
+
+  Future<void> setDefaultVehicleId(String? v) async {
+    if (_defaultVehicleId == v) return;
+    _defaultVehicleId = v;
+    if (v == null) {
+      await _prefs.remove(_kDefaultVehicleId);
+    } else {
+      await _prefs.setString(_kDefaultVehicleId, v);
+    }
+    notifyListeners();
+  }
+
+  Future<void> setDefaultRoutingProfile(String v) async {
+    if (_defaultRoutingProfile == v) return;
+    _defaultRoutingProfile = v;
+    await _prefs.setString(_kDefaultRoutingProfile, v);
+    notifyListeners();
+  }
+}

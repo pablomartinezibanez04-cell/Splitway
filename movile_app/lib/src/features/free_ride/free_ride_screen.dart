@@ -1,16 +1,21 @@
 // movile_app/lib/src/features/free_ride/free_ride_screen.dart
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:splitway_core/splitway_core.dart';
 import 'package:splitway_mobile/l10n/app_localizations.dart';
 
 import '../../config/app_config.dart';
 import '../../routing/app_router.dart';
 import '../../services/auth/auth_service.dart';
+import '../../services/garage/garage_service.dart';
+import '../../services/profile/profile_service.dart';
+import '../../services/settings/app_settings_controller.dart';
 import '../../services/tracking/location_service.dart';
 import '../../shared/formatters.dart';
 import '../../shared/widgets/empty_state.dart';
 import '../../shared/widgets/splitway_map.dart';
+import '../../shared/widgets/vehicle_picker_tile.dart';
 import '../home/home_shell.dart';
 import 'free_ride_controller.dart';
 
@@ -19,12 +24,18 @@ class FreeRideScreen extends StatefulWidget {
     super.key,
     required this.controller,
     required this.config,
+    required this.settingsController,
     this.authService,
+    this.profileService,
+    this.garageService,
   });
 
   final FreeRideController controller;
   final AppConfig config;
+  final AppSettingsController settingsController;
   final AuthService? authService;
+  final ProfileService? profileService;
+  final GarageService? garageService;
 
   @override
   State<FreeRideScreen> createState() => _FreeRideScreenState();
@@ -40,16 +51,29 @@ class _FreeRideScreenState extends State<FreeRideScreen> {
   void initState() {
     super.initState();
     widget.controller.addListener(_onChange);
+    widget.settingsController.addListener(_onSettingsChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (widget.controller.selectedVehicleId == null) {
+        final defaultId = widget.settingsController.defaultVehicleId;
+        if (defaultId != null) {
+          widget.controller.selectVehicle(defaultId);
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
     widget.controller.removeListener(_onChange);
+    widget.settingsController.removeListener(_onSettingsChanged);
+    WakelockPlus.disable().catchError((_) {});
     _flyToNotifier.dispose();
     super.dispose();
   }
 
   void _onChange() {
+    _updateWakelock();
     final ctrl = widget.controller;
     if (ctrl.stage == FreeRideStage.recording && _followUser) {
       final points = ctrl.ingested;
@@ -59,6 +83,17 @@ class _FreeRideScreenState extends State<FreeRideScreen> {
       _lastPointCount = points.length;
     }
     setState(() {});
+  }
+
+  void _onSettingsChanged() {
+    _updateWakelock();
+    setState(() {});
+  }
+
+  void _updateWakelock() {
+    final shouldKeep = widget.settingsController.keepScreenAwake &&
+        widget.controller.stage == FreeRideStage.recording;
+    WakelockPlus.toggle(enable: shouldKeep).catchError((_) {});
   }
 
   Future<GeoPoint?> _getCurrentLocation() async {
@@ -96,20 +131,54 @@ class _FreeRideScreenState extends State<FreeRideScreen> {
     }
   }
 
+  String _speedLabel(AppLocalizations l, double mps) {
+    final v = Formatters.speedMps(mps, unit: widget.settingsController.unitSystem);
+    return widget.settingsController.unitSystem == UnitSystem.imperial
+        ? l.unitMph(v)
+        : l.unitKmh(v);
+  }
+
+  String _distanceLabel(AppLocalizations l, double meters) {
+    final (value, isLarge) = Formatters.distanceMeters(
+      meters,
+      unit: widget.settingsController.unitSystem,
+    );
+    final formatted = value.toStringAsFixed(value >= 10 ? 1 : 2);
+    if (widget.settingsController.unitSystem == UnitSystem.imperial) {
+      return isLarge ? l.unitMiles(formatted) : l.unitFeet(formatted);
+    }
+    return isLarge ? l.unitKilometers(formatted) : l.unitMeters(formatted);
+  }
+
+  String _elevationLabel(AppLocalizations l, double meters) {
+    if (widget.settingsController.unitSystem == UnitSystem.imperial) {
+      final feet = meters * 3.28084;
+      return l.elevationRangeValueFeet(feet.toStringAsFixed(0));
+    }
+    return l.elevationRangeValue(meters.toStringAsFixed(0));
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final ctrl = widget.controller;
-    return Scaffold(
-      appBar: AppBar(
-        leading: buildDrawerLeading(context, widget.authService),
-        title: Text(l.freeRideTitle),
+    return ListenableBuilder(
+      listenable: widget.settingsController,
+      builder: (context, _) => Scaffold(
+        appBar: AppBar(
+          leading: buildDrawerLeading(
+            context,
+            widget.authService,
+            widget.profileService,
+          ),
+          title: Text(l.freeRideTitle),
+        ),
+        body: switch (ctrl.stage) {
+          FreeRideStage.idle => _buildIdle(context, ctrl),
+          FreeRideStage.recording => _buildRecording(context, ctrl),
+          FreeRideStage.finished => _buildFinished(context, ctrl),
+        },
       ),
-      body: switch (ctrl.stage) {
-        FreeRideStage.idle => _buildIdle(context, ctrl),
-        FreeRideStage.recording => _buildRecording(context, ctrl),
-        FreeRideStage.finished => _buildFinished(context, ctrl),
-      },
     );
   }
 
@@ -131,6 +200,18 @@ class _FreeRideScreenState extends State<FreeRideScreen> {
             const SizedBox(height: 16),
             _PermissionBanner(status: ctrl.permissionStatus!),
           ],
+          if (widget.garageService != null &&
+              widget.garageService!.vehicles.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text(l.vehiclePickerLabel,
+                style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 8),
+            VehiclePickerTile(
+              selectedVehicleId: ctrl.selectedVehicleId,
+              vehicles: widget.garageService!.vehicles,
+              onSelected: ctrl.selectVehicle,
+            ),
+          ],
           const SizedBox(height: 24),
           FilledButton.icon(
             onPressed: () async {
@@ -143,7 +224,9 @@ class _FreeRideScreenState extends State<FreeRideScreen> {
               _initialCenter = await _getCurrentLocation();
               _followUser = true;
               _lastPointCount = 0;
-              await ctrl.startRecording();
+              await ctrl.startRecording(
+                distanceFilterMeters: widget.settingsController.gpsSamplingDistanceFilter,
+              );
             },
             icon: const Icon(Icons.play_arrow),
             label: Text(l.freeRideStartButton),
@@ -194,28 +277,22 @@ class _FreeRideScreenState extends State<FreeRideScreen> {
               Expanded(
                 child: _MetricCard(
                   label: l.freeRideElapsedLabel,
-                  value: Formatters.duration(snap.elapsed),
+                  value: Formatters.duration(
+                    snap.elapsed,
+                    dotSeparator: widget.settingsController.timeFormatDot,
+                  ),
                 ),
               ),
               Expanded(
                 child: _MetricCard(
                   label: l.freeRideDistanceLabel,
-                  value: () {
-                    final (dv, isKm) =
-                        Formatters.distanceMeters(snap.totalDistanceMeters);
-                    return isKm
-                        ? l.unitKilometers(dv.toStringAsFixed(2))
-                        : l.unitMeters(dv.toStringAsFixed(0));
-                  }(),
+                  value: _distanceLabel(l, snap.totalDistanceMeters),
                 ),
               ),
               Expanded(
                 child: _MetricCard(
                   label: l.freeRideSpeedLabel,
-                  value: l.unitKmh(
-                    Formatters.speedMps(snap.currentSpeedMps)
-                        .toStringAsFixed(1),
-                  ),
+                  value: _speedLabel(l, snap.currentSpeedMps),
                 ),
               ),
             ],
@@ -248,10 +325,7 @@ class _FreeRideScreenState extends State<FreeRideScreen> {
   Widget _buildFinished(BuildContext context, FreeRideController ctrl) {
     final l = AppLocalizations.of(context);
     final result = ctrl.result!;
-    final (dv, isKm) = Formatters.distanceMeters(result.totalDistanceMeters);
-    final distStr = isKm
-        ? l.unitKilometers(dv.toStringAsFixed(2))
-        : l.unitMeters(dv.toStringAsFixed(0));
+    final distStr = _distanceLabel(l, result.totalDistanceMeters);
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -279,24 +353,32 @@ class _FreeRideScreenState extends State<FreeRideScreen> {
             Expanded(
               child: _StatCard(
                 l.freeRideMaxSpeedLabel,
-                l.unitKmh(Formatters.speedMps(result.maxSpeedMps)
-                    .toStringAsFixed(1)),
+                _speedLabel(l, result.maxSpeedMps),
               ),
             ),
             Expanded(
               child: _StatCard(
                 l.freeRideAvgSpeedLabel,
-                l.unitKmh(Formatters.speedMps(result.avgSpeedMps)
-                    .toStringAsFixed(1)),
+                _speedLabel(l, result.avgSpeedMps),
               ),
             ),
           ],
         ),
+        if (result.elevationRangeMeters != null) ...[
+          const SizedBox(height: 8),
+          _StatCard(
+            l.elevationRangeLabel,
+            _elevationLabel(l, result.elevationRangeMeters!),
+          ),
+        ],
         if (result.totalDuration != null) ...[
           const SizedBox(height: 8),
           _StatCard(
             l.freeRideElapsedLabel,
-            Formatters.duration(result.totalDuration!),
+            Formatters.duration(
+              result.totalDuration!,
+              dotSeparator: widget.settingsController.timeFormatDot,
+            ),
           ),
         ],
         const SizedBox(height: 24),

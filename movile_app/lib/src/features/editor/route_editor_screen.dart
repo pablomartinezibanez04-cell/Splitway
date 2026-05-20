@@ -1,22 +1,25 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:splitway_core/splitway_core.dart';
 import 'package:splitway_mobile/l10n/app_localizations.dart';
 
 import '../../config/app_config.dart';
-import '../../data/repositories/local_draft_repository.dart';
 import '../../routing/app_router.dart';
 import '../../services/auth/auth_service.dart';
+import '../../services/profile/profile_service.dart';
+import '../../services/settings/app_settings_controller.dart';
 import '../../services/tracking/location_service.dart';
-import '../../shared/formatters.dart';
 import '../../shared/widgets/empty_state.dart';
 import '../../shared/widgets/splitway_map.dart';
 import '../home/home_shell.dart';
-import '../history/history_screen.dart';
+import 'route_detail_screen.dart';
 import 'route_editor_controller.dart';
-import 'widgets/bento_grid.dart';
+import 'widgets/difficulty_selector.dart';
+import 'widgets/route_grid_tile.dart';
+import 'widgets/route_list_tile.dart';
 
 class RouteEditorScreen extends StatefulWidget {
   const RouteEditorScreen({
@@ -24,19 +27,24 @@ class RouteEditorScreen extends StatefulWidget {
     required this.controller,
     required this.config,
     this.authService,
+    this.profileService,
+    this.settingsController,
   });
 
   final RouteEditorController controller;
   final AppConfig config;
   final AuthService? authService;
+  final ProfileService? profileService;
+  final AppSettingsController? settingsController;
 
   @override
   State<RouteEditorScreen> createState() => _RouteEditorScreenState();
 }
 
+enum _ViewMode { list, grid }
+
 class _RouteEditorScreenState extends State<RouteEditorScreen> {
-  bool _showSectors = false;
-  String? _lastSelectedId;
+  _ViewMode _viewMode = _ViewMode.list;
   GeoPoint? _userLocation;
 
   @override
@@ -44,6 +52,7 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
     super.initState();
     widget.controller.addListener(_onChange);
     widget.authService?.addListener(_onChange);
+    widget.profileService?.addListener(_onChange);
     widget.controller.load();
   }
 
@@ -51,16 +60,21 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
   void dispose() {
     widget.controller.removeListener(_onChange);
     widget.authService?.removeListener(_onChange);
+    widget.profileService?.removeListener(_onChange);
     super.dispose();
   }
 
   void _onChange() {
-    final newId = widget.controller.selected?.id;
-    if (newId != _lastSelectedId) {
-      _showSectors = false;
-      _lastSelectedId = newId;
+    // Defer setState to avoid calling it during the build phase when a
+    // ChangeNotifier fires while the widget tree is still being built.
+    if (SchedulerBinding.instance.schedulerPhase ==
+        SchedulerPhase.persistentCallbacks) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() {});
+      });
+    } else {
+      if (mounted) setState(() {});
     }
-    setState(() {});
   }
 
   Future<void> _onCreateRoute() async {
@@ -121,30 +135,6 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
     }
   }
 
-  Future<void> _confirmDelete(RouteTemplate route) async {
-    final l = AppLocalizations.of(context);
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l.editorDeleteRouteTitle),
-        content: Text(l.editorDeleteRouteConfirm(route.name)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text(l.commonCancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(l.commonDelete),
-          ),
-        ],
-      ),
-    );
-    if (ok == true) {
-      await widget.controller.deleteRoute(route.id);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -158,9 +148,28 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
     }
     return Scaffold(
       appBar: AppBar(
-        leading: buildDrawerLeading(context, widget.authService),
-        title: Text(l.editorTitle),
+        leading: buildDrawerLeading(
+          context,
+          widget.authService,
+          widget.profileService,
+        ),
+        title: Text(l.routesTitle),
         actions: [
+          IconButton(
+            tooltip: _viewMode == _ViewMode.list
+                ? l.routesViewGrid
+                : l.routesViewList,
+            onPressed: () => setState(() {
+              _viewMode = _viewMode == _ViewMode.list
+                  ? _ViewMode.grid
+                  : _ViewMode.list;
+            }),
+            icon: Icon(
+              _viewMode == _ViewMode.list
+                  ? Icons.grid_view_rounded
+                  : Icons.view_list_rounded,
+            ),
+          ),
           IconButton(
             tooltip: l.editorNewRouteTooltip,
             onPressed: _onCreateRoute,
@@ -181,501 +190,62 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
                     label: Text(l.editorNewRouteButton),
                   ),
                 )
-              : Column(
-                  children: [
-                    SizedBox(
-                      height: 56,
-                      child: ListView.separated(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        scrollDirection: Axis.horizontal,
-                        itemCount: ctrl.routes.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 8),
-                        itemBuilder: (_, index) {
-                          final route = ctrl.routes[index];
-                          final selected = route.id == ctrl.selected?.id;
-                          return ChoiceChip(
-                            selected: selected,
-                            label: Text(route.name),
-                            onSelected: (_) => ctrl.select(route),
-                          );
-                        },
-                      ),
-                    ),
-                    const Divider(height: 1),
-                    if (ctrl.selected != null)
-                      Expanded(
-                        child: _RouteDetail(
-                          route: ctrl.selected!,
-                          config: widget.config,
-                          controller: ctrl,
-                          onDelete: () => _confirmDelete(ctrl.selected!),
-                          showSectors: _showSectors,
-                          onToggleSectors: () => setState(() => _showSectors = !_showSectors),
-                        ),
-                      ),
-                  ],
-                ),
+              : _viewMode == _ViewMode.list
+                  ? _buildListView(ctrl)
+                  : _buildGridView(ctrl),
     );
   }
-}
 
-class _RouteDetail extends StatelessWidget {
-  const _RouteDetail({
-    required this.route,
-    required this.config,
-    required this.controller,
-    required this.onDelete,
-    required this.showSectors,
-    required this.onToggleSectors,
-  });
-
-  final RouteTemplate route;
-  final AppConfig config;
-  final RouteEditorController controller;
-  final VoidCallback onDelete;
-  final bool showSectors;
-  final VoidCallback onToggleSectors;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final sessions = controller.sessionsForSelected;
-    final bestLap = _findBestLap(sessions);
-
-    return ListView(
+  Widget _buildListView(RouteEditorController ctrl) {
+    return ListView.separated(
       padding: const EdgeInsets.all(16),
-      children: [
-        // Map
-        Card(
-          clipBehavior: Clip.antiAlias,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: AspectRatio(
-            aspectRatio: 16 / 10,
-            child: SplitwayMap(
-              useMapbox: config.hasMapbox,
-              route: route,
-              showSectors: showSectors,
-              interactive: false,
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-
-        // Route name + difficulty + sectors toggle
-        Row(
-          children: [
-            Expanded(
-              child: Text(route.name, style: theme.textTheme.headlineSmall),
-            ),
-            _DifficultyChip(difficulty: route.difficulty),
-            if (route.sectors.isNotEmpty) ...[
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: onToggleSectors,
-                icon: Icon(
-                  showSectors ? Icons.flag : Icons.flag_outlined,
-                ),
-                tooltip: showSectors ? 'Ocultar sectores' : 'Ver sectores',
-              ),
-            ],
-          ],
-        ),
-        if (route.description != null && route.description!.isNotEmpty) ...[
-          const SizedBox(height: 4),
-          Text(route.description!, style: theme.textTheme.bodyMedium),
-        ],
-        const SizedBox(height: 16),
-
-        // Bento grid — 2 columns
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            SizedBox(
-              width: _halfWidth(context),
-              child: BentoTile(
-                icon: Icons.straighten,
-                label: 'Distancia',
-                value: _formatDistance(route.totalDistanceMeters),
-              ),
-            ),
-            SizedBox(
-              width: _halfWidth(context),
-              child: BentoTile(
-                icon: Icons.flag_outlined,
-                label: 'Sectores',
-                value: '${route.sectors.length}',
-                onTap: route.sectors.isNotEmpty ? onToggleSectors : null,
-              ),
-            ),
-            SizedBox(
-              width: _halfWidth(context),
-              child: BentoTile(
-                icon: route.isClosed ? Icons.loop : Icons.linear_scale,
-                label: 'Circuito',
-                value: route.isClosed ? 'Cerrado' : 'Abierto',
-              ),
-            ),
-            SizedBox(
-              width: _halfWidth(context),
-              child: BentoTile(
-                icon: Icons.location_on_outlined,
-                label: 'Localización',
-                value: route.locationLabel ?? '—',
-              ),
-            ),
-            SizedBox(
-              width: _halfWidth(context),
-              child: BentoTile(
-                icon: Icons.calendar_today_outlined,
-                label: 'Creación',
-                value: Formatters.dateTime(route.createdAt),
-              ),
-            ),
-            SizedBox(
-              width: _halfWidth(context),
-              child: BentoTile(
-                icon: Icons.bolt_outlined,
-                label: 'Dificultad',
-                value: _difficultyLabel(route.difficulty),
-              ),
-            ),
-            SizedBox(
-              width: double.infinity,
-              child: BentoTileWide(
-                icon: Icons.emoji_events_outlined,
-                label: 'Sesiones',
-                value: _sessionsValue(sessions),
-                trailingLabel: sessions.isNotEmpty ? 'Mejor' : null,
-                trailingText: sessions.isNotEmpty ? _bestLapText(bestLap) : null,
-                onTap: sessions.isNotEmpty
-                    ? () => _navigateToSessions(context)
-                    : null,
-              ),
-            ),
-            SizedBox(
-              width: _halfWidth(context),
-              child: BentoActionTile(
-                icon: Icons.edit_outlined,
-                label: 'Editar',
-                onTap: () => _showEditDialog(context),
-              ),
-            ),
-            SizedBox(
-              width: _halfWidth(context),
-              child: BentoActionTile(
-                icon: Icons.delete_outline,
-                label: 'Eliminar',
-                onTap: onDelete,
-                backgroundColor: theme.colorScheme.errorContainer,
-                foregroundColor: theme.colorScheme.onErrorContainer,
-              ),
-            ),
-          ],
-        ),
-      ],
+      itemCount: ctrl.routes.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      itemBuilder: (_, index) {
+        final route = ctrl.routes[index];
+        return RouteListTile(
+          route: route,
+          sessionCount: ctrl.routeSessionCounts[route.id] ?? 0,
+          bestLap: ctrl.routeBestLaps[route.id],
+          onTap: () => _openRouteDetail(route),
+          settingsController: widget.settingsController,
+        );
+      },
     );
   }
 
-  double _halfWidth(BuildContext context) {
-    final available = MediaQuery.of(context).size.width - 32 - 8;
-    return available / 2;
+  Widget _buildGridView(RouteEditorController ctrl) {
+    return GridView.builder(
+      padding: const EdgeInsets.all(16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 8,
+        crossAxisSpacing: 8,
+        childAspectRatio: 0.85,
+      ),
+      itemCount: ctrl.routes.length,
+      itemBuilder: (_, index) {
+        final route = ctrl.routes[index];
+        return RouteGridTile(
+          route: route,
+          sessionCount: ctrl.routeSessionCounts[route.id] ?? 0,
+          bestLap: ctrl.routeBestLaps[route.id],
+          onTap: () => _openRouteDetail(route),
+          settingsController: widget.settingsController,
+        );
+      },
+    );
   }
 
-  String _formatDistance(double meters) {
-    if (meters >= 1000) {
-      return '${(meters / 1000).toStringAsFixed(1)} km';
-    }
-    return '${meters.toStringAsFixed(0)} m';
-  }
-
-  String _difficultyLabel(RouteDifficulty d) => switch (d) {
-        RouteDifficulty.easy => 'Fácil',
-        RouteDifficulty.medium => 'Media',
-        RouteDifficulty.hard => 'Difícil',
-      };
-
-  String _sessionsValue(List<SessionRun> sessions) {
-    if (sessions.isEmpty) return 'Sin sesiones';
-    return '${sessions.length} sesión${sessions.length > 1 ? "es" : ""}';
-  }
-
-  String _bestLapText(LapSummary? bestLap) {
-    if (bestLap == null) return '—';
-    return Formatters.duration(bestLap.duration);
-  }
-
-  LapSummary? _findBestLap(List<SessionRun> sessions) {
-    LapSummary? best;
-    for (final s in sessions) {
-      final lap = s.bestLap;
-      if (lap != null && (best == null || lap.duration < best.duration)) {
-        best = lap;
-      }
-    }
-    return best;
-  }
-
-  void _navigateToSessions(BuildContext context) {
+  void _openRouteDetail(RouteTemplate route) {
     Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => _RouteSessionsScreen(
-        routeName: route.name,
-        sessions: controller.sessionsForSelected,
-        repository: controller.repository,
-        config: config,
+      builder: (_) => RouteDetailScreen(
+        route: route,
+        controller: widget.controller,
+        config: widget.config,
+        settingsController: widget.settingsController,
       ),
     ));
-  }
-
-  Future<void> _showEditDialog(BuildContext context) async {
-    final result = await showModalBottomSheet<_EditRouteResult>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (_) => _EditRouteSheet(
-        name: route.name,
-        description: route.description,
-        difficulty: route.difficulty,
-      ),
-    );
-    if (result == null) return;
-    await controller.updateRouteMetadata(
-      routeId: route.id,
-      name: result.name,
-      description: result.description,
-      difficulty: result.difficulty,
-    );
-  }
-}
-
-class _RouteSessionsScreen extends StatelessWidget {
-  const _RouteSessionsScreen({
-    required this.routeName,
-    required this.sessions,
-    required this.repository,
-    required this.config,
-  });
-
-  final String routeName;
-  final List<SessionRun> sessions;
-  final LocalDraftRepository repository;
-  final AppConfig config;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Sesiones: $routeName')),
-      body: sessions.isEmpty
-          ? const Center(child: Text('No hay sesiones'))
-          : ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: sessions.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (_, i) {
-                final s = sessions[i];
-                final best = s.bestLap;
-                return Card(
-                  child: ListTile(
-                    leading: CircleAvatar(child: Text('${i + 1}')),
-                    title: Text(Formatters.dateTime(s.startedAt)),
-                    subtitle: Text(
-                      '${s.laps.length} vueltas'
-                      '${best != null ? " · Mejor: ${Formatters.duration(best.duration)}" : ""}',
-                    ),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                      builder: (_) => SessionDetailScreen(
-                        sessionId: s.id,
-                        repository: repository,
-                        config: config,
-                      ),
-                    )),
-                  ),
-                );
-              },
-            ),
-    );
-  }
-}
-
-class _EditRouteResult {
-  _EditRouteResult({
-    required this.name,
-    required this.difficulty,
-    this.description,
-  });
-
-  final String name;
-  final String? description;
-  final RouteDifficulty difficulty;
-}
-
-class _EditRouteSheet extends StatefulWidget {
-  const _EditRouteSheet({
-    required this.name,
-    required this.difficulty,
-    this.description,
-  });
-
-  final String name;
-  final String? description;
-  final RouteDifficulty difficulty;
-
-  @override
-  State<_EditRouteSheet> createState() => _EditRouteSheetState();
-}
-
-class _EditRouteSheetState extends State<_EditRouteSheet> {
-  late final TextEditingController _nameCtrl;
-  late final TextEditingController _descCtrl;
-  late RouteDifficulty _difficulty;
-
-  @override
-  void initState() {
-    super.initState();
-    _nameCtrl = TextEditingController(text: widget.name);
-    _descCtrl = TextEditingController(text: widget.description ?? '');
-    _difficulty = widget.difficulty;
-  }
-
-  @override
-  void dispose() {
-    _nameCtrl.dispose();
-    _descCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-        left: 24,
-        right: 24,
-        top: 16,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: cs.onSurfaceVariant.withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: cs.primaryContainer,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(Icons.edit_road_rounded, color: cs.onPrimaryContainer, size: 24),
-              ),
-              const SizedBox(width: 14),
-              Text(
-                l.editorEditRouteDialogTitle,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          TextField(
-            controller: _nameCtrl,
-            decoration: InputDecoration(
-              labelText: l.editorNameLabel,
-              prefixIcon: const Icon(Icons.label_rounded),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            autofocus: true,
-            textInputAction: TextInputAction.next,
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _descCtrl,
-            decoration: InputDecoration(
-              labelText: l.editorDescriptionLabel,
-              prefixIcon: const Icon(Icons.notes_rounded),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              alignLabelWithHint: true,
-            ),
-            maxLines: 2,
-          ),
-          const SizedBox(height: 24),
-          Text(
-            l.editorDifficultyLabel,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-          ),
-          const SizedBox(height: 12),
-          _DifficultySelector(
-            value: _difficulty,
-            onChanged: (d) => setState(() => _difficulty = d),
-          ),
-          const SizedBox(height: 28),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Text(l.commonCancel),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                flex: 2,
-                child: FilledButton.icon(
-                  onPressed: () {
-                    final name = _nameCtrl.text.trim();
-                    if (name.isEmpty) return;
-                    Navigator.pop(
-                      context,
-                      _EditRouteResult(
-                        name: name,
-                        difficulty: _difficulty,
-                        description: _descCtrl.text.trim().isEmpty
-                            ? null
-                            : _descCtrl.text.trim(),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.check_rounded),
-                  label: Text(l.commonSave),
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-        ],
-      ),
-    );
   }
 }
 
@@ -818,10 +388,20 @@ class _DrawingViewState extends State<_DrawingView> {
                 Positioned(
                   right: 12,
                   bottom: 12,
-                  child: FloatingActionButton.small(
-                    heroTag: 'center_on_user',
-                    onPressed: _centerOnUser,
-                    child: const Icon(Icons.my_location),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _RoutingProfileFab(
+                        profile: controller.routingProfile,
+                        onChanged: (p) => controller.routingProfile = p,
+                      ),
+                      const SizedBox(width: 12),
+                      FloatingActionButton.small(
+                        heroTag: 'center_on_user',
+                        onPressed: _centerOnUser,
+                        child: const Icon(Icons.my_location),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -947,28 +527,6 @@ class _StatusChip extends StatelessWidget {
   }
 }
 
-class _DifficultyChip extends StatelessWidget {
-  const _DifficultyChip({required this.difficulty});
-
-  final RouteDifficulty difficulty;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final (label, color) = switch (difficulty) {
-      RouteDifficulty.easy => (l.editorDifficultyEasy, Colors.green),
-      RouteDifficulty.medium => (l.editorDifficultyMedium, Colors.orange),
-      RouteDifficulty.hard => (l.editorDifficultyHard, Colors.red),
-    };
-    return Chip(
-      label: Text(label),
-      backgroundColor: color.withValues(alpha: 0.15),
-      side: BorderSide(color: color.withValues(alpha: 0.5)),
-      labelStyle: TextStyle(color: color.shade900),
-    );
-  }
-}
-
 /// A full-width informational/warning banner shown below the map.
 class _InfoBanner extends StatelessWidget {
   const _InfoBanner({
@@ -1009,6 +567,68 @@ class _InfoBanner extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _RoutingProfileFab extends StatelessWidget {
+  const _RoutingProfileFab({
+    required this.profile,
+    required this.onChanged,
+  });
+
+  final String profile;
+  final ValueChanged<String> onChanged;
+
+  static const _profiles = [
+    ('driving', Icons.directions_car),
+    ('walking', Icons.directions_walk),
+    ('cycling', Icons.directions_bike),
+  ];
+
+  IconData get _activeIcon =>
+      _profiles.firstWhere((p) => p.$1 == profile).$2;
+
+  String _label(AppLocalizations l, String key) => switch (key) {
+        'driving' => l.editorRoutingProfileDriving,
+        'walking' => l.editorRoutingProfileWalking,
+        'cycling' => l.editorRoutingProfileCycling,
+        _ => key,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    return PopupMenuButton<String>(
+      onSelected: onChanged,
+      tooltip: l.editorRoutingProfileTooltip,
+      position: PopupMenuPosition.over,
+      offset: const Offset(0, -160),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      itemBuilder: (_) => [
+        for (final (key, icon) in _profiles)
+          PopupMenuItem<String>(
+            value: key,
+            child: Row(
+              children: [
+                Icon(icon, color: key == profile
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurfaceVariant),
+                const SizedBox(width: 12),
+                Expanded(child: Text(_label(l, key))),
+                if (key == profile)
+                  Icon(Icons.check, size: 18, color: theme.colorScheme.primary),
+              ],
+            ),
+          ),
+      ],
+      child: FloatingActionButton.small(
+        heroTag: 'routing_profile',
+        onPressed: null,
+        backgroundColor: theme.colorScheme.primaryContainer,
+        child: Icon(_activeIcon, color: theme.colorScheme.onPrimaryContainer),
       ),
     );
   }
@@ -1118,7 +738,7 @@ class _NewRouteSheetState extends State<_NewRouteSheet> {
                 ),
           ),
           const SizedBox(height: 12),
-          _DifficultySelector(
+          DifficultySelector(
             value: _difficulty,
             onChanged: (d) => setState(() => _difficulty = d),
           ),
@@ -1174,88 +794,3 @@ class _NewRouteSheetState extends State<_NewRouteSheet> {
   }
 }
 
-class _DifficultySelector extends StatelessWidget {
-  const _DifficultySelector({
-    required this.value,
-    required this.onChanged,
-  });
-
-  final RouteDifficulty value;
-  final ValueChanged<RouteDifficulty> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    return Row(
-      children: [
-        _buildOption(
-          context: context,
-          difficulty: RouteDifficulty.easy,
-          label: l.editorDifficultyEasy,
-          icon: Icons.park_rounded,
-          color: Colors.green,
-        ),
-        const SizedBox(width: 10),
-        _buildOption(
-          context: context,
-          difficulty: RouteDifficulty.medium,
-          label: l.editorDifficultyMedium,
-          icon: Icons.terrain_rounded,
-          color: Colors.orange,
-        ),
-        const SizedBox(width: 10),
-        _buildOption(
-          context: context,
-          difficulty: RouteDifficulty.hard,
-          label: l.editorDifficultyHard,
-          icon: Icons.whatshot_rounded,
-          color: Colors.red,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildOption({
-    required BuildContext context,
-    required RouteDifficulty difficulty,
-    required String label,
-    required IconData icon,
-    required Color color,
-  }) {
-    final selected = value == difficulty;
-    final cs = Theme.of(context).colorScheme;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => onChanged(difficulty),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          decoration: BoxDecoration(
-            color: selected
-                ? color.withValues(alpha: 0.12)
-                : cs.surfaceContainerHighest.withValues(alpha: 0.4),
-            border: Border.all(
-              color: selected ? color : cs.outline.withValues(alpha: 0.2),
-              width: selected ? 2 : 1,
-            ),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Column(
-            children: [
-              Icon(icon,
-                  color: selected ? color : cs.onSurfaceVariant, size: 28),
-              const SizedBox(height: 6),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: selected ? color : cs.onSurfaceVariant,
-                      fontWeight: selected ? FontWeight.bold : FontWeight.w500,
-                    ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}

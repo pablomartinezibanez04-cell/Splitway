@@ -51,6 +51,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navHistory => 'History';
 
   @override
+  String get navRoutes => 'Routes';
+
+  @override
   String get drawerMenu => 'Menu';
 
   @override
@@ -105,6 +108,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get drawerSyncNow => 'Sync now';
 
   @override
+  String get drawerProfile => 'Profile';
+
+  @override
   String get loginBannerDefault => 'Sign in to continue';
 
   @override
@@ -153,6 +159,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loginSkipButton => 'Continue without account';
 
   @override
+  String get loginNicknameHint => 'Nickname';
+
+  @override
+  String get loginNicknameRequired => 'Enter a nickname';
+
+  @override
+  String get loginNicknameMinLength => 'Minimum 2 characters';
+
+  @override
   String get loginConfirmationTitle => 'Check your inbox!';
 
   @override
@@ -183,6 +198,80 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get authErrorUnexpected => 'Unexpected error. Try again.';
+
+  @override
+  String get profileTitle => 'Profile';
+
+  @override
+  String get profileAvatarUpdated => 'Avatar updated';
+
+  @override
+  String get profileErrorUnexpected => 'Could not update avatar. Try again.';
+
+  @override
+  String get profileNicknameUpdated => 'Nickname updated';
+
+  @override
+  String get profileErrorCooldown =>
+      'Nickname can only be changed after the cooldown.';
+
+  @override
+  String get profileBioUpdated => 'Bio updated';
+
+  @override
+  String get profileChangeAvatar => 'Change avatar';
+
+  @override
+  String get profileNicknameLabel => 'Nickname';
+
+  @override
+  String get profileNicknameRequired => 'Enter a nickname';
+
+  @override
+  String get profileNicknameMinLength => 'Minimum 2 characters';
+
+  @override
+  String get profileNicknameTooLong => 'Maximum 30 characters';
+
+  @override
+  String get profileBioLabel => 'Bio';
+
+  @override
+  String get profileBioHint => 'Tell others a little bit about yourself';
+
+  @override
+  String profileNicknameCooldownDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days',
+      one: '1 day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String profileNicknameCooldownHours(int hours) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: '$hours hours',
+      one: '1 hour',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profileNicknameCooldown => 'Nickname change available in';
+
+  @override
+  String get profileEmailLabel => 'Email';
+
+  @override
+  String get profileDateOfBirthLabel => 'Date of birth';
+
+  @override
+  String get loginDateOfBirthHint => 'Date of birth';
 
   @override
   String get editorTitle => 'Route editor';
@@ -340,6 +429,18 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get editorSnapFailedMessage =>
       'Could not reach the server to snap the route to roads. Showing straight segments until the connection is restored.';
+
+  @override
+  String get editorRoutingProfileTooltip => 'Routing mode';
+
+  @override
+  String get editorRoutingProfileDriving => 'Road';
+
+  @override
+  String get editorRoutingProfileWalking => 'Trail';
+
+  @override
+  String get editorRoutingProfileCycling => 'Cycling';
 
   @override
   String get editorNewRouteDialogTitle => 'New route';
@@ -579,6 +680,201 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String unitMph(String value) {
+    return '$value mph';
+  }
+
+  @override
+  String unitFeet(String value) {
+    return '$value ft';
+  }
+
+  @override
+  String unitMiles(String value) {
+    return '$value mi';
+  }
+
+  @override
+  String get settingsAppearanceSection => 'Appearance';
+
+  @override
+  String get settingsThemeLabel => 'Theme';
+
+  @override
+  String get settingsThemeSystem => 'System default';
+
+  @override
+  String get settingsThemeLight => 'Light';
+
+  @override
+  String get settingsThemeDark => 'Dark';
+
+  @override
+  String get settingsMeasurementSection => 'Measurement';
+
+  @override
+  String get settingsUnitSystemLabel => 'Unit system';
+
+  @override
+  String get settingsUnitMetric => 'Metric (km, m/s → km/h)';
+
+  @override
+  String get settingsUnitImperial => 'Imperial (mi, m/s → mph)';
+
+  @override
+  String get settingsTimeFormatLabel => 'Lap time separator';
+
+  @override
+  String get settingsTimeFormatDot => 'Dot  —  01:23.456';
+
+  @override
+  String get settingsTimeFormatComma => 'Comma  —  01:23,456';
+
+  @override
+  String get settingsSessionSection => 'Session behaviour';
+
+  @override
+  String get settingsKeepScreenAwakeLabel => 'Keep screen awake';
+
+  @override
+  String get settingsKeepScreenAwakeDesc =>
+      'Prevents the display from sleeping during an active session or free ride.';
+
+  @override
+  String get settingsHapticFeedbackLabel => 'Haptic feedback';
+
+  @override
+  String get settingsHapticFeedbackDesc =>
+      'Vibrate when crossing a sector gate or the finish line.';
+
+  @override
+  String get settingsAudioAlertsLabel => 'Audio alerts';
+
+  @override
+  String get settingsAudioAlertsDesc =>
+      'Play a short beep on each sector and lap crossing.';
+
+  @override
+  String get settingsGpsSamplingLabel => 'GPS update rate';
+
+  @override
+  String get settingsGpsSampling1s => 'Every 1 s — high accuracy, more battery';
+
+  @override
+  String get settingsGpsSampling2s => 'Every ~2 s — balanced';
+
+  @override
+  String get settingsGpsSampling5s => 'Every ~5 s — low battery';
+
+  @override
+  String get settingsRoutesSection => 'Routes';
+
+  @override
+  String get settingsDefaultRoutingProfileLabel => 'Default routing mode';
+
+  @override
+  String get settingsRoutingProfileRoad => 'Road';
+
+  @override
+  String get settingsRoutingProfileTrail => 'Trail';
+
+  @override
+  String get settingsRoutingProfileCycling => 'Cycling';
+
+  @override
+  String get settingsGarageSection => 'Garage';
+
+  @override
+  String get settingsDefaultVehicleLabel => 'Default vehicle';
+
+  @override
+  String get settingsDefaultVehicleNone => 'None (always ask)';
+
+  @override
+  String get settingsAccountSection => 'Account';
+
+  @override
+  String get settingsChangePasswordLabel => 'Change password';
+
+  @override
+  String get settingsDeleteAccountLabel => 'Delete account';
+
+  @override
+  String get settingsDeleteAccountConfirmTitle => 'Delete account?';
+
+  @override
+  String get settingsDeleteAccountConfirmBody =>
+      'All your data will be permanently deleted. This cannot be undone.';
+
+  @override
+  String get settingsDeleteAccountConfirmButton => 'Delete my account';
+
+  @override
+  String get settingsDeleteAccountSuccess => 'Account deleted. Goodbye!';
+
+  @override
+  String get settingsDeleteAccountError =>
+      'Could not delete account. Try again.';
+
+  @override
+  String get settingsChangePasswordCurrentLabel => 'Current password';
+
+  @override
+  String get settingsChangePasswordNewLabel => 'New password';
+
+  @override
+  String get settingsChangePasswordConfirmLabel => 'Confirm new password';
+
+  @override
+  String get settingsChangePasswordButton => 'Update password';
+
+  @override
+  String get settingsChangePasswordSuccess => 'Password updated';
+
+  @override
+  String get settingsChangePasswordError =>
+      'Could not update password. Try again.';
+
+  @override
+  String get settingsChangePasswordMismatch => 'Passwords do not match';
+
+  @override
+  String get settingsChangePasswordTooShort => 'Minimum 6 characters';
+
+  @override
+  String get settingsDataSection => 'Data';
+
+  @override
+  String get settingsExportHistoryLabel => 'Export history';
+
+  @override
+  String get settingsExportHistoryDesc =>
+      'Download all sessions and free rides as a CSV file.';
+
+  @override
+  String get settingsClearCacheLabel => 'Clear local data';
+
+  @override
+  String get settingsClearCacheDesc =>
+      'Deletes all locally saved routes and sessions. Cloud data is not affected.';
+
+  @override
+  String get settingsClearCacheConfirmTitle => 'Clear all local data?';
+
+  @override
+  String get settingsClearCacheConfirmBody =>
+      'Your routes and sessions will be deleted from this device. If sync is enabled they will remain in the cloud.';
+
+  @override
+  String get settingsClearCacheConfirmButton => 'Clear data';
+
+  @override
+  String get settingsClearCacheDone => 'Local data cleared';
+
+  @override
+  String get settingsExportSharing => 'Exporting…';
+
+  @override
   String get mapNoRoute => 'No route';
 
   @override
@@ -698,4 +994,187 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get historyRenameRouteLabel => 'Name';
+
+  @override
+  String get routesTitle => 'My routes';
+
+  @override
+  String get routesViewList => 'List';
+
+  @override
+  String get routesViewGrid => 'Grid';
+
+  @override
+  String routesSessionsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sessions',
+      one: '1 session',
+      zero: 'No sessions',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String routesBestLap(String time) {
+    return 'Best: $time';
+  }
+
+  @override
+  String get routesDetailTitle => 'Route detail';
+
+  @override
+  String get navGarage => 'Garage';
+
+  @override
+  String get garageTitle => 'My garage';
+
+  @override
+  String get garageNoVehiclesTitle => 'No vehicles yet';
+
+  @override
+  String get garageNoVehiclesMessage =>
+      'Add your first car, bike, or kart to track which vehicle you use on each session.';
+
+  @override
+  String get garageAddVehicleButton => 'Add vehicle';
+
+  @override
+  String get garageViewList => 'List';
+
+  @override
+  String get garageViewGrid => 'Grid';
+
+  @override
+  String get garageDeleteVehicleTitle => 'Delete vehicle';
+
+  @override
+  String garageDeleteVehicleConfirm(String vehicleName) {
+    return 'Delete \"$vehicleName\"? This cannot be undone.';
+  }
+
+  @override
+  String get garageVehicleSavedSnack => 'Vehicle saved';
+
+  @override
+  String get garageVehicleDeletedSnack => 'Vehicle deleted';
+
+  @override
+  String get garagePhotoUpdated => 'Photo updated';
+
+  @override
+  String get garageErrorUnexpected => 'Something went wrong. Try again.';
+
+  @override
+  String get garageChangePhoto => 'Change photo';
+
+  @override
+  String get vehicleFormTitleNew => 'New vehicle';
+
+  @override
+  String get vehicleFormTitleEdit => 'Edit vehicle';
+
+  @override
+  String get vehicleFormNameLabel => 'Name';
+
+  @override
+  String get vehicleFormNameRequired => 'Enter a name';
+
+  @override
+  String get vehicleFormNameMinLength => 'Minimum 2 characters';
+
+  @override
+  String get vehicleFormTypeLabel => 'Type';
+
+  @override
+  String get vehicleFormModelLabel => 'Model (optional)';
+
+  @override
+  String get vehicleFormYearLabel => 'Year (optional)';
+
+  @override
+  String get vehicleFormHorsepowerLabel => 'Horsepower (optional)';
+
+  @override
+  String get vehicleFormTorqueLabel => 'Torque Nm (optional)';
+
+  @override
+  String get vehicleFormWeightLabel => 'Weight kg (optional)';
+
+  @override
+  String get vehicleFormDrivetrainLabel => 'Drivetrain (optional)';
+
+  @override
+  String get vehicleFormNotesLabel => 'Notes (optional)';
+
+  @override
+  String get vehicleFormNotesHint => 'Tire setup, modifications, etc.';
+
+  @override
+  String get vehicleFormSaveButton => 'Save';
+
+  @override
+  String get vehicleTypeCar => 'Car';
+
+  @override
+  String get vehicleTypeMotorcycle => 'Motorcycle';
+
+  @override
+  String get vehicleTypeBicycle => 'Bicycle';
+
+  @override
+  String get vehicleTypeGoKart => 'Go-kart';
+
+  @override
+  String get vehicleTypeOther => 'Other';
+
+  @override
+  String get drivetrainFront => 'Front-wheel drive';
+
+  @override
+  String get drivetrainRear => 'Rear-wheel drive';
+
+  @override
+  String get drivetrainAllWheel => 'All-wheel drive';
+
+  @override
+  String get vehicleDetailSpecs => 'Specs';
+
+  @override
+  String vehicleDetailHorsepower(int hp) {
+    return '$hp hp';
+  }
+
+  @override
+  String vehicleDetailTorque(int nm) {
+    return '$nm Nm';
+  }
+
+  @override
+  String vehicleDetailWeight(int kg) {
+    return '$kg kg';
+  }
+
+  @override
+  String get vehiclePickerLabel => 'Vehicle';
+
+  @override
+  String get vehiclePickerOnFoot => 'On foot';
+
+  @override
+  String get vehiclePickerSelectVehicle => 'Select a vehicle';
+
+  @override
+  String get elevationRangeLabel => 'Elevation';
+
+  @override
+  String elevationRangeValue(String value) {
+    return '$value m';
+  }
+
+  @override
+  String elevationRangeValueFeet(String value) {
+    return '$value ft';
+  }
 }

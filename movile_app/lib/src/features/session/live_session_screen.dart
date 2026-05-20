@@ -1,11 +1,20 @@
+import 'dart:async';
+
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:splitway_core/splitway_core.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:splitway_mobile/l10n/app_localizations.dart';
 
 import '../../config/app_config.dart';
 import '../../routing/app_router.dart';
 import '../../services/auth/auth_service.dart';
+import '../../services/garage/garage_service.dart';
+import '../../services/profile/profile_service.dart';
+import '../../services/settings/app_settings_controller.dart';
 import '../../services/tracking/live_tracking_controller.dart';
+import '../../shared/widgets/vehicle_picker_tile.dart';
 import '../../services/tracking/location_service.dart';
 import '../../shared/formatters.dart';
 import '../../shared/widgets/empty_state.dart';
@@ -13,55 +22,147 @@ import '../../shared/widgets/splitway_map.dart';
 import '../home/home_shell.dart';
 import 'live_session_controller.dart';
 
+String _speedLabel(
+  AppLocalizations l,
+  AppSettingsController ctrl,
+  double mps,
+) {
+  final v = Formatters.speedMps(mps, unit: ctrl.unitSystem);
+  return ctrl.unitSystem == UnitSystem.imperial ? l.unitMph(v) : l.unitKmh(v);
+}
+
+String _distanceLabel(
+  AppLocalizations l,
+  AppSettingsController ctrl,
+  double meters,
+) {
+  final (value, isLarge) = Formatters.distanceMeters(meters, unit: ctrl.unitSystem);
+  final formatted = value.toStringAsFixed(value >= 10 ? 1 : 2);
+  if (ctrl.unitSystem == UnitSystem.imperial) {
+    return isLarge ? l.unitMiles(formatted) : l.unitFeet(formatted);
+  }
+  return isLarge ? l.unitKilometers(formatted) : l.unitMeters(formatted);
+}
+
 class LiveSessionScreen extends StatefulWidget {
   const LiveSessionScreen({
     super.key,
     required this.controller,
     required this.config,
+    required this.settingsController,
     this.authService,
+    this.profileService,
+    this.garageService,
   });
 
   final LiveSessionController controller;
   final AppConfig config;
+  final AppSettingsController settingsController;
   final AuthService? authService;
+  final ProfileService? profileService;
+  final GarageService? garageService;
 
   @override
   State<LiveSessionScreen> createState() => _LiveSessionScreenState();
 }
 
 class _LiveSessionScreenState extends State<LiveSessionScreen> {
+  int _lastEventCount = 0;
+  AudioPlayer? _audioPlayer;
+
   @override
   void initState() {
     super.initState();
     widget.controller.addListener(_onChange);
     widget.authService?.addListener(_onChange);
-    widget.controller.load();
+    widget.settingsController.addListener(_onSettingsChanged);
+    widget.controller.load().then((_) {
+      if (!mounted) return;
+      if (widget.controller.selectedVehicleId == null) {
+        final defaultId = widget.settingsController.defaultVehicleId;
+        if (defaultId != null) {
+          widget.controller.selectVehicle(defaultId);
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
     widget.controller.removeListener(_onChange);
     widget.authService?.removeListener(_onChange);
+    widget.settingsController.removeListener(_onSettingsChanged);
+    WakelockPlus.disable().catchError((_) {});
+    _audioPlayer?.dispose();
     super.dispose();
   }
 
-  void _onChange() => setState(() {});
+  void _onChange() {
+    _updateWakelock();
+    _onNewEvents();
+    setState(() {});
+  }
+
+  void _onSettingsChanged() {
+    _updateWakelock();
+    setState(() {});
+  }
+
+  void _onNewEvents() {
+    final tracker = widget.controller.tracker;
+    if (tracker == null) return;
+    final events = tracker.events;
+    if (events.length <= _lastEventCount) return;
+
+    final newEvents = events.sublist(_lastEventCount);
+    bool hasCrossing = false;
+    for (final evt in newEvents) {
+      if (evt is SectorCrossed || evt is LapClosed) {
+        hasCrossing = true;
+        break;
+      }
+    }
+    _lastEventCount = events.length;
+
+    if (hasCrossing) {
+      if (widget.settingsController.hapticFeedback) {
+        HapticFeedback.mediumImpact();
+      }
+      if (widget.settingsController.audioAlerts) {
+        _audioPlayer ??= AudioPlayer();
+        unawaited(_audioPlayer!.play(AssetSource('sounds/beep.mp3')));
+      }
+    }
+  }
+
+  void _updateWakelock() {
+    final shouldKeep = widget.settingsController.keepScreenAwake &&
+        widget.controller.stage == LiveSessionStage.running;
+    WakelockPlus.toggle(enable: shouldKeep).catchError((_) {});
+  }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final ctrl = widget.controller;
-    return Scaffold(
-      appBar: AppBar(
-        leading: buildDrawerLeading(context, widget.authService),
-        title: Text(l.sessionTitle),
+    return ListenableBuilder(
+      listenable: widget.settingsController,
+      builder: (context, _) => Scaffold(
+        appBar: AppBar(
+          leading: buildDrawerLeading(
+            context,
+            widget.authService,
+            widget.profileService,
+          ),
+          title: Text(l.sessionTitle),
+        ),
+        body: switch (ctrl.stage) {
+          LiveSessionStage.selecting => _buildEmpty(context),
+          LiveSessionStage.ready => _buildReady(context, ctrl),
+          LiveSessionStage.running => _buildRunning(context, ctrl),
+          LiveSessionStage.finished => _buildFinished(context, ctrl),
+        },
       ),
-      body: switch (ctrl.stage) {
-        LiveSessionStage.selecting => _buildEmpty(context),
-        LiveSessionStage.ready => _buildReady(context, ctrl),
-        LiveSessionStage.running => _buildRunning(context, ctrl),
-        LiveSessionStage.finished => _buildFinished(context, ctrl),
-      },
     );
   }
 
@@ -125,6 +226,18 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
             const SizedBox(height: 8),
             _PermissionBanner(status: ctrl.permissionStatus!),
           ],
+          if (widget.garageService != null &&
+              widget.garageService!.vehicles.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text(l.vehiclePickerLabel,
+                style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 8),
+            VehiclePickerTile(
+              selectedVehicleId: ctrl.selectedVehicleId,
+              vehicles: widget.garageService!.vehicles,
+              onSelected: ctrl.selectVehicle,
+            ),
+          ],
           const SizedBox(height: 12),
           FilledButton.icon(
             onPressed: ctrl.selected == null
@@ -137,8 +250,11 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
                       message: AppLocalizations.of(context).loginBannerDefault,
                     );
                     if (!allowed || !mounted) return;
+                    _lastEventCount = 0;
                     // ignore: discarded_futures
-                    ctrl.startSession();
+                    ctrl.startSession(
+                      distanceFilterMeters: widget.settingsController.gpsSamplingDistanceFilter,
+                    );
                   },
             icon: const Icon(Icons.play_arrow),
             label: Text(l.sessionStartButton),
@@ -182,9 +298,15 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          _MetricsRow(snapshot: snapshot),
+          _MetricsRow(
+            snapshot: snapshot,
+            settingsController: widget.settingsController,
+          ),
           const SizedBox(height: 8),
-          _LastEventTile(snapshot: snapshot),
+          _LastEventTile(
+            snapshot: snapshot,
+            settingsController: widget.settingsController,
+          ),
           const SizedBox(height: 12),
           if (ctrl.source == TrackingSource.simulated) ...[
             // Progress bar (visible only while auto-simulating)
@@ -304,20 +426,23 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        _StatsGrid(session: result),
+        _StatsGrid(
+          session: result,
+          settingsController: widget.settingsController,
+        ),
         const SizedBox(height: 16),
         Text(l.sessionLapsLabel,
             style: Theme.of(context).textTheme.titleMedium),
         for (final lap in result.laps)
           ListTile(
             leading: CircleAvatar(child: Text('${lap.lapNumber}')),
-            title: Text(Formatters.duration(lap.duration)),
+            title: Text(Formatters.duration(
+              lap.duration,
+              dotSeparator: widget.settingsController.timeFormatDot,
+            )),
             subtitle: Text(() {
-                  final (dv, isKm) = Formatters.distanceMeters(lap.distanceMeters);
-                  final dist = isKm
-                      ? l.unitKilometers(dv.toStringAsFixed(2))
-                      : l.unitMeters(dv.toStringAsFixed(0));
-                  final speed = l.unitKmh(Formatters.speedMps(lap.avgSpeedMps).toStringAsFixed(1));
+                  final dist = _distanceLabel(l, widget.settingsController, lap.distanceMeters);
+                  final speed = _speedLabel(l, widget.settingsController, lap.avgSpeedMps);
                   return '$dist · $speed';
                 }()),
             trailing: lap.completed
@@ -336,9 +461,13 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
 }
 
 class _MetricsRow extends StatelessWidget {
-  const _MetricsRow({required this.snapshot});
+  const _MetricsRow({
+    required this.snapshot,
+    required this.settingsController,
+  });
 
   final TrackingSnapshot snapshot;
+  final AppSettingsController settingsController;
 
   @override
   Widget build(BuildContext context) {
@@ -356,7 +485,10 @@ class _MetricsRow extends StatelessWidget {
         Expanded(
           child: _MetricCard(
             label: l.sessionLapTimeLabel,
-            value: Formatters.duration(snapshot.currentLapElapsed),
+            value: Formatters.duration(
+              snapshot.currentLapElapsed,
+              dotSeparator: settingsController.timeFormatDot,
+            ),
           ),
         ),
         Expanded(
@@ -364,7 +496,10 @@ class _MetricsRow extends StatelessWidget {
             label: l.sessionBestLapLabel,
             value: snapshot.bestLap == null
                 ? l.sessionNoLapYet
-                : Formatters.duration(snapshot.bestLap!),
+                : Formatters.duration(
+                    snapshot.bestLap!,
+                    dotSeparator: settingsController.timeFormatDot,
+                  ),
           ),
         ),
       ],
@@ -399,9 +534,13 @@ class _MetricCard extends StatelessWidget {
 }
 
 class _LastEventTile extends StatelessWidget {
-  const _LastEventTile({required this.snapshot});
+  const _LastEventTile({
+    required this.snapshot,
+    required this.settingsController,
+  });
 
   final TrackingSnapshot snapshot;
+  final AppSettingsController settingsController;
 
   @override
   Widget build(BuildContext context) {
@@ -422,28 +561,32 @@ class _LastEventTile extends StatelessWidget {
         Text(l.sessionLastSector(last)),
         const Spacer(),
         if (snapshot.lastSectorTime != null)
-          Text(Formatters.duration(snapshot.lastSectorTime!)),
+          Text(Formatters.duration(
+            snapshot.lastSectorTime!,
+            dotSeparator: settingsController.timeFormatDot,
+          )),
       ],
     );
   }
 }
 
 class _StatsGrid extends StatelessWidget {
-  const _StatsGrid({required this.session});
+  const _StatsGrid({
+    required this.session,
+    required this.settingsController,
+  });
 
   final SessionRun session;
+  final AppSettingsController settingsController;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final (dv, isKm) = Formatters.distanceMeters(session.totalDistanceMeters);
-    final distStr = isKm
-        ? l.unitKilometers(dv.toStringAsFixed(2))
-        : l.unitMeters(dv.toStringAsFixed(0));
+    final distStr = _distanceLabel(l, settingsController, session.totalDistanceMeters);
     final children = [
       _Stat(l.sessionDistanceLabel, distStr),
-      _Stat(l.sessionMaxSpeedLabel, l.unitKmh(Formatters.speedMps(session.maxSpeedMps).toStringAsFixed(1))),
-      _Stat(l.sessionAvgSpeedLabel, l.unitKmh(Formatters.speedMps(session.avgSpeedMps).toStringAsFixed(1))),
+      _Stat(l.sessionMaxSpeedLabel, _speedLabel(l, settingsController, session.maxSpeedMps)),
+      _Stat(l.sessionAvgSpeedLabel, _speedLabel(l, settingsController, session.avgSpeedMps)),
       _Stat(l.sessionLapsCountLabel, '${session.laps.length}'),
     ];
     return GridView.count(

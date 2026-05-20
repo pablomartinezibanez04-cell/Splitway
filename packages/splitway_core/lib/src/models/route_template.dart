@@ -2,6 +2,8 @@ import 'gate_definition.dart';
 import 'geo_point.dart';
 import 'sector_definition.dart';
 
+const _sentinel = Object();
+
 enum RouteDifficulty { easy, medium, hard }
 
 extension RouteDifficultyX on RouteDifficulty {
@@ -26,17 +28,21 @@ class RouteTemplate {
     required this.createdAt,
     this.description,
     this.locationLabel,
+    this.thumbnailUrl,
+    this.elevationRangeMeters,
   });
 
   final String id;
   final String name;
   final String? description;
   final String? locationLabel;
+  final String? thumbnailUrl;
   final List<GeoPoint> path;
   final GateDefinition startFinishGate;
   final List<SectorDefinition> sectors;
   final RouteDifficulty difficulty;
   final DateTime createdAt;
+  final double? elevationRangeMeters;
 
   /// True when the route is a closed circuit (first and last path points
   /// are the same, as set when the gap between them is ≤ 20 m at save time).
@@ -58,22 +64,30 @@ class RouteTemplate {
     String? name,
     String? description,
     String? locationLabel,
+    Object? thumbnailUrl = _sentinel,
     List<GeoPoint>? path,
     GateDefinition? startFinishGate,
     List<SectorDefinition>? sectors,
     RouteDifficulty? difficulty,
     DateTime? createdAt,
+    Object? elevationRangeMeters = _sentinel,
   }) {
     return RouteTemplate(
       id: id ?? this.id,
       name: name ?? this.name,
       description: description ?? this.description,
       locationLabel: locationLabel ?? this.locationLabel,
+      thumbnailUrl: thumbnailUrl == _sentinel
+          ? this.thumbnailUrl
+          : thumbnailUrl as String?,
       path: path ?? this.path,
       startFinishGate: startFinishGate ?? this.startFinishGate,
       sectors: sectors ?? this.sectors,
       difficulty: difficulty ?? this.difficulty,
       createdAt: createdAt ?? this.createdAt,
+      elevationRangeMeters: elevationRangeMeters == _sentinel
+          ? this.elevationRangeMeters
+          : elevationRangeMeters as double?,
     );
   }
 
@@ -82,11 +96,13 @@ class RouteTemplate {
         'name': name,
         'description': description,
         'locationLabel': locationLabel,
+        'thumbnailUrl': thumbnailUrl,
         'path': path.map((p) => p.toJson()).toList(),
         'startFinishGate': startFinishGate.toJson(),
         'sectors': sectors.map((s) => s.toJson()).toList(),
         'difficulty': difficulty.id,
         'createdAt': createdAt.toUtc().toIso8601String(),
+        'elevationRangeMeters': elevationRangeMeters,
       };
 
   factory RouteTemplate.fromJson(Map<String, dynamic> json) => RouteTemplate(
@@ -94,6 +110,7 @@ class RouteTemplate {
         name: json['name'] as String,
         description: json['description'] as String?,
         locationLabel: json['locationLabel'] as String?,
+        thumbnailUrl: json['thumbnailUrl'] as String?,
         path: (json['path'] as List<dynamic>)
             .map((e) => GeoPoint.fromJson(e as Map<String, dynamic>))
             .toList(),
@@ -105,5 +122,7 @@ class RouteTemplate {
         difficulty:
             RouteDifficultyX.fromId(json['difficulty'] as String? ?? 'medium'),
         createdAt: DateTime.parse(json['createdAt'] as String),
+        elevationRangeMeters:
+            (json['elevationRangeMeters'] as num?)?.toDouble(),
       );
 }

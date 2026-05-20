@@ -7,9 +7,14 @@ import 'package:splitway_mobile/l10n/app_localizations.dart';
 import '../../config/app_config.dart';
 import '../../data/repositories/local_draft_repository.dart';
 import '../../services/auth/auth_service.dart';
+import '../../services/garage/garage_service.dart';
+import '../../services/garage/vehicle.dart';
+import '../../services/profile/profile_service.dart';
+import '../../services/settings/app_settings_controller.dart';
 import '../../shared/formatters.dart';
 import '../../shared/widgets/empty_state.dart';
 import '../../shared/widgets/splitway_map.dart';
+import '../garage/vehicle_detail_screen.dart';
 import '../home/home_shell.dart';
 
 sealed class _HistoryEntry implements Comparable<_HistoryEntry> {
@@ -39,13 +44,19 @@ class HistoryScreen extends StatefulWidget {
   const HistoryScreen({
     super.key,
     required this.repository,
+    required this.settingsController,
     this.config = const AppConfig(),
     this.authService,
+    this.profileService,
+    this.garageService,
   });
 
   final LocalDraftRepository repository;
+  final AppSettingsController settingsController;
   final AppConfig config;
   final AuthService? authService;
+  final ProfileService? profileService;
+  final GarageService? garageService;
 
   @override
   State<HistoryScreen> createState() => _HistoryScreenState();
@@ -134,58 +145,106 @@ class _HistoryScreenState extends State<HistoryScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return Scaffold(
-      appBar: AppBar(
-        leading: buildDrawerLeading(context, widget.authService),
-        title: Text(l.historyTitle),
-        actions: [
-          IconButton(
-            tooltip: l.commonRefresh,
-            onPressed: _reload,
-            icon: const Icon(Icons.refresh),
+    return ListenableBuilder(
+      listenable: widget.settingsController,
+      builder: (context, _) => Scaffold(
+        appBar: AppBar(
+          leading: buildDrawerLeading(
+            context,
+            widget.authService,
+            widget.profileService,
           ),
-        ],
+          title: Text(l.historyTitle),
+          actions: [
+            IconButton(
+              tooltip: l.commonRefresh,
+              onPressed: _reload,
+              icon: const Icon(Icons.refresh),
+            ),
+          ],
+        ),
+        body: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _entries.isEmpty
+                ? EmptyState(
+                    icon: Icons.history_toggle_off,
+                    title: l.historyNoEntriesTitle,
+                    message: l.historyNoEntriesMessage,
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.all(8),
+                    itemCount: _entries.length + (_hasMore ? 1 : 0),
+                    separatorBuilder: (_, __) => const SizedBox(height: 4),
+                    itemBuilder: (_, index) {
+                      if (index >= _entries.length) {
+                        // Load-more sentinel: trigger next page when visible.
+                        _load();
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      }
+                      final entry = _entries[index];
+                      return switch (entry) {
+                        _SessionEntry(:final session) => _SessionTile(
+                            session: session,
+                            route: _routes[session.routeTemplateId],
+                            repository: widget.repository,
+                            config: widget.config,
+                            garageService: widget.garageService,
+                            settingsController: widget.settingsController,
+                          ),
+                        _FreeRideEntry(:final ride) => _FreeRideTile(
+                            ride: ride,
+                            repository: widget.repository,
+                            config: widget.config,
+                            garageService: widget.garageService,
+                            settingsController: widget.settingsController,
+                          ),
+                      };
+                    },
+                  ),
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _entries.isEmpty
-              ? EmptyState(
-                  icon: Icons.history_toggle_off,
-                  title: l.historyNoEntriesTitle,
-                  message: l.historyNoEntriesMessage,
-                )
-              : ListView.separated(
-                  padding: const EdgeInsets.all(8),
-                  itemCount: _entries.length + (_hasMore ? 1 : 0),
-                  separatorBuilder: (_, __) => const SizedBox(height: 4),
-                  itemBuilder: (_, index) {
-                    if (index >= _entries.length) {
-                      // Load-more sentinel: trigger next page when visible.
-                      _load();
-                      return const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 16),
-                        child: Center(child: CircularProgressIndicator()),
-                      );
-                    }
-                    final entry = _entries[index];
-                    return switch (entry) {
-                      _SessionEntry(:final session) => _SessionTile(
-                          session: session,
-                          route: _routes[session.routeTemplateId],
-                          repository: widget.repository,
-                          config: widget.config,
-                        ),
-                      _FreeRideEntry(:final ride) => _FreeRideTile(
-                          ride: ride,
-                          repository: widget.repository,
-                          config: widget.config,
-                        ),
-                    };
-                  },
-                ),
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Shared helper functions for unit-aware formatting (used by inner widgets).
+// [ctrl] may be null when opened from contexts that don't carry settings
+// (e.g. RouteDetailScreen → SessionDetailScreen). In that case metric/dot
+// defaults are used.
+// ---------------------------------------------------------------------------
+
+String _speedLabel(
+    AppLocalizations l, double mps, AppSettingsController? ctrl) {
+  final unit = ctrl?.unitSystem ?? UnitSystem.metric;
+  final v = Formatters.speedMps(mps, unit: unit);
+  return unit == UnitSystem.imperial ? l.unitMph(v) : l.unitKmh(v);
+}
+
+String _distanceLabel(
+    AppLocalizations l, double meters, AppSettingsController? ctrl) {
+  final unit = ctrl?.unitSystem ?? UnitSystem.metric;
+  final (value, isLarge) = Formatters.distanceMeters(meters, unit: unit);
+  final formatted = value.toStringAsFixed(value >= 10 ? 1 : 2);
+  if (unit == UnitSystem.imperial) {
+    return isLarge ? l.unitMiles(formatted) : l.unitFeet(formatted);
+  }
+  return isLarge ? l.unitKilometers(formatted) : l.unitMeters(formatted);
+}
+
+String _elevationLabel(
+    AppLocalizations l, double meters, AppSettingsController? ctrl) {
+  final unit = ctrl?.unitSystem ?? UnitSystem.metric;
+  if (unit == UnitSystem.imperial) {
+    final feet = meters * 3.28084;
+    return l.elevationRangeValueFeet(feet.toStringAsFixed(0));
+  }
+  return l.elevationRangeValue(meters.toStringAsFixed(0));
+}
+
+// ---------------------------------------------------------------------------
 
 class _SessionTile extends StatelessWidget {
   const _SessionTile({
@@ -193,29 +252,78 @@ class _SessionTile extends StatelessWidget {
     required this.route,
     required this.repository,
     required this.config,
+    required this.settingsController,
+    this.garageService,
   });
 
   final SessionRun session;
   final RouteTemplate? route;
   final LocalDraftRepository repository;
   final AppConfig config;
+  final AppSettingsController settingsController;
+  final GarageService? garageService;
+
+  Vehicle? get _vehicle {
+    final vid = session.vehicleId;
+    if (vid == null || garageService == null) return null;
+    return garageService!.vehicles
+        .where((v) => v.id == vid)
+        .firstOrNull;
+  }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final best = session.bestLap;
     final bestLapSuffix = best != null
-        ? l.historyBestLapSuffix(Formatters.duration(best.duration))
+        ? l.historyBestLapSuffix(Formatters.duration(
+            best.duration,
+            dotSeparator: settingsController.timeFormatDot,
+          ))
         : '';
+    final vehicle = _vehicle;
     return Card(
       child: ListTile(
         title: Text(route?.name ?? l.historyDeletedRoute),
-        subtitle: Text(
-          l.historySessionSubtitle(
-            Formatters.dateTime(session.startedAt),
-            session.laps.length,
-            bestLapSuffix,
-          ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l.historySessionSubtitle(
+                Formatters.dateTime(session.startedAt),
+                session.laps.length,
+                bestLapSuffix,
+              ),
+            ),
+            if (vehicle != null)
+              GestureDetector(
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => VehicleDetailScreen(
+                    vehicle: vehicle,
+                    garageService: garageService!,
+                  ),
+                )),
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.directions_car,
+                          size: 14,
+                          color: Theme.of(context).colorScheme.primary),
+                      const SizedBox(width: 4),
+                      Text(
+                        vehicle.name,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
         ),
         trailing: const Icon(Icons.chevron_right),
         onTap: route == null
@@ -225,6 +333,7 @@ class _SessionTile extends StatelessWidget {
                     sessionId: session.id,
                     repository: repository,
                     config: config,
+                    settingsController: settingsController,
                   ),
                 )),
       ),
@@ -237,28 +346,71 @@ class _FreeRideTile extends StatelessWidget {
     required this.ride,
     required this.repository,
     required this.config,
+    required this.settingsController,
+    this.garageService,
   });
 
   final FreeRideRun ride;
   final LocalDraftRepository repository;
   final AppConfig config;
+  final AppSettingsController settingsController;
+  final GarageService? garageService;
+
+  Vehicle? get _vehicle {
+    final vid = ride.vehicleId;
+    if (vid == null || garageService == null) return null;
+    return garageService!.vehicles
+        .where((v) => v.id == vid)
+        .firstOrNull;
+  }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final (dv, isKm) = Formatters.distanceMeters(ride.totalDistanceMeters);
-    final distStr = isKm
-        ? l.unitKilometers(dv.toStringAsFixed(2))
-        : l.unitMeters(dv.toStringAsFixed(0));
+    final distStr = _distanceLabel(l, ride.totalDistanceMeters, settingsController);
+    final vehicle = _vehicle;
     return Card(
       child: ListTile(
         leading: const Icon(Icons.explore, color: Colors.teal),
         title: Text(ride.name ?? l.historyFreeRideLabel),
-        subtitle: Text(
-          l.historyFreeRideSubtitle(
-            Formatters.dateTime(ride.startedAt),
-            distStr,
-          ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l.historyFreeRideSubtitle(
+                Formatters.dateTime(ride.startedAt),
+                distStr,
+              ),
+            ),
+            if (vehicle != null)
+              GestureDetector(
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => VehicleDetailScreen(
+                    vehicle: vehicle,
+                    garageService: garageService!,
+                  ),
+                )),
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.directions_car,
+                          size: 14,
+                          color: Theme.of(context).colorScheme.primary),
+                      const SizedBox(width: 4),
+                      Text(
+                        vehicle.name,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
         ),
         trailing: const Icon(Icons.chevron_right),
         onTap: () => Navigator.of(context).push(MaterialPageRoute(
@@ -266,6 +418,7 @@ class _FreeRideTile extends StatelessWidget {
                 rideId: ride.id,
                 repository: repository,
                 config: config,
+                settingsController: settingsController,
               ),
             )),
       ),
@@ -278,11 +431,13 @@ class FreeRideDetailScreen extends StatefulWidget {
     super.key,
     required this.rideId,
     required this.repository,
+    this.settingsController,
     this.config = const AppConfig(),
   });
 
   final String rideId;
   final LocalDraftRepository repository;
+  final AppSettingsController? settingsController;
   final AppConfig config;
 
   @override
@@ -422,7 +577,10 @@ class _FreeRideDetailScreenState extends State<FreeRideDetailScreen> {
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 12),
-                    _FreeRideSummaryRow(ride: _ride!),
+                    _FreeRideSummaryRow(
+                      ride: _ride!,
+                      settingsController: widget.settingsController,
+                    ),
                   ],
                 ),
     );
@@ -430,41 +588,67 @@ class _FreeRideDetailScreenState extends State<FreeRideDetailScreen> {
 }
 
 class _FreeRideSummaryRow extends StatelessWidget {
-  const _FreeRideSummaryRow({required this.ride});
+  const _FreeRideSummaryRow({
+    required this.ride,
+    this.settingsController,
+  });
 
   final FreeRideRun ride;
+  final AppSettingsController? settingsController;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final (dv, isKm) = Formatters.distanceMeters(ride.totalDistanceMeters);
-    final distStr = isKm
-        ? l.unitKilometers(dv.toStringAsFixed(2))
-        : l.unitMeters(dv.toStringAsFixed(0));
+    final distStr = _distanceLabel(l, ride.totalDistanceMeters, settingsController);
     final entries = [
       (l.historyDistanceLabel, distStr),
-      (l.historyMaxSpeedLabel, l.unitKmh(Formatters.speedMps(ride.maxSpeedMps).toStringAsFixed(1))),
-      (l.historyAvgSpeedLabel, l.unitKmh(Formatters.speedMps(ride.avgSpeedMps).toStringAsFixed(1))),
+      (l.historyMaxSpeedLabel, _speedLabel(l, ride.maxSpeedMps, settingsController)),
+      (l.historyAvgSpeedLabel, _speedLabel(l, ride.avgSpeedMps, settingsController)),
     ];
-    return Row(
+    final elevation = ride.elevationRangeMeters;
+    return Column(
       children: [
-        for (final e in entries)
-          Expanded(
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Column(
-                  children: [
-                    Text(e.$1,
-                        style: Theme.of(context).textTheme.labelSmall),
-                    const SizedBox(height: 4),
-                    Text(e.$2,
-                        style: Theme.of(context).textTheme.titleMedium),
-                  ],
+        Row(
+          children: [
+            for (final e in entries)
+              Expanded(
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Column(
+                      children: [
+                        Text(e.$1,
+                            style: Theme.of(context).textTheme.labelSmall),
+                        const SizedBox(height: 4),
+                        Text(e.$2,
+                            style: Theme.of(context).textTheme.titleMedium),
+                      ],
+                    ),
+                  ),
                 ),
+              ),
+          ],
+        ),
+        if (elevation != null) ...[
+          const SizedBox(height: 8),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(l.elevationRangeLabel,
+                      style: Theme.of(context).textTheme.labelSmall),
+                  const SizedBox(width: 8),
+                  Text(
+                    _elevationLabel(l, elevation, settingsController),
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ],
               ),
             ),
           ),
+        ],
       ],
     );
   }
@@ -475,11 +659,13 @@ class SessionDetailScreen extends StatefulWidget {
     super.key,
     required this.sessionId,
     required this.repository,
+    this.settingsController,
     this.config = const AppConfig(),
   });
 
   final String sessionId;
   final LocalDraftRepository repository;
+  final AppSettingsController? settingsController;
   final AppConfig config;
 
   @override
@@ -624,20 +810,31 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 12),
-                    _SummaryRow(session: _session!),
+                    _SummaryRow(
+                      session: _session!,
+                      settingsController: widget.settingsController,
+                    ),
                     const SizedBox(height: 16),
                     Text(l.historyLapsLabel,
                         style: Theme.of(context).textTheme.titleMedium),
                     for (final lap in _session!.laps)
                       ListTile(
                         leading: CircleAvatar(child: Text('${lap.lapNumber}')),
-                        title: Text(Formatters.duration(lap.duration)),
+                        title: Text(Formatters.duration(
+                          lap.duration,
+                          dotSeparator: widget.settingsController?.timeFormatDot ?? true,
+                        )),
                         subtitle: Text(() {
-                            final (dv, isKm) = Formatters.distanceMeters(lap.distanceMeters);
-                            final dist = isKm
-                                ? l.unitKilometers(dv.toStringAsFixed(2))
-                                : l.unitMeters(dv.toStringAsFixed(0));
-                            final speed = l.unitKmh(Formatters.speedMps(lap.avgSpeedMps).toStringAsFixed(1));
+                            final dist = _distanceLabel(
+                              l,
+                              lap.distanceMeters,
+                              widget.settingsController,
+                            );
+                            final speed = _speedLabel(
+                              l,
+                              lap.avgSpeedMps,
+                              widget.settingsController,
+                            );
                             return '$dist · $speed';
                           }()),
                         trailing: lap.completed
@@ -664,10 +861,17 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                         subtitle: Text(
                           l.historySectorSubtitle(
                             sec.lapNumber,
-                            l.unitKmh(Formatters.speedMps(sec.avgSpeedMps).toStringAsFixed(1)),
+                            _speedLabel(
+                              l,
+                              sec.avgSpeedMps,
+                              widget.settingsController,
+                            ),
                           ),
                         ),
-                        trailing: Text(Formatters.duration(sec.duration)),
+                        trailing: Text(Formatters.duration(
+                          sec.duration,
+                          dotSeparator: widget.settingsController?.timeFormatDot ?? true,
+                        )),
                       ),
                   ],
                 ),
@@ -676,21 +880,22 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 }
 
 class _SummaryRow extends StatelessWidget {
-  const _SummaryRow({required this.session});
+  const _SummaryRow({
+    required this.session,
+    this.settingsController,
+  });
 
   final SessionRun session;
+  final AppSettingsController? settingsController;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final (dv, isKm) = Formatters.distanceMeters(session.totalDistanceMeters);
-    final distStr = isKm
-        ? l.unitKilometers(dv.toStringAsFixed(2))
-        : l.unitMeters(dv.toStringAsFixed(0));
+    final distStr = _distanceLabel(l, session.totalDistanceMeters, settingsController);
     final entries = [
       (l.historyDistanceLabel, distStr),
-      (l.historyMaxSpeedLabel, l.unitKmh(Formatters.speedMps(session.maxSpeedMps).toStringAsFixed(1))),
-      (l.historyAvgSpeedLabel, l.unitKmh(Formatters.speedMps(session.avgSpeedMps).toStringAsFixed(1))),
+      (l.historyMaxSpeedLabel, _speedLabel(l, session.maxSpeedMps, settingsController)),
+      (l.historyAvgSpeedLabel, _speedLabel(l, session.avgSpeedMps, settingsController)),
     ];
     return Row(
       children: [

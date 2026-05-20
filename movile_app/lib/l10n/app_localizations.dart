@@ -182,6 +182,12 @@ abstract class AppLocalizations {
   /// **'History'**
   String get navHistory;
 
+  /// No description provided for @navRoutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Routes'**
+  String get navRoutes;
+
   /// No description provided for @drawerMenu.
   ///
   /// In en, this message translates to:
@@ -277,6 +283,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sync now'**
   String get drawerSyncNow;
+
+  /// No description provided for @drawerProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get drawerProfile;
 
   /// No description provided for @loginBannerDefault.
   ///
@@ -374,6 +386,24 @@ abstract class AppLocalizations {
   /// **'Continue without account'**
   String get loginSkipButton;
 
+  /// No description provided for @loginNicknameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Nickname'**
+  String get loginNicknameHint;
+
+  /// No description provided for @loginNicknameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a nickname'**
+  String get loginNicknameRequired;
+
+  /// No description provided for @loginNicknameMinLength.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimum 2 characters'**
+  String get loginNicknameMinLength;
+
   /// No description provided for @loginConfirmationTitle.
   ///
   /// In en, this message translates to:
@@ -427,6 +457,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unexpected error. Try again.'**
   String get authErrorUnexpected;
+
+  /// No description provided for @profileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get profileTitle;
+
+  /// No description provided for @profileAvatarUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Avatar updated'**
+  String get profileAvatarUpdated;
+
+  /// No description provided for @profileErrorUnexpected.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not update avatar. Try again.'**
+  String get profileErrorUnexpected;
+
+  /// No description provided for @profileNicknameUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Nickname updated'**
+  String get profileNicknameUpdated;
+
+  /// No description provided for @profileErrorCooldown.
+  ///
+  /// In en, this message translates to:
+  /// **'Nickname can only be changed after the cooldown.'**
+  String get profileErrorCooldown;
+
+  /// No description provided for @profileBioUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Bio updated'**
+  String get profileBioUpdated;
+
+  /// No description provided for @profileChangeAvatar.
+  ///
+  /// In en, this message translates to:
+  /// **'Change avatar'**
+  String get profileChangeAvatar;
+
+  /// No description provided for @profileNicknameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Nickname'**
+  String get profileNicknameLabel;
+
+  /// No description provided for @profileNicknameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a nickname'**
+  String get profileNicknameRequired;
+
+  /// No description provided for @profileNicknameMinLength.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimum 2 characters'**
+  String get profileNicknameMinLength;
+
+  /// No description provided for @profileNicknameTooLong.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum 30 characters'**
+  String get profileNicknameTooLong;
+
+  /// No description provided for @profileBioLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Bio'**
+  String get profileBioLabel;
+
+  /// No description provided for @profileBioHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell others a little bit about yourself'**
+  String get profileBioHint;
+
+  /// No description provided for @profileNicknameCooldownDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, =1{1 day} other{{days} days}}'**
+  String profileNicknameCooldownDays(int days);
+
+  /// No description provided for @profileNicknameCooldownHours.
+  ///
+  /// In en, this message translates to:
+  /// **'{hours, plural, =1{1 hour} other{{hours} hours}}'**
+  String profileNicknameCooldownHours(int hours);
+
+  /// No description provided for @profileNicknameCooldown.
+  ///
+  /// In en, this message translates to:
+  /// **'Nickname change available in'**
+  String get profileNicknameCooldown;
+
+  /// No description provided for @profileEmailLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get profileEmailLabel;
+
+  /// No description provided for @profileDateOfBirthLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Date of birth'**
+  String get profileDateOfBirthLabel;
+
+  /// No description provided for @loginDateOfBirthHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Date of birth'**
+  String get loginDateOfBirthHint;
 
   /// No description provided for @editorTitle.
   ///
@@ -679,6 +823,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not reach the server to snap the route to roads. Showing straight segments until the connection is restored.'**
   String get editorSnapFailedMessage;
+
+  /// No description provided for @editorRoutingProfileTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Routing mode'**
+  String get editorRoutingProfileTooltip;
+
+  /// No description provided for @editorRoutingProfileDriving.
+  ///
+  /// In en, this message translates to:
+  /// **'Road'**
+  String get editorRoutingProfileDriving;
+
+  /// No description provided for @editorRoutingProfileWalking.
+  ///
+  /// In en, this message translates to:
+  /// **'Trail'**
+  String get editorRoutingProfileWalking;
+
+  /// No description provided for @editorRoutingProfileCycling.
+  ///
+  /// In en, this message translates to:
+  /// **'Cycling'**
+  String get editorRoutingProfileCycling;
 
   /// No description provided for @editorNewRouteDialogTitle.
   ///
@@ -1076,6 +1244,366 @@ abstract class AppLocalizations {
   /// **'{value} km/h'**
   String unitKmh(String value);
 
+  /// No description provided for @unitMph.
+  ///
+  /// In en, this message translates to:
+  /// **'{value} mph'**
+  String unitMph(String value);
+
+  /// No description provided for @unitFeet.
+  ///
+  /// In en, this message translates to:
+  /// **'{value} ft'**
+  String unitFeet(String value);
+
+  /// No description provided for @unitMiles.
+  ///
+  /// In en, this message translates to:
+  /// **'{value} mi'**
+  String unitMiles(String value);
+
+  /// No description provided for @settingsAppearanceSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Appearance'**
+  String get settingsAppearanceSection;
+
+  /// No description provided for @settingsThemeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme'**
+  String get settingsThemeLabel;
+
+  /// No description provided for @settingsThemeSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'System default'**
+  String get settingsThemeSystem;
+
+  /// No description provided for @settingsThemeLight.
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get settingsThemeLight;
+
+  /// No description provided for @settingsThemeDark.
+  ///
+  /// In en, this message translates to:
+  /// **'Dark'**
+  String get settingsThemeDark;
+
+  /// No description provided for @settingsMeasurementSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Measurement'**
+  String get settingsMeasurementSection;
+
+  /// No description provided for @settingsUnitSystemLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit system'**
+  String get settingsUnitSystemLabel;
+
+  /// No description provided for @settingsUnitMetric.
+  ///
+  /// In en, this message translates to:
+  /// **'Metric (km, m/s → km/h)'**
+  String get settingsUnitMetric;
+
+  /// No description provided for @settingsUnitImperial.
+  ///
+  /// In en, this message translates to:
+  /// **'Imperial (mi, m/s → mph)'**
+  String get settingsUnitImperial;
+
+  /// No description provided for @settingsTimeFormatLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Lap time separator'**
+  String get settingsTimeFormatLabel;
+
+  /// No description provided for @settingsTimeFormatDot.
+  ///
+  /// In en, this message translates to:
+  /// **'Dot  —  01:23.456'**
+  String get settingsTimeFormatDot;
+
+  /// No description provided for @settingsTimeFormatComma.
+  ///
+  /// In en, this message translates to:
+  /// **'Comma  —  01:23,456'**
+  String get settingsTimeFormatComma;
+
+  /// No description provided for @settingsSessionSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Session behaviour'**
+  String get settingsSessionSection;
+
+  /// No description provided for @settingsKeepScreenAwakeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep screen awake'**
+  String get settingsKeepScreenAwakeLabel;
+
+  /// No description provided for @settingsKeepScreenAwakeDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Prevents the display from sleeping during an active session or free ride.'**
+  String get settingsKeepScreenAwakeDesc;
+
+  /// No description provided for @settingsHapticFeedbackLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Haptic feedback'**
+  String get settingsHapticFeedbackLabel;
+
+  /// No description provided for @settingsHapticFeedbackDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Vibrate when crossing a sector gate or the finish line.'**
+  String get settingsHapticFeedbackDesc;
+
+  /// No description provided for @settingsAudioAlertsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio alerts'**
+  String get settingsAudioAlertsLabel;
+
+  /// No description provided for @settingsAudioAlertsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Play a short beep on each sector and lap crossing.'**
+  String get settingsAudioAlertsDesc;
+
+  /// No description provided for @settingsGpsSamplingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'GPS update rate'**
+  String get settingsGpsSamplingLabel;
+
+  /// No description provided for @settingsGpsSampling1s.
+  ///
+  /// In en, this message translates to:
+  /// **'Every 1 s — high accuracy, more battery'**
+  String get settingsGpsSampling1s;
+
+  /// No description provided for @settingsGpsSampling2s.
+  ///
+  /// In en, this message translates to:
+  /// **'Every ~2 s — balanced'**
+  String get settingsGpsSampling2s;
+
+  /// No description provided for @settingsGpsSampling5s.
+  ///
+  /// In en, this message translates to:
+  /// **'Every ~5 s — low battery'**
+  String get settingsGpsSampling5s;
+
+  /// No description provided for @settingsRoutesSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Routes'**
+  String get settingsRoutesSection;
+
+  /// No description provided for @settingsDefaultRoutingProfileLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Default routing mode'**
+  String get settingsDefaultRoutingProfileLabel;
+
+  /// No description provided for @settingsRoutingProfileRoad.
+  ///
+  /// In en, this message translates to:
+  /// **'Road'**
+  String get settingsRoutingProfileRoad;
+
+  /// No description provided for @settingsRoutingProfileTrail.
+  ///
+  /// In en, this message translates to:
+  /// **'Trail'**
+  String get settingsRoutingProfileTrail;
+
+  /// No description provided for @settingsRoutingProfileCycling.
+  ///
+  /// In en, this message translates to:
+  /// **'Cycling'**
+  String get settingsRoutingProfileCycling;
+
+  /// No description provided for @settingsGarageSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Garage'**
+  String get settingsGarageSection;
+
+  /// No description provided for @settingsDefaultVehicleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Default vehicle'**
+  String get settingsDefaultVehicleLabel;
+
+  /// No description provided for @settingsDefaultVehicleNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None (always ask)'**
+  String get settingsDefaultVehicleNone;
+
+  /// No description provided for @settingsAccountSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get settingsAccountSection;
+
+  /// No description provided for @settingsChangePasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Change password'**
+  String get settingsChangePasswordLabel;
+
+  /// No description provided for @settingsDeleteAccountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete account'**
+  String get settingsDeleteAccountLabel;
+
+  /// No description provided for @settingsDeleteAccountConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete account?'**
+  String get settingsDeleteAccountConfirmTitle;
+
+  /// No description provided for @settingsDeleteAccountConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'All your data will be permanently deleted. This cannot be undone.'**
+  String get settingsDeleteAccountConfirmBody;
+
+  /// No description provided for @settingsDeleteAccountConfirmButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete my account'**
+  String get settingsDeleteAccountConfirmButton;
+
+  /// No description provided for @settingsDeleteAccountSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Account deleted. Goodbye!'**
+  String get settingsDeleteAccountSuccess;
+
+  /// No description provided for @settingsDeleteAccountError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not delete account. Try again.'**
+  String get settingsDeleteAccountError;
+
+  /// No description provided for @settingsChangePasswordCurrentLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Current password'**
+  String get settingsChangePasswordCurrentLabel;
+
+  /// No description provided for @settingsChangePasswordNewLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'New password'**
+  String get settingsChangePasswordNewLabel;
+
+  /// No description provided for @settingsChangePasswordConfirmLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm new password'**
+  String get settingsChangePasswordConfirmLabel;
+
+  /// No description provided for @settingsChangePasswordButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Update password'**
+  String get settingsChangePasswordButton;
+
+  /// No description provided for @settingsChangePasswordSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Password updated'**
+  String get settingsChangePasswordSuccess;
+
+  /// No description provided for @settingsChangePasswordError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not update password. Try again.'**
+  String get settingsChangePasswordError;
+
+  /// No description provided for @settingsChangePasswordMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Passwords do not match'**
+  String get settingsChangePasswordMismatch;
+
+  /// No description provided for @settingsChangePasswordTooShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimum 6 characters'**
+  String get settingsChangePasswordTooShort;
+
+  /// No description provided for @settingsDataSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Data'**
+  String get settingsDataSection;
+
+  /// No description provided for @settingsExportHistoryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Export history'**
+  String get settingsExportHistoryLabel;
+
+  /// No description provided for @settingsExportHistoryDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Download all sessions and free rides as a CSV file.'**
+  String get settingsExportHistoryDesc;
+
+  /// No description provided for @settingsClearCacheLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear local data'**
+  String get settingsClearCacheLabel;
+
+  /// No description provided for @settingsClearCacheDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Deletes all locally saved routes and sessions. Cloud data is not affected.'**
+  String get settingsClearCacheDesc;
+
+  /// No description provided for @settingsClearCacheConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear all local data?'**
+  String get settingsClearCacheConfirmTitle;
+
+  /// No description provided for @settingsClearCacheConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your routes and sessions will be deleted from this device. If sync is enabled they will remain in the cloud.'**
+  String get settingsClearCacheConfirmBody;
+
+  /// No description provided for @settingsClearCacheConfirmButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear data'**
+  String get settingsClearCacheConfirmButton;
+
+  /// No description provided for @settingsClearCacheDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Local data cleared'**
+  String get settingsClearCacheDone;
+
+  /// No description provided for @settingsExportSharing.
+  ///
+  /// In en, this message translates to:
+  /// **'Exporting…'**
+  String get settingsExportSharing;
+
   /// No description provided for @mapNoRoute.
   ///
   /// In en, this message translates to:
@@ -1285,6 +1813,324 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Name'**
   String get historyRenameRouteLabel;
+
+  /// No description provided for @routesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My routes'**
+  String get routesTitle;
+
+  /// No description provided for @routesViewList.
+  ///
+  /// In en, this message translates to:
+  /// **'List'**
+  String get routesViewList;
+
+  /// No description provided for @routesViewGrid.
+  ///
+  /// In en, this message translates to:
+  /// **'Grid'**
+  String get routesViewGrid;
+
+  /// No description provided for @routesSessionsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No sessions} =1{1 session} other{{count} sessions}}'**
+  String routesSessionsCount(int count);
+
+  /// No description provided for @routesBestLap.
+  ///
+  /// In en, this message translates to:
+  /// **'Best: {time}'**
+  String routesBestLap(String time);
+
+  /// No description provided for @routesDetailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Route detail'**
+  String get routesDetailTitle;
+
+  /// No description provided for @navGarage.
+  ///
+  /// In en, this message translates to:
+  /// **'Garage'**
+  String get navGarage;
+
+  /// No description provided for @garageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My garage'**
+  String get garageTitle;
+
+  /// No description provided for @garageNoVehiclesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No vehicles yet'**
+  String get garageNoVehiclesTitle;
+
+  /// No description provided for @garageNoVehiclesMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Add your first car, bike, or kart to track which vehicle you use on each session.'**
+  String get garageNoVehiclesMessage;
+
+  /// No description provided for @garageAddVehicleButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Add vehicle'**
+  String get garageAddVehicleButton;
+
+  /// No description provided for @garageViewList.
+  ///
+  /// In en, this message translates to:
+  /// **'List'**
+  String get garageViewList;
+
+  /// No description provided for @garageViewGrid.
+  ///
+  /// In en, this message translates to:
+  /// **'Grid'**
+  String get garageViewGrid;
+
+  /// No description provided for @garageDeleteVehicleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete vehicle'**
+  String get garageDeleteVehicleTitle;
+
+  /// No description provided for @garageDeleteVehicleConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete \"{vehicleName}\"? This cannot be undone.'**
+  String garageDeleteVehicleConfirm(String vehicleName);
+
+  /// No description provided for @garageVehicleSavedSnack.
+  ///
+  /// In en, this message translates to:
+  /// **'Vehicle saved'**
+  String get garageVehicleSavedSnack;
+
+  /// No description provided for @garageVehicleDeletedSnack.
+  ///
+  /// In en, this message translates to:
+  /// **'Vehicle deleted'**
+  String get garageVehicleDeletedSnack;
+
+  /// No description provided for @garagePhotoUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo updated'**
+  String get garagePhotoUpdated;
+
+  /// No description provided for @garageErrorUnexpected.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong. Try again.'**
+  String get garageErrorUnexpected;
+
+  /// No description provided for @garageChangePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Change photo'**
+  String get garageChangePhoto;
+
+  /// No description provided for @vehicleFormTitleNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New vehicle'**
+  String get vehicleFormTitleNew;
+
+  /// No description provided for @vehicleFormTitleEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit vehicle'**
+  String get vehicleFormTitleEdit;
+
+  /// No description provided for @vehicleFormNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get vehicleFormNameLabel;
+
+  /// No description provided for @vehicleFormNameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a name'**
+  String get vehicleFormNameRequired;
+
+  /// No description provided for @vehicleFormNameMinLength.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimum 2 characters'**
+  String get vehicleFormNameMinLength;
+
+  /// No description provided for @vehicleFormTypeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get vehicleFormTypeLabel;
+
+  /// No description provided for @vehicleFormModelLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Model (optional)'**
+  String get vehicleFormModelLabel;
+
+  /// No description provided for @vehicleFormYearLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Year (optional)'**
+  String get vehicleFormYearLabel;
+
+  /// No description provided for @vehicleFormHorsepowerLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Horsepower (optional)'**
+  String get vehicleFormHorsepowerLabel;
+
+  /// No description provided for @vehicleFormTorqueLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Torque Nm (optional)'**
+  String get vehicleFormTorqueLabel;
+
+  /// No description provided for @vehicleFormWeightLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Weight kg (optional)'**
+  String get vehicleFormWeightLabel;
+
+  /// No description provided for @vehicleFormDrivetrainLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Drivetrain (optional)'**
+  String get vehicleFormDrivetrainLabel;
+
+  /// No description provided for @vehicleFormNotesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes (optional)'**
+  String get vehicleFormNotesLabel;
+
+  /// No description provided for @vehicleFormNotesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tire setup, modifications, etc.'**
+  String get vehicleFormNotesHint;
+
+  /// No description provided for @vehicleFormSaveButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get vehicleFormSaveButton;
+
+  /// No description provided for @vehicleTypeCar.
+  ///
+  /// In en, this message translates to:
+  /// **'Car'**
+  String get vehicleTypeCar;
+
+  /// No description provided for @vehicleTypeMotorcycle.
+  ///
+  /// In en, this message translates to:
+  /// **'Motorcycle'**
+  String get vehicleTypeMotorcycle;
+
+  /// No description provided for @vehicleTypeBicycle.
+  ///
+  /// In en, this message translates to:
+  /// **'Bicycle'**
+  String get vehicleTypeBicycle;
+
+  /// No description provided for @vehicleTypeGoKart.
+  ///
+  /// In en, this message translates to:
+  /// **'Go-kart'**
+  String get vehicleTypeGoKart;
+
+  /// No description provided for @vehicleTypeOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get vehicleTypeOther;
+
+  /// No description provided for @drivetrainFront.
+  ///
+  /// In en, this message translates to:
+  /// **'Front-wheel drive'**
+  String get drivetrainFront;
+
+  /// No description provided for @drivetrainRear.
+  ///
+  /// In en, this message translates to:
+  /// **'Rear-wheel drive'**
+  String get drivetrainRear;
+
+  /// No description provided for @drivetrainAllWheel.
+  ///
+  /// In en, this message translates to:
+  /// **'All-wheel drive'**
+  String get drivetrainAllWheel;
+
+  /// No description provided for @vehicleDetailSpecs.
+  ///
+  /// In en, this message translates to:
+  /// **'Specs'**
+  String get vehicleDetailSpecs;
+
+  /// No description provided for @vehicleDetailHorsepower.
+  ///
+  /// In en, this message translates to:
+  /// **'{hp} hp'**
+  String vehicleDetailHorsepower(int hp);
+
+  /// No description provided for @vehicleDetailTorque.
+  ///
+  /// In en, this message translates to:
+  /// **'{nm} Nm'**
+  String vehicleDetailTorque(int nm);
+
+  /// No description provided for @vehicleDetailWeight.
+  ///
+  /// In en, this message translates to:
+  /// **'{kg} kg'**
+  String vehicleDetailWeight(int kg);
+
+  /// No description provided for @vehiclePickerLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Vehicle'**
+  String get vehiclePickerLabel;
+
+  /// No description provided for @vehiclePickerOnFoot.
+  ///
+  /// In en, this message translates to:
+  /// **'On foot'**
+  String get vehiclePickerOnFoot;
+
+  /// No description provided for @vehiclePickerSelectVehicle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a vehicle'**
+  String get vehiclePickerSelectVehicle;
+
+  /// No description provided for @elevationRangeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Elevation'**
+  String get elevationRangeLabel;
+
+  /// No description provided for @elevationRangeValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{value} m'**
+  String elevationRangeValue(String value);
+
+  /// No description provided for @elevationRangeValueFeet.
+  ///
+  /// In en, this message translates to:
+  /// **'{value} ft'**
+  String elevationRangeValueFeet(String value);
 }
 
 class _AppLocalizationsDelegate
