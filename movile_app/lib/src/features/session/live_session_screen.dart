@@ -17,6 +17,28 @@ import '../../shared/widgets/splitway_map.dart';
 import '../home/home_shell.dart';
 import 'live_session_controller.dart';
 
+String _speedLabel(
+  AppLocalizations l,
+  AppSettingsController ctrl,
+  double mps,
+) {
+  final v = Formatters.speedMps(mps, unit: ctrl.unitSystem);
+  return ctrl.unitSystem == UnitSystem.imperial ? l.unitMph(v) : l.unitKmh(v);
+}
+
+String _distanceLabel(
+  AppLocalizations l,
+  AppSettingsController ctrl,
+  double meters,
+) {
+  final (value, isLarge) = Formatters.distanceMeters(meters, unit: ctrl.unitSystem);
+  final formatted = value.toStringAsFixed(value >= 10 ? 1 : 2);
+  if (ctrl.unitSystem == UnitSystem.imperial) {
+    return isLarge ? l.unitMiles(formatted) : l.unitFeet(formatted);
+  }
+  return isLarge ? l.unitKilometers(formatted) : l.unitMeters(formatted);
+}
+
 class LiveSessionScreen extends StatefulWidget {
   const LiveSessionScreen({
     super.key,
@@ -56,25 +78,6 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
   }
 
   void _onChange() => setState(() {});
-
-  String _speedLabel(AppLocalizations l, double mps) {
-    final v = Formatters.speedMps(mps, unit: widget.settingsController.unitSystem);
-    return widget.settingsController.unitSystem == UnitSystem.imperial
-        ? l.unitMph(v)
-        : l.unitKmh(v);
-  }
-
-  String _distanceLabel(AppLocalizations l, double meters) {
-    final (value, isLarge) = Formatters.distanceMeters(
-      meters,
-      unit: widget.settingsController.unitSystem,
-    );
-    final formatted = value.toStringAsFixed(value >= 10 ? 1 : 2);
-    if (widget.settingsController.unitSystem == UnitSystem.imperial) {
-      return isLarge ? l.unitMiles(formatted) : l.unitFeet(formatted);
-    }
-    return isLarge ? l.unitKilometers(formatted) : l.unitMeters(formatted);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -373,8 +376,8 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
               dotSeparator: widget.settingsController.timeFormatDot,
             )),
             subtitle: Text(() {
-                  final dist = _distanceLabel(l, lap.distanceMeters);
-                  final speed = _speedLabel(l, lap.avgSpeedMps);
+                  final dist = _distanceLabel(l, widget.settingsController, lap.distanceMeters);
+                  final speed = _speedLabel(l, widget.settingsController, lap.avgSpeedMps);
                   return '$dist · $speed';
                 }()),
             trailing: lap.completed
@@ -511,33 +514,14 @@ class _StatsGrid extends StatelessWidget {
   final SessionRun session;
   final AppSettingsController settingsController;
 
-  String _speedLabel(AppLocalizations l, double mps) {
-    final v = Formatters.speedMps(mps, unit: settingsController.unitSystem);
-    return settingsController.unitSystem == UnitSystem.imperial
-        ? l.unitMph(v)
-        : l.unitKmh(v);
-  }
-
-  String _distanceLabel(AppLocalizations l, double meters) {
-    final (value, isLarge) = Formatters.distanceMeters(
-      meters,
-      unit: settingsController.unitSystem,
-    );
-    final formatted = value.toStringAsFixed(value >= 10 ? 1 : 2);
-    if (settingsController.unitSystem == UnitSystem.imperial) {
-      return isLarge ? l.unitMiles(formatted) : l.unitFeet(formatted);
-    }
-    return isLarge ? l.unitKilometers(formatted) : l.unitMeters(formatted);
-  }
-
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final distStr = _distanceLabel(l, session.totalDistanceMeters);
+    final distStr = _distanceLabel(l, settingsController, session.totalDistanceMeters);
     final children = [
       _Stat(l.sessionDistanceLabel, distStr),
-      _Stat(l.sessionMaxSpeedLabel, _speedLabel(l, session.maxSpeedMps)),
-      _Stat(l.sessionAvgSpeedLabel, _speedLabel(l, session.avgSpeedMps)),
+      _Stat(l.sessionMaxSpeedLabel, _speedLabel(l, settingsController, session.maxSpeedMps)),
+      _Stat(l.sessionAvgSpeedLabel, _speedLabel(l, settingsController, session.avgSpeedMps)),
       _Stat(l.sessionLapsCountLabel, '${session.laps.length}'),
     ];
     return GridView.count(
