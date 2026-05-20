@@ -68,7 +68,7 @@ class LiveSessionScreen extends StatefulWidget {
 
 class _LiveSessionScreenState extends State<LiveSessionScreen> {
   int _lastEventCount = 0;
-  final _audioPlayer = AudioPlayer();
+  AudioPlayer? _audioPlayer;
 
   @override
   void initState() {
@@ -93,7 +93,7 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
     widget.authService?.removeListener(_onChange);
     widget.settingsController.removeListener(_onSettingsChanged);
     WakelockPlus.disable().catchError((_) {});
-    _audioPlayer.dispose();
+    _audioPlayer?.dispose();
     super.dispose();
   }
 
@@ -129,7 +129,8 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
         HapticFeedback.mediumImpact();
       }
       if (widget.settingsController.audioAlerts) {
-        unawaited(_audioPlayer.play(AssetSource('sounds/beep.mp3')));
+        _audioPlayer ??= AudioPlayer();
+        unawaited(_audioPlayer!.play(AssetSource('sounds/beep.mp3')));
       }
     }
   }
