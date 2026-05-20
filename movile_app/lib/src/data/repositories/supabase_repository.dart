@@ -121,6 +121,7 @@ class SupabaseRepository {
                 'altitude_m': p.altitudeMeters,
               })
           .toList(),
+      'p_vehicle_id': session.vehicleId,
     });
   }
 
@@ -192,6 +193,7 @@ class SupabaseRepository {
       'p_description': ride.description,
       'p_location_label': ride.locationLabel,
       'p_updated_at': DateTime.now().toUtc().toIso8601String(),
+      'p_vehicle_id': ride.vehicleId,
       'p_points': ride.points
           .map((p) => {
                 'ts': p.timestamp.toUtc().toIso8601String(),
@@ -341,6 +343,7 @@ class SupabaseRepository {
       totalDistanceMeters: (row['total_distance_m'] as num).toDouble(),
       maxSpeedMps: (row['max_speed_mps'] as num).toDouble(),
       avgSpeedMps: (row['avg_speed_mps'] as num).toDouble(),
+      vehicleId: row['vehicle_id'] as String?,
     );
   }
 
@@ -360,6 +363,7 @@ class SupabaseRepository {
       name: row['name'] as String?,
       description: row['description'] as String?,
       locationLabel: row['location_label'] as String?,
+      vehicleId: row['vehicle_id'] as String?,
     );
   }
 
