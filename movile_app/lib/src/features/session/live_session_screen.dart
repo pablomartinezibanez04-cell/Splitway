@@ -340,7 +340,7 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
                   final dist = isKm
                       ? l.unitKilometers(dv.toStringAsFixed(2))
                       : l.unitMeters(dv.toStringAsFixed(0));
-                  final speed = l.unitKmh(Formatters.speedMps(lap.avgSpeedMps).toStringAsFixed(1));
+                  final speed = l.unitKmh(Formatters.speedMps(lap.avgSpeedMps));
                   return '$dist · $speed';
                 }()),
             trailing: lap.completed
@@ -465,8 +465,8 @@ class _StatsGrid extends StatelessWidget {
         : l.unitMeters(dv.toStringAsFixed(0));
     final children = [
       _Stat(l.sessionDistanceLabel, distStr),
-      _Stat(l.sessionMaxSpeedLabel, l.unitKmh(Formatters.speedMps(session.maxSpeedMps).toStringAsFixed(1))),
-      _Stat(l.sessionAvgSpeedLabel, l.unitKmh(Formatters.speedMps(session.avgSpeedMps).toStringAsFixed(1))),
+      _Stat(l.sessionMaxSpeedLabel, l.unitKmh(Formatters.speedMps(session.maxSpeedMps))),
+      _Stat(l.sessionAvgSpeedLabel, l.unitKmh(Formatters.speedMps(session.avgSpeedMps))),
       _Stat(l.sessionLapsCountLabel, '${session.laps.length}'),
     ];
     return GridView.count(

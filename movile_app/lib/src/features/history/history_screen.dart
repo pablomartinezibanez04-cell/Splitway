@@ -545,8 +545,8 @@ class _FreeRideSummaryRow extends StatelessWidget {
         : l.unitMeters(dv.toStringAsFixed(0));
     final entries = [
       (l.historyDistanceLabel, distStr),
-      (l.historyMaxSpeedLabel, l.unitKmh(Formatters.speedMps(ride.maxSpeedMps).toStringAsFixed(1))),
-      (l.historyAvgSpeedLabel, l.unitKmh(Formatters.speedMps(ride.avgSpeedMps).toStringAsFixed(1))),
+      (l.historyMaxSpeedLabel, l.unitKmh(Formatters.speedMps(ride.maxSpeedMps))),
+      (l.historyAvgSpeedLabel, l.unitKmh(Formatters.speedMps(ride.avgSpeedMps))),
     ];
     return Row(
       children: [
@@ -739,7 +739,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                             final dist = isKm
                                 ? l.unitKilometers(dv.toStringAsFixed(2))
                                 : l.unitMeters(dv.toStringAsFixed(0));
-                            final speed = l.unitKmh(Formatters.speedMps(lap.avgSpeedMps).toStringAsFixed(1));
+                            final speed = l.unitKmh(Formatters.speedMps(lap.avgSpeedMps));
                             return '$dist · $speed';
                           }()),
                         trailing: lap.completed
@@ -766,7 +766,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                         subtitle: Text(
                           l.historySectorSubtitle(
                             sec.lapNumber,
-                            l.unitKmh(Formatters.speedMps(sec.avgSpeedMps).toStringAsFixed(1)),
+                            l.unitKmh(Formatters.speedMps(sec.avgSpeedMps)),
                           ),
                         ),
                         trailing: Text(Formatters.duration(sec.duration)),
@@ -791,8 +791,8 @@ class _SummaryRow extends StatelessWidget {
         : l.unitMeters(dv.toStringAsFixed(0));
     final entries = [
       (l.historyDistanceLabel, distStr),
-      (l.historyMaxSpeedLabel, l.unitKmh(Formatters.speedMps(session.maxSpeedMps).toStringAsFixed(1))),
-      (l.historyAvgSpeedLabel, l.unitKmh(Formatters.speedMps(session.avgSpeedMps).toStringAsFixed(1))),
+      (l.historyMaxSpeedLabel, l.unitKmh(Formatters.speedMps(session.maxSpeedMps))),
+      (l.historyAvgSpeedLabel, l.unitKmh(Formatters.speedMps(session.avgSpeedMps))),
     ];
     return Row(
       children: [

@@ -236,8 +236,7 @@ class _FreeRideScreenState extends State<FreeRideScreen> {
                 child: _MetricCard(
                   label: l.freeRideSpeedLabel,
                   value: l.unitKmh(
-                    Formatters.speedMps(snap.currentSpeedMps)
-                        .toStringAsFixed(1),
+                    Formatters.speedMps(snap.currentSpeedMps),
                   ),
                 ),
               ),
@@ -302,15 +301,13 @@ class _FreeRideScreenState extends State<FreeRideScreen> {
             Expanded(
               child: _StatCard(
                 l.freeRideMaxSpeedLabel,
-                l.unitKmh(Formatters.speedMps(result.maxSpeedMps)
-                    .toStringAsFixed(1)),
+                l.unitKmh(Formatters.speedMps(result.maxSpeedMps)),
               ),
             ),
             Expanded(
               child: _StatCard(
                 l.freeRideAvgSpeedLabel,
-                l.unitKmh(Formatters.speedMps(result.avgSpeedMps)
-                    .toStringAsFixed(1)),
+                l.unitKmh(Formatters.speedMps(result.avgSpeedMps)),
               ),
             ),
           ],
