@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:splitway_core/splitway_core.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:splitway_mobile/l10n/app_localizations.dart';
@@ -63,6 +64,8 @@ class LiveSessionScreen extends StatefulWidget {
 }
 
 class _LiveSessionScreenState extends State<LiveSessionScreen> {
+  int _lastEventCount = 0;
+
   @override
   void initState() {
     super.initState();
@@ -83,12 +86,30 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
 
   void _onChange() {
     _updateWakelock();
+    _checkHaptic();
     setState(() {});
   }
 
   void _onSettingsChanged() {
     _updateWakelock();
     setState(() {});
+  }
+
+  void _checkHaptic() {
+    if (!widget.settingsController.hapticFeedback) return;
+    final tracker = widget.controller.tracker;
+    if (tracker == null) return;
+    final events = tracker.events;
+    if (events.length > _lastEventCount) {
+      final newEvents = events.sublist(_lastEventCount);
+      for (final evt in newEvents) {
+        if (evt is SectorCrossed || evt is LapClosed) {
+          HapticFeedback.mediumImpact();
+          break; // one haptic pulse per notification cycle is enough
+        }
+      }
+    }
+    _lastEventCount = events.length;
   }
 
   void _updateWakelock() {
@@ -206,6 +227,7 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
                       message: AppLocalizations.of(context).loginBannerDefault,
                     );
                     if (!allowed || !mounted) return;
+                    _lastEventCount = 0;
                     // ignore: discarded_futures
                     ctrl.startSession();
                   },
