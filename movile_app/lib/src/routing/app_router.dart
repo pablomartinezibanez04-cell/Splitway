@@ -17,6 +17,7 @@ import '../features/settings/settings_screen.dart';
 import '../services/auth/auth_service.dart';
 import '../services/garage/garage_service.dart';
 import '../services/locale/locale_controller.dart';
+import '../services/settings/app_settings_controller.dart';
 import '../services/geocoding/reverse_geocoding_service.dart';
 import '../services/routing/routing_service.dart';
 import '../features/profile/profile_screen.dart';
@@ -28,6 +29,7 @@ class AppRouter {
     required this.repository,
     required this.config,
     required this.localeController,
+    required this.settingsController,
     this.authService,
     SyncService? syncService,
     ProfileService? profileService,
@@ -51,6 +53,7 @@ class AppRouter {
   final LocalDraftRepository repository;
   final AppConfig config;
   final LocaleController localeController;
+  final AppSettingsController settingsController;
   final AuthService? authService;
   ProfileService? profileService;
   GarageService? garageService;
@@ -94,6 +97,7 @@ class AppRouter {
         path: '/profile',
         builder: (_, __) => ProfileScreen(
           profileService: profileService!,
+          authService: authService!,
         ),
       ),
 

@@ -10,6 +10,7 @@ import 'src/data/demo/demo_seed.dart';
 import 'src/data/local/splitway_local_database.dart';
 import 'src/data/repositories/local_draft_repository.dart';
 import 'src/services/locale/locale_controller.dart';
+import 'src/services/settings/app_settings_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,10 +40,12 @@ Future<void> main() async {
       WidgetsBinding.instance.platformDispatcher.locale;
   final localeController =
       await LocaleController.load(deviceLocale: deviceLocale);
+  final settingsController = await AppSettingsController.load();
 
   runApp(SplitwayApp(
     config: config,
     database: database,
     localeController: localeController,
+    settingsController: settingsController,
   ));
 }

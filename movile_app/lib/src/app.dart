@@ -11,6 +11,7 @@ import 'data/services/route_thumbnail_service.dart';
 import 'routing/app_router.dart';
 import 'services/auth/auth_service.dart';
 import 'services/locale/locale_controller.dart';
+import 'services/settings/app_settings_controller.dart';
 import 'data/repositories/garage_repository.dart';
 import 'data/repositories/profile_repository.dart';
 import 'services/garage/garage_service.dart';
@@ -23,11 +24,13 @@ class SplitwayApp extends StatefulWidget {
     required this.config,
     required this.database,
     required this.localeController,
+    required this.settingsController,
   });
 
   final AppConfig config;
   final SplitwayLocalDatabase database;
   final LocaleController localeController;
+  final AppSettingsController settingsController;
 
   @override
   State<SplitwayApp> createState() => _SplitwayAppState();
@@ -65,6 +68,7 @@ class _SplitwayAppState extends State<SplitwayApp> {
       profileService: _profileService,
       garageService: _garageService,
       localeController: widget.localeController,
+      settingsController: widget.settingsController,
     );
   }
 
@@ -121,7 +125,12 @@ class _SplitwayAppState extends State<SplitwayApp> {
         user?.userMetadata?['full_name'] as String? ??
         user?.email?.split('@').first ??
         'User';
-    _profileService!.ensureProfile(fallbackNickname: nickname);
+    final dobStr = user?.userMetadata?['date_of_birth'] as String?;
+    final dateOfBirth = dobStr != null ? DateTime.tryParse(dobStr) : null;
+    _profileService!.ensureProfile(
+      fallbackNickname: nickname,
+      dateOfBirth: dateOfBirth,
+    );
 
     final garageRepo = GarageRepository(client);
     _garageService = GarageService(garageRepo);
@@ -145,7 +154,10 @@ class _SplitwayAppState extends State<SplitwayApp> {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: widget.localeController,
+      listenable: Listenable.merge([
+        widget.localeController,
+        widget.settingsController,
+      ]),
       builder: (context, _) => MaterialApp.router(
         onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
         debugShowCheckedModeBanner: false,
@@ -157,6 +169,7 @@ class _SplitwayAppState extends State<SplitwayApp> {
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
+        themeMode: widget.settingsController.flutterThemeMode,
         theme: ThemeData(
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(

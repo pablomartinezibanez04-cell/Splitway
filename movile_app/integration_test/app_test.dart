@@ -8,6 +8,7 @@ import 'package:splitway_mobile/src/data/demo/demo_seed.dart';
 import 'package:splitway_mobile/src/data/local/splitway_local_database.dart';
 import 'package:splitway_mobile/src/data/repositories/local_draft_repository.dart';
 import 'package:splitway_mobile/src/services/locale/locale_controller.dart';
+import 'package:splitway_mobile/src/services/settings/app_settings_controller.dart';
 
 /// End-to-end integration tests.
 /// Run with:  flutter test integration_test/app_test.dart
@@ -21,6 +22,7 @@ void main() {
   late SplitwayLocalDatabase database;
   late LocalDraftRepository seedRepo;
   late LocaleController localeController;
+  late AppSettingsController settingsController;
 
   setUpAll(() async {
     await initializeDateFormatting('es_ES');
@@ -28,6 +30,7 @@ void main() {
     localeController = await LocaleController.load(
       deviceLocale: const Locale('es'),
     );
+    settingsController = await AppSettingsController.load();
   });
 
   setUp(() async {
@@ -47,6 +50,7 @@ void main() {
         config: const AppConfig(),
         database: database,
         localeController: localeController,
+        settingsController: settingsController,
       ));
       await tester.pumpAndSettle(const Duration(seconds: 2));
 
@@ -61,6 +65,7 @@ void main() {
         config: const AppConfig(),
         database: database,
         localeController: localeController,
+        settingsController: settingsController,
       ));
       await tester.pumpAndSettle(const Duration(seconds: 2));
 
@@ -78,6 +83,7 @@ void main() {
         config: const AppConfig(),
         database: database,
         localeController: localeController,
+        settingsController: settingsController,
       ));
       await tester.pumpAndSettle(const Duration(seconds: 2));
 
@@ -101,6 +107,7 @@ void main() {
         config: const AppConfig(),
         database: database,
         localeController: localeController,
+        settingsController: settingsController,
       ));
       await tester.pumpAndSettle(const Duration(seconds: 2));
 
