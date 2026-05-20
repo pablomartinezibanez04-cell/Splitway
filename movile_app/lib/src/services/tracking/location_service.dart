@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:geolocator/geolocator.dart';
 import 'package:splitway_core/splitway_core.dart';
@@ -34,16 +35,48 @@ class LocationService {
     };
   }
 
+  /// Requests the 'always' location permission needed for background tracking.
+  /// Must be called after [ensurePermission] has already obtained 'whileInUse'.
+  static Future<LocationPermissionStatus> ensureBackgroundPermission() async {
+    final permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.always) {
+      return LocationPermissionStatus.granted;
+    }
+    final upgraded = await Geolocator.requestPermission();
+    return switch (upgraded) {
+      LocationPermission.always => LocationPermissionStatus.granted,
+      LocationPermission.deniedForever =>
+        LocationPermissionStatus.permanentlyDenied,
+      _ => LocationPermissionStatus.denied,
+    };
+  }
+
   /// Stream of GPS samples mapped to [TelemetryPoint]. Caller must hold
   /// the subscription and cancel it on dispose.
+  ///
+  /// Set [backgroundMode] to true when tracking while the app is backgrounded.
+  /// On iOS this switches to [AppleSettings] with background location updates
+  /// enabled; on other platforms it falls back to generic [LocationSettings].
   static Stream<TelemetryPoint> positionStream({
     int distanceFilterMeters = 0,
     LocationAccuracy accuracy = LocationAccuracy.bestForNavigation,
+    bool backgroundMode = false,
   }) {
-    final settings = LocationSettings(
-      accuracy: accuracy,
-      distanceFilter: distanceFilterMeters,
-    );
+    final LocationSettings settings;
+    if (backgroundMode && Platform.isIOS) {
+      settings = AppleSettings(
+        accuracy: accuracy,
+        distanceFilter: distanceFilterMeters,
+        allowBackgroundLocationUpdates: true,
+        pauseLocationUpdatesAutomatically: false,
+        showBackgroundLocationIndicator: true,
+      );
+    } else {
+      settings = LocationSettings(
+        accuracy: accuracy,
+        distanceFilter: distanceFilterMeters,
+      );
+    }
     return Geolocator.getPositionStream(locationSettings: settings).map(
       (p) => TelemetryPoint(
         timestamp: p.timestamp,
