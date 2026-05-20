@@ -247,7 +247,7 @@ class AppLocalizationsEn extends AppLocalizations {
       other: '$days days',
       one: '1 day',
     );
-    return '$_temp0 until next change';
+    return '$_temp0';
   }
 
   @override
@@ -258,11 +258,20 @@ class AppLocalizationsEn extends AppLocalizations {
       other: '$hours hours',
       one: '1 hour',
     );
-    return '$_temp0 until next change';
+    return '$_temp0';
   }
 
   @override
   String get profileNicknameCooldown => 'Nickname change available in';
+
+  @override
+  String get profileEmailLabel => 'Email';
+
+  @override
+  String get profileDateOfBirthLabel => 'Date of birth';
+
+  @override
+  String get loginDateOfBirthHint => 'Date of birth';
 
   @override
   String get editorTitle => 'Route editor';
@@ -669,6 +678,192 @@ class AppLocalizationsEn extends AppLocalizations {
   String unitKmh(String value) {
     return '$value km/h';
   }
+
+  @override
+  String unitMph(String value) {
+    return '$value mph';
+  }
+
+  @override
+  String unitFeet(String value) {
+    return '$value ft';
+  }
+
+  @override
+  String unitMiles(String value) {
+    return '$value mi';
+  }
+
+  @override
+  String get settingsAppearanceSection => 'Appearance';
+
+  @override
+  String get settingsThemeLabel => 'Theme';
+
+  @override
+  String get settingsThemeSystem => 'System default';
+
+  @override
+  String get settingsThemeLight => 'Light';
+
+  @override
+  String get settingsThemeDark => 'Dark';
+
+  @override
+  String get settingsMeasurementSection => 'Measurement';
+
+  @override
+  String get settingsUnitSystemLabel => 'Unit system';
+
+  @override
+  String get settingsUnitMetric => 'Metric (km, m/s → km/h)';
+
+  @override
+  String get settingsUnitImperial => 'Imperial (mi, m/s → mph)';
+
+  @override
+  String get settingsTimeFormatLabel => 'Lap time separator';
+
+  @override
+  String get settingsTimeFormatDot => 'Dot  —  01:23.456';
+
+  @override
+  String get settingsTimeFormatComma => 'Comma  —  01:23,456';
+
+  @override
+  String get settingsSessionSection => 'Session behaviour';
+
+  @override
+  String get settingsKeepScreenAwakeLabel => 'Keep screen awake';
+
+  @override
+  String get settingsKeepScreenAwakeDesc =>
+      'Prevents the display from sleeping during an active session or free ride.';
+
+  @override
+  String get settingsHapticFeedbackLabel => 'Haptic feedback';
+
+  @override
+  String get settingsHapticFeedbackDesc =>
+      'Vibrate when crossing a sector gate or the finish line.';
+
+  @override
+  String get settingsAudioAlertsLabel => 'Audio alerts';
+
+  @override
+  String get settingsAudioAlertsDesc =>
+      'Play a short beep on each sector and lap crossing.';
+
+  @override
+  String get settingsGpsSamplingLabel => 'GPS update rate';
+
+  @override
+  String get settingsGpsSampling1s => 'Every 1 s — high accuracy, more battery';
+
+  @override
+  String get settingsGpsSampling2s => 'Every ~2 s — balanced';
+
+  @override
+  String get settingsGpsSampling5s => 'Every ~5 s — low battery';
+
+  @override
+  String get settingsRoutesSection => 'Routes';
+
+  @override
+  String get settingsDefaultRoutingProfileLabel => 'Default routing mode';
+
+  @override
+  String get settingsGarageSection => 'Garage';
+
+  @override
+  String get settingsDefaultVehicleLabel => 'Default vehicle';
+
+  @override
+  String get settingsDefaultVehicleNone => 'None (always ask)';
+
+  @override
+  String get settingsAccountSection => 'Account';
+
+  @override
+  String get settingsChangePasswordLabel => 'Change password';
+
+  @override
+  String get settingsDeleteAccountLabel => 'Delete account';
+
+  @override
+  String get settingsDeleteAccountConfirmTitle => 'Delete account?';
+
+  @override
+  String get settingsDeleteAccountConfirmBody =>
+      'All your data will be permanently deleted. This cannot be undone.';
+
+  @override
+  String get settingsDeleteAccountConfirmButton => 'Delete my account';
+
+  @override
+  String get settingsDeleteAccountSuccess => 'Account deleted. Goodbye!';
+
+  @override
+  String get settingsDeleteAccountError =>
+      'Could not delete account. Try again.';
+
+  @override
+  String get settingsChangePasswordCurrentLabel => 'Current password';
+
+  @override
+  String get settingsChangePasswordNewLabel => 'New password';
+
+  @override
+  String get settingsChangePasswordConfirmLabel => 'Confirm new password';
+
+  @override
+  String get settingsChangePasswordButton => 'Update password';
+
+  @override
+  String get settingsChangePasswordSuccess => 'Password updated';
+
+  @override
+  String get settingsChangePasswordError =>
+      'Could not update password. Try again.';
+
+  @override
+  String get settingsChangePasswordMismatch => 'Passwords do not match';
+
+  @override
+  String get settingsChangePasswordTooShort => 'Minimum 6 characters';
+
+  @override
+  String get settingsDataSection => 'Data';
+
+  @override
+  String get settingsExportHistoryLabel => 'Export history';
+
+  @override
+  String get settingsExportHistoryDesc =>
+      'Download all sessions and free rides as a CSV file.';
+
+  @override
+  String get settingsClearCacheLabel => 'Clear local data';
+
+  @override
+  String get settingsClearCacheDesc =>
+      'Deletes all locally saved routes and sessions. Cloud data is not affected.';
+
+  @override
+  String get settingsClearCacheConfirmTitle => 'Clear all local data?';
+
+  @override
+  String get settingsClearCacheConfirmBody =>
+      'Your routes and sessions will be deleted from this device. If sync is enabled they will remain in the cloud.';
+
+  @override
+  String get settingsClearCacheConfirmButton => 'Clear data';
+
+  @override
+  String get settingsClearCacheDone => 'Local data cleared';
+
+  @override
+  String get settingsExportSharing => 'Exporting…';
 
   @override
   String get mapNoRoute => 'No route';

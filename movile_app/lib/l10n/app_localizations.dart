@@ -539,13 +539,13 @@ abstract class AppLocalizations {
   /// No description provided for @profileNicknameCooldownDays.
   ///
   /// In en, this message translates to:
-  /// **'{days, plural, =1{1 day} other{{days} days}} until next change'**
+  /// **'{days, plural, =1{1 day} other{{days} days}}'**
   String profileNicknameCooldownDays(int days);
 
   /// No description provided for @profileNicknameCooldownHours.
   ///
   /// In en, this message translates to:
-  /// **'{hours, plural, =1{1 hour} other{{hours} hours}} until next change'**
+  /// **'{hours, plural, =1{1 hour} other{{hours} hours}}'**
   String profileNicknameCooldownHours(int hours);
 
   /// No description provided for @profileNicknameCooldown.
@@ -553,6 +553,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Nickname change available in'**
   String get profileNicknameCooldown;
+
+  /// No description provided for @profileEmailLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get profileEmailLabel;
+
+  /// No description provided for @profileDateOfBirthLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Date of birth'**
+  String get profileDateOfBirthLabel;
+
+  /// No description provided for @loginDateOfBirthHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Date of birth'**
+  String get loginDateOfBirthHint;
 
   /// No description provided for @editorTitle.
   ///
@@ -1225,6 +1243,348 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{value} km/h'**
   String unitKmh(String value);
+
+  /// No description provided for @unitMph.
+  ///
+  /// In en, this message translates to:
+  /// **'{value} mph'**
+  String unitMph(String value);
+
+  /// No description provided for @unitFeet.
+  ///
+  /// In en, this message translates to:
+  /// **'{value} ft'**
+  String unitFeet(String value);
+
+  /// No description provided for @unitMiles.
+  ///
+  /// In en, this message translates to:
+  /// **'{value} mi'**
+  String unitMiles(String value);
+
+  /// No description provided for @settingsAppearanceSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Appearance'**
+  String get settingsAppearanceSection;
+
+  /// No description provided for @settingsThemeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme'**
+  String get settingsThemeLabel;
+
+  /// No description provided for @settingsThemeSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'System default'**
+  String get settingsThemeSystem;
+
+  /// No description provided for @settingsThemeLight.
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get settingsThemeLight;
+
+  /// No description provided for @settingsThemeDark.
+  ///
+  /// In en, this message translates to:
+  /// **'Dark'**
+  String get settingsThemeDark;
+
+  /// No description provided for @settingsMeasurementSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Measurement'**
+  String get settingsMeasurementSection;
+
+  /// No description provided for @settingsUnitSystemLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit system'**
+  String get settingsUnitSystemLabel;
+
+  /// No description provided for @settingsUnitMetric.
+  ///
+  /// In en, this message translates to:
+  /// **'Metric (km, m/s → km/h)'**
+  String get settingsUnitMetric;
+
+  /// No description provided for @settingsUnitImperial.
+  ///
+  /// In en, this message translates to:
+  /// **'Imperial (mi, m/s → mph)'**
+  String get settingsUnitImperial;
+
+  /// No description provided for @settingsTimeFormatLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Lap time separator'**
+  String get settingsTimeFormatLabel;
+
+  /// No description provided for @settingsTimeFormatDot.
+  ///
+  /// In en, this message translates to:
+  /// **'Dot  —  01:23.456'**
+  String get settingsTimeFormatDot;
+
+  /// No description provided for @settingsTimeFormatComma.
+  ///
+  /// In en, this message translates to:
+  /// **'Comma  —  01:23,456'**
+  String get settingsTimeFormatComma;
+
+  /// No description provided for @settingsSessionSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Session behaviour'**
+  String get settingsSessionSection;
+
+  /// No description provided for @settingsKeepScreenAwakeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep screen awake'**
+  String get settingsKeepScreenAwakeLabel;
+
+  /// No description provided for @settingsKeepScreenAwakeDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Prevents the display from sleeping during an active session or free ride.'**
+  String get settingsKeepScreenAwakeDesc;
+
+  /// No description provided for @settingsHapticFeedbackLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Haptic feedback'**
+  String get settingsHapticFeedbackLabel;
+
+  /// No description provided for @settingsHapticFeedbackDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Vibrate when crossing a sector gate or the finish line.'**
+  String get settingsHapticFeedbackDesc;
+
+  /// No description provided for @settingsAudioAlertsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio alerts'**
+  String get settingsAudioAlertsLabel;
+
+  /// No description provided for @settingsAudioAlertsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Play a short beep on each sector and lap crossing.'**
+  String get settingsAudioAlertsDesc;
+
+  /// No description provided for @settingsGpsSamplingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'GPS update rate'**
+  String get settingsGpsSamplingLabel;
+
+  /// No description provided for @settingsGpsSampling1s.
+  ///
+  /// In en, this message translates to:
+  /// **'Every 1 s — high accuracy, more battery'**
+  String get settingsGpsSampling1s;
+
+  /// No description provided for @settingsGpsSampling2s.
+  ///
+  /// In en, this message translates to:
+  /// **'Every ~2 s — balanced'**
+  String get settingsGpsSampling2s;
+
+  /// No description provided for @settingsGpsSampling5s.
+  ///
+  /// In en, this message translates to:
+  /// **'Every ~5 s — low battery'**
+  String get settingsGpsSampling5s;
+
+  /// No description provided for @settingsRoutesSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Routes'**
+  String get settingsRoutesSection;
+
+  /// No description provided for @settingsDefaultRoutingProfileLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Default routing mode'**
+  String get settingsDefaultRoutingProfileLabel;
+
+  /// No description provided for @settingsGarageSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Garage'**
+  String get settingsGarageSection;
+
+  /// No description provided for @settingsDefaultVehicleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Default vehicle'**
+  String get settingsDefaultVehicleLabel;
+
+  /// No description provided for @settingsDefaultVehicleNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None (always ask)'**
+  String get settingsDefaultVehicleNone;
+
+  /// No description provided for @settingsAccountSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get settingsAccountSection;
+
+  /// No description provided for @settingsChangePasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Change password'**
+  String get settingsChangePasswordLabel;
+
+  /// No description provided for @settingsDeleteAccountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete account'**
+  String get settingsDeleteAccountLabel;
+
+  /// No description provided for @settingsDeleteAccountConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete account?'**
+  String get settingsDeleteAccountConfirmTitle;
+
+  /// No description provided for @settingsDeleteAccountConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'All your data will be permanently deleted. This cannot be undone.'**
+  String get settingsDeleteAccountConfirmBody;
+
+  /// No description provided for @settingsDeleteAccountConfirmButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete my account'**
+  String get settingsDeleteAccountConfirmButton;
+
+  /// No description provided for @settingsDeleteAccountSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Account deleted. Goodbye!'**
+  String get settingsDeleteAccountSuccess;
+
+  /// No description provided for @settingsDeleteAccountError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not delete account. Try again.'**
+  String get settingsDeleteAccountError;
+
+  /// No description provided for @settingsChangePasswordCurrentLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Current password'**
+  String get settingsChangePasswordCurrentLabel;
+
+  /// No description provided for @settingsChangePasswordNewLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'New password'**
+  String get settingsChangePasswordNewLabel;
+
+  /// No description provided for @settingsChangePasswordConfirmLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm new password'**
+  String get settingsChangePasswordConfirmLabel;
+
+  /// No description provided for @settingsChangePasswordButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Update password'**
+  String get settingsChangePasswordButton;
+
+  /// No description provided for @settingsChangePasswordSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Password updated'**
+  String get settingsChangePasswordSuccess;
+
+  /// No description provided for @settingsChangePasswordError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not update password. Try again.'**
+  String get settingsChangePasswordError;
+
+  /// No description provided for @settingsChangePasswordMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Passwords do not match'**
+  String get settingsChangePasswordMismatch;
+
+  /// No description provided for @settingsChangePasswordTooShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimum 6 characters'**
+  String get settingsChangePasswordTooShort;
+
+  /// No description provided for @settingsDataSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Data'**
+  String get settingsDataSection;
+
+  /// No description provided for @settingsExportHistoryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Export history'**
+  String get settingsExportHistoryLabel;
+
+  /// No description provided for @settingsExportHistoryDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Download all sessions and free rides as a CSV file.'**
+  String get settingsExportHistoryDesc;
+
+  /// No description provided for @settingsClearCacheLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear local data'**
+  String get settingsClearCacheLabel;
+
+  /// No description provided for @settingsClearCacheDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Deletes all locally saved routes and sessions. Cloud data is not affected.'**
+  String get settingsClearCacheDesc;
+
+  /// No description provided for @settingsClearCacheConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear all local data?'**
+  String get settingsClearCacheConfirmTitle;
+
+  /// No description provided for @settingsClearCacheConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your routes and sessions will be deleted from this device. If sync is enabled they will remain in the cloud.'**
+  String get settingsClearCacheConfirmBody;
+
+  /// No description provided for @settingsClearCacheConfirmButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear data'**
+  String get settingsClearCacheConfirmButton;
+
+  /// No description provided for @settingsClearCacheDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Local data cleared'**
+  String get settingsClearCacheDone;
+
+  /// No description provided for @settingsExportSharing.
+  ///
+  /// In en, this message translates to:
+  /// **'Exporting…'**
+  String get settingsExportSharing;
 
   /// No description provided for @mapNoRoute.
   ///
