@@ -33,12 +33,13 @@ class RouteEditorController extends ChangeNotifier {
     this.routingService,
     this.geocodingService,
     String defaultRoutingProfile = 'driving',
-  }) {
-    _routingProfile = defaultRoutingProfile;
+  }) : _defaultRoutingProfile = defaultRoutingProfile {
+    _routingProfile = _defaultRoutingProfile;
     _changesSub = _repo.changes.listen((_) => _onRepoChanged());
   }
 
   final LocalDraftRepository _repo;
+  final String _defaultRoutingProfile;
   LocalDraftRepository get repository => _repo;
   StreamSubscription<void>? _changesSub;
   Timer? _reloadDebouncer;
@@ -240,7 +241,7 @@ class RouteEditorController extends ChangeNotifier {
     _draftSectorPoints.clear();
     _undoStack.clear();
     _inputMode = DrawInputMode.appendPath;
-    _routingProfile = 'driving';
+    _routingProfile = _defaultRoutingProfile;
     notifyListeners();
   }
 
@@ -257,7 +258,7 @@ class RouteEditorController extends ChangeNotifier {
     _draftSectorPoints.clear();
     _undoStack.clear();
     _inputMode = DrawInputMode.appendPath;
-    _routingProfile = 'driving';
+    _routingProfile = _defaultRoutingProfile;
     notifyListeners();
   }
 
@@ -555,7 +556,7 @@ class RouteEditorController extends ChangeNotifier {
     _draftSectorPoints.clear();
     _undoStack.clear();
     _inputMode = DrawInputMode.appendPath;
-    _routingProfile = 'driving';
+    _routingProfile = _defaultRoutingProfile;
     _activeFreehand = null;
 
     await load();
