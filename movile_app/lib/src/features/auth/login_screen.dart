@@ -51,11 +51,13 @@ String _localizedAuthError(AppLocalizations l, AuthErrorCode code) {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
+  final _confirmPasswordCtrl = TextEditingController();
   final _nicknameCtrl = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
   bool _isSignUp = false;
   bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
   DateTime? _dateOfBirth;
 
   @override
@@ -69,6 +71,7 @@ class _LoginScreenState extends State<LoginScreen> {
     widget.authService.removeListener(_onAuthChanged);
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
+    _confirmPasswordCtrl.dispose();
     _nicknameCtrl.dispose();
     super.dispose();
   }
@@ -120,6 +123,83 @@ class _LoginScreenState extends State<LoginScreen> {
       success = await widget.authService.signInWithEmail(email, password);
     }
     if (success) _popSuccess();
+  }
+
+  Future<void> _handleForgotPassword() async {
+    final l = AppLocalizations.of(context);
+    final resetEmailCtrl = TextEditingController(text: _emailCtrl.text.trim());
+    final formKey = GlobalKey<FormState>();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(l.loginForgotPasswordTitle),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                l.loginForgotPasswordBody,
+                style: const TextStyle(fontSize: 13, color: Color(0xFF616161)),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: resetEmailCtrl,
+                keyboardType: TextInputType.emailAddress,
+                decoration: InputDecoration(
+                  hintText: l.loginEmailHint,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 12),
+                ),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return l.loginEmailRequired;
+                  if (!v.contains('@') || !v.contains('.')) {
+                    return l.loginEmailInvalid;
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(l.commonCancel),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                Navigator.of(ctx).pop(true);
+              }
+            },
+            child: Text(l.loginForgotPasswordButton),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    final email = resetEmailCtrl.text.trim();
+    final success = await widget.authService.resetPasswordForEmail(email);
+
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    if (success) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l.loginForgotPasswordSuccess(email))),
+      );
+    } else {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l.loginForgotPasswordError)),
+      );
+    }
   }
 
   Future<void> _showConfirmationEmailDialog(String email) {
@@ -402,7 +482,66 @@ class _LoginScreenState extends State<LoginScreen> {
                               return null;
                             },
                           ),
-                          const SizedBox(height: 14),
+
+                          // Confirm password field (signup only)
+                          if (_isSignUp) ...[
+                            const SizedBox(height: 10),
+                            TextFormField(
+                              controller: _confirmPasswordCtrl,
+                              obscureText: _obscureConfirmPassword,
+                              style: const TextStyle(color: Colors.white),
+                              decoration: _inputDecoration(l.loginConfirmPasswordHint).copyWith(
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    _obscureConfirmPassword
+                                        ? Icons.visibility_off
+                                        : Icons.visibility,
+                                    color: Colors.white54,
+                                    size: 20,
+                                  ),
+                                  onPressed: () => setState(
+                                      () => _obscureConfirmPassword = !_obscureConfirmPassword),
+                                ),
+                              ),
+                              validator: (v) {
+                                if (v == null || v.isEmpty) {
+                                  return l.loginPasswordRequired;
+                                }
+                                if (v != _passwordCtrl.text) {
+                                  return l.loginPasswordMismatch;
+                                }
+                                return null;
+                              },
+                            ),
+                          ],
+                          const SizedBox(height: 6),
+
+                          // Forgot password (sign-in mode only)
+                          if (!_isSignUp)
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: GestureDetector(
+                                onTap: auth.loading
+                                    ? null
+                                    : _handleForgotPassword,
+                                child: Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 4),
+                                  child: Text(
+                                    l.loginForgotPassword,
+                                    style: TextStyle(
+                                      color:
+                                          Colors.white.withValues(alpha: 0.8),
+                                      fontSize: 12,
+                                      decoration: TextDecoration.underline,
+                                      decorationColor:
+                                          Colors.white.withValues(alpha: 0.5),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          const SizedBox(height: 8),
 
                           // Error message
                           if (auth.errorCode != null) ...[
@@ -467,7 +606,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   GestureDetector(
                     onTap: () => setState(() {
                       _isSignUp = !_isSignUp;
-                      // Clear previous errors when switching mode.
+                      _confirmPasswordCtrl.clear();
                       widget.authService.clearError();
                     }),
                     child: Text.rich(

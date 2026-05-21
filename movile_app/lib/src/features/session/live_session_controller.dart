@@ -70,8 +70,8 @@ class LiveSessionController extends ChangeNotifier {
   Future<void> load() async {
     _routes = await _repo.getAllRoutes();
     if (_selected != null) {
-      final stillExists = _routes.any((r) => r.id == _selected!.id);
-      if (!stillExists) _selected = null;
+      final updated = _routes.where((r) => r.id == _selected!.id).firstOrNull;
+      _selected = updated;
     }
     _selected ??= _routes.isNotEmpty ? _routes.first : null;
     _stage =

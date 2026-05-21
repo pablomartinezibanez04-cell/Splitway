@@ -37,6 +37,7 @@ class AppSettingsController extends ChangeNotifier {
   static const _kGpsSamplingInterval = 'gps_sampling_interval';
   static const _kDefaultVehicleId = 'default_vehicle_id';
   static const _kDefaultRoutingProfile = 'default_routing_profile';
+  static const _kNotificationPermissionAsked = 'notification_permission_asked';
 
   final SharedPreferences _prefs;
 
@@ -59,6 +60,8 @@ class AppSettingsController extends ChangeNotifier {
   GpsSamplingInterval get gpsSamplingInterval => _gpsSamplingInterval;
   String? get defaultVehicleId => _defaultVehicleId;
   String get defaultRoutingProfile => _defaultRoutingProfile;
+  bool get notificationPermissionAsked =>
+      _prefs.getBool(_kNotificationPermissionAsked) ?? false;
 
   ThemeMode get flutterThemeMode => switch (_themeMode) {
         AppThemeMode.system => ThemeMode.system,
@@ -143,5 +146,9 @@ class AppSettingsController extends ChangeNotifier {
     _defaultRoutingProfile = v;
     await _prefs.setString(_kDefaultRoutingProfile, v);
     notifyListeners();
+  }
+
+  Future<void> markNotificationPermissionAsked() async {
+    await _prefs.setBool(_kNotificationPermissionAsked, true);
   }
 }

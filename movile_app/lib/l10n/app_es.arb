@@ -48,6 +48,8 @@
   "loginEmailInvalid": "Email no válido",
   "loginPasswordRequired": "Introduce una contraseña",
   "loginPasswordMinLength": "Mínimo 6 caracteres",
+  "loginConfirmPasswordHint": "Confirmar contraseña",
+  "loginPasswordMismatch": "Las contraseñas no coinciden",
   "loginSignInButton": "Iniciar sesión",
   "loginSignUpButton": "Crear cuenta",
   "loginOrSeparator": "— o —",
@@ -71,6 +73,14 @@
   "authErrorPasswordTooShort": "La contraseña debe tener al menos 6 caracteres.",
   "authErrorNoConnection": "Sin conexión. Inténtalo de nuevo.",
   "authErrorUnexpected": "Error inesperado. Inténtalo de nuevo.",
+
+  "loginForgotPassword": "¿Olvidaste tu contraseña?",
+  "loginForgotPasswordTitle": "Restablecer contraseña",
+  "loginForgotPasswordBody": "Introduce tu email y te enviaremos un enlace para restablecer tu contraseña.",
+  "loginForgotPasswordButton": "Enviar enlace",
+  "loginForgotPasswordSuccess": "Te enviamos un enlace a {email}. Revisa tu bandeja de entrada.",
+  "@loginForgotPasswordSuccess": { "placeholders": { "email": { "type": "String" } } },
+  "loginForgotPasswordError": "No se pudo enviar el email. Inténtalo de nuevo.",
 
   "profileTitle": "Perfil",
   "profileAvatarUpdated": "Avatar actualizado",
@@ -420,5 +430,15 @@
   "backgroundDialogTitle": "Grabación en segundo plano",
   "backgroundDialogBody": "Para que la ruta siga grabándose con la pantalla apagada o al cambiar de app, necesitas permitir el acceso a la ubicación \"Siempre\".\n\nVe a Ajustes > Permisos > Ubicación y selecciona \"Permitir siempre\".",
   "backgroundDialogOpenSettings": "Abrir ajustes",
-  "backgroundDialogSkip": "Continuar sin segundo plano"
+  "backgroundDialogSkip": "Continuar sin segundo plano",
+
+  "notificationDialogTitle": "Activar notificaciones",
+  "notificationDialogBody": "Splitway usa notificaciones para mantenerte informado durante la grabación de rutas: tiempo transcurrido, distancia y estado del seguimiento, incluso con la app en segundo plano.",
+  "notificationDialogAllow": "Permitir notificaciones",
+  "notificationDialogSkip": "Ahora no",
+
+  "mapStyleOutdoors": "Exterior",
+  "mapStyleSatelliteStreets": "Satélite",
+  "mapStyleDark": "Oscuro",
+  "mapStyleLayersTooltip": "Estilo del mapa"
 }

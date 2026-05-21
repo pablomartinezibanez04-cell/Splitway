@@ -175,16 +175,22 @@ class _FreeRideScreenState extends State<FreeRideScreen>
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final ctrl = widget.controller;
+    final isRecording = ctrl.stage == FreeRideStage.recording;
     return ListenableBuilder(
       listenable: widget.settingsController,
       builder: (context, _) => Scaffold(
+        extendBodyBehindAppBar: isRecording,
+        extendBody: isRecording,
         appBar: AppBar(
+          backgroundColor: isRecording ? Colors.transparent : null,
+          surfaceTintColor: isRecording ? Colors.transparent : null,
+          elevation: isRecording ? 0 : null,
           leading: buildDrawerLeading(
             context,
             widget.authService,
             widget.profileService,
           ),
-          title: Text(l.freeRideTitle),
+          title: isRecording ? null : Text(l.freeRideTitle),
         ),
         body: switch (ctrl.stage) {
           FreeRideStage.idle => _buildIdle(context, ctrl),
@@ -273,114 +279,138 @@ class _FreeRideScreenState extends State<FreeRideScreen>
   Widget _buildRecording(BuildContext context, FreeRideController ctrl) {
     final l = AppLocalizations.of(context);
     final snap = ctrl.snapshot;
+    final theme = Theme.of(context);
 
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          Expanded(
-            child: Card(
-              clipBehavior: Clip.antiAlias,
-              child: Stack(
-                children: [
-                  SplitwayMap(
-                    useMapbox: widget.config.hasMapbox,
-                    telemetry: ctrl.ingested,
-                    userLocation: ctrl.ingested.isNotEmpty
-                        ? ctrl.ingested.last.location
-                        : null,
-                    initialCenter: _initialCenter,
-                    flyToNotifier: _flyToNotifier,
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: SplitwayMap(
+            useMapbox: widget.config.hasMapbox,
+            telemetry: ctrl.ingested,
+            userLocation: ctrl.ingested.isNotEmpty
+                ? ctrl.ingested.last.location
+                : null,
+            initialCenter: _initialCenter,
+            flyToNotifier: _flyToNotifier,
+          ),
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (!ctrl.backgroundActive) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.85),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.warning_amber_rounded,
+                              color: Colors.white, size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(l.backgroundDeniedBanner,
+                                style: theme.textTheme.bodySmall
+                                    ?.copyWith(color: Colors.white)),
+                          ),
+                          GestureDetector(
+                            onTap: () => Geolocator.openAppSettings(),
+                            child: Text(l.backgroundOpenSettings,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                )),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  Positioned(
-                    right: 12,
-                    bottom: 12,
+                  const SizedBox(height: 8),
+                ],
+                Padding(
+                  padding: const EdgeInsets.only(right: 16, bottom: 8),
+                  child: Align(
+                    alignment: Alignment.centerRight,
                     child: FloatingActionButton.small(
                       heroTag: 'free_ride_center',
                       onPressed: _centerOnUser,
                       child: const Icon(Icons.my_location),
                     ),
                   ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _MetricCard(
-                  label: l.freeRideElapsedLabel,
-                  value: Formatters.duration(
-                    snap.elapsed,
-                    dotSeparator: widget.settingsController.timeFormatDot,
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface.withValues(alpha: 0.85),
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(20)),
+                  ),
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _CompactMetric(
+                              label: l.freeRideElapsedLabel,
+                              value: Formatters.duration(
+                                snap.elapsed,
+                                dotSeparator:
+                                    widget.settingsController.timeFormatDot,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: _CompactMetric(
+                              label: l.freeRideDistanceLabel,
+                              value: _distanceLabel(
+                                  l, snap.totalDistanceMeters),
+                            ),
+                          ),
+                          Expanded(
+                            child: _CompactMetric(
+                              label: l.freeRideSpeedLabel,
+                              value: _speedLabel(l, snap.currentSpeedMps),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      FilledButton.icon(
+                        onPressed: () async {
+                          final savedText = l.freeRideSavedSnackBar;
+                          final messenger = ScaffoldMessenger.of(context);
+                          await ctrl.finishRecording();
+                          if (!mounted) return;
+                          messenger.showSnackBar(
+                            SnackBar(content: Text(savedText)),
+                          );
+                        },
+                        icon: const Icon(Icons.stop),
+                        label: Text(l.freeRideFinishButton),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.redAccent,
+                          minimumSize: const Size.fromHeight(48),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-              Expanded(
-                child: _MetricCard(
-                  label: l.freeRideDistanceLabel,
-                  value: _distanceLabel(l, snap.totalDistanceMeters),
-                ),
-              ),
-              Expanded(
-                child: _MetricCard(
-                  label: l.freeRideSpeedLabel,
-                  value: _speedLabel(l, snap.currentSpeedMps),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          _GpsStatusTile(pointCount: snap.pointCount),
-          if (!ctrl.backgroundActive &&
-              ctrl.stage == FreeRideStage.recording) ...[
-            const SizedBox(height: 4),
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: 0.12),
-                border: Border.all(
-                    color: Colors.orange.withValues(alpha: 0.5)),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              padding: const EdgeInsets.all(10),
-              child: Row(
-                children: [
-                  const Icon(Icons.warning_amber_rounded,
-                      color: Colors.orange, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(l.backgroundDeniedBanner,
-                        style: Theme.of(context).textTheme.bodySmall),
-                  ),
-                  TextButton(
-                    onPressed: () => Geolocator.openAppSettings(),
-                    child: Text(l.backgroundOpenSettings),
-                  ),
-                ],
-              ),
-            ),
-          ],
-          const SizedBox(height: 12),
-          FilledButton.icon(
-            onPressed: () async {
-              final savedText = l.freeRideSavedSnackBar;
-              final messenger = ScaffoldMessenger.of(context);
-              await ctrl.finishRecording();
-              if (!mounted) return;
-              messenger.showSnackBar(
-                SnackBar(content: Text(savedText)),
-              );
-            },
-            icon: const Icon(Icons.stop),
-            label: Text(l.freeRideFinishButton),
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.redAccent,
-              minimumSize: const Size.fromHeight(48),
+              ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -650,8 +680,8 @@ class _FreeRideScreenState extends State<FreeRideScreen>
   }
 }
 
-class _MetricCard extends StatelessWidget {
-  const _MetricCard({required this.label, required this.value});
+class _CompactMetric extends StatelessWidget {
+  const _CompactMetric({required this.label, required this.value});
 
   final String label;
   final String value;
@@ -659,19 +689,14 @@ class _MetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-        child: Column(
-          children: [
-            Text(label,
-                style: theme.textTheme.labelSmall
-                    ?.copyWith(color: theme.colorScheme.outline)),
-            const SizedBox(height: 4),
-            Text(value, style: theme.textTheme.titleMedium),
-          ],
-        ),
-      ),
+    return Column(
+      children: [
+        Text(label,
+            style: theme.textTheme.labelSmall
+                ?.copyWith(color: theme.colorScheme.outline)),
+        const SizedBox(height: 4),
+        Text(value, style: theme.textTheme.titleMedium),
+      ],
     );
   }
 }
@@ -692,32 +717,6 @@ class _StatCard extends StatelessWidget {
             Text(label, style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: 4),
             Text(value, style: Theme.of(context).textTheme.titleMedium),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _GpsStatusTile extends StatelessWidget {
-  const _GpsStatusTile({required this.pointCount});
-
-  final int pointCount;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(
-          children: [
-            const Icon(Icons.gps_fixed, color: Colors.green),
-            const SizedBox(width: 8),
-            Text(
-              l.freeRidePointsLabel(pointCount),
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
           ],
         ),
       ),

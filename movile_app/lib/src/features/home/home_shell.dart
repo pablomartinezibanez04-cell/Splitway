@@ -1,40 +1,94 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:splitway_mobile/l10n/app_localizations.dart';
 
 import '../../services/auth/auth_service.dart';
 import '../../services/profile/profile_service.dart';
+import '../../services/settings/app_settings_controller.dart';
 import '../../services/sync/sync_service.dart';
 import '../../shared/widgets/app_drawer.dart';
 import '../auth/login_screen.dart';
 
-/// Shell widget that wraps the three main tabs with a NavigationBar and
-/// an optional dark-minimal Drawer (when Supabase auth is configured).
-///
-/// Inner screens access the drawer via [Scaffold.of(context).openDrawer()]
-/// using their build context (which is *above* their own returned Scaffold,
-/// so it finds this one).
-class HomeShell extends StatelessWidget {
+class HomeShell extends StatefulWidget {
   const HomeShell({
     super.key,
     required this.shell,
+    required this.settingsController,
     this.authService,
     this.syncService,
     this.profileService,
   });
 
   final StatefulNavigationShell shell;
+  final AppSettingsController settingsController;
   final AuthService? authService;
   final SyncService? syncService;
   final ProfileService? profileService;
 
   @override
-  Widget build(BuildContext context) {
-    if (authService == null) return _buildScaffold(context);
+  State<HomeShell> createState() => _HomeShellState();
+}
 
-    final listenable = profileService != null
-        ? Listenable.merge([authService!, profileService!])
-        : authService!;
+class _HomeShellState extends State<HomeShell> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _maybeAskNotificationPermission();
+    });
+  }
+
+  Future<void> _maybeAskNotificationPermission() async {
+    if (widget.settingsController.notificationPermissionAsked) return;
+    if (!Platform.isAndroid && !Platform.isIOS) return;
+
+    final status = await Permission.notification.status;
+    if (status.isGranted) {
+      await widget.settingsController.markNotificationPermissionAsked();
+      return;
+    }
+
+    if (!mounted) return;
+    await _showNotificationDialog(context);
+    await widget.settingsController.markNotificationPermissionAsked();
+  }
+
+  Future<void> _showNotificationDialog(BuildContext context) async {
+    final l = AppLocalizations.of(context);
+    final allow = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.notifications_outlined, size: 32),
+        title: Text(l.notificationDialogTitle),
+        content: Text(l.notificationDialogBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l.notificationDialogSkip),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l.notificationDialogAllow),
+          ),
+        ],
+      ),
+    );
+
+    if (allow == true) {
+      await Permission.notification.request();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.authService == null) return _buildScaffold(context);
+
+    final listenable = widget.profileService != null
+        ? Listenable.merge([widget.authService!, widget.profileService!])
+        : widget.authService!;
 
     return ListenableBuilder(
       listenable: listenable,
@@ -44,23 +98,23 @@ class HomeShell extends StatelessWidget {
 
   Widget _buildScaffold(BuildContext context) {
     return Scaffold(
-      drawer: authService != null
+      drawer: widget.authService != null
           ? AppDrawer(
-              authService: authService!,
-              syncService: syncService,
-              profileService: profileService,
+              authService: widget.authService!,
+              syncService: widget.syncService,
+              profileService: widget.profileService,
               onLoginTap: () {
-                Navigator.pop(context); // close drawer
+                Navigator.pop(context);
                 _navigateToLogin(context);
               },
             )
           : null,
-      body: shell,
+      body: widget.shell,
       bottomNavigationBar: NavigationBar(
-        selectedIndex: shell.currentIndex,
-        onDestinationSelected: (i) => shell.goBranch(
+        selectedIndex: widget.shell.currentIndex,
+        onDestinationSelected: (i) => widget.shell.goBranch(
           i,
-          initialLocation: i == shell.currentIndex,
+          initialLocation: i == widget.shell.currentIndex,
         ),
         destinations: [
           NavigationDestination(
@@ -89,10 +143,10 @@ class HomeShell extends StatelessWidget {
   }
 
   void _navigateToLogin(BuildContext context) {
-    if (authService == null) return;
+    if (widget.authService == null) return;
     Navigator.of(context).push<bool>(
       MaterialPageRoute(
-        builder: (_) => LoginScreen(authService: authService!),
+        builder: (_) => LoginScreen(authService: widget.authService!),
       ),
     );
   }

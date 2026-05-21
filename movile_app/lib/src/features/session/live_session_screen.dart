@@ -14,7 +14,6 @@ import '../../services/auth/auth_service.dart';
 import '../../services/garage/garage_service.dart';
 import '../../services/profile/profile_service.dart';
 import '../../services/settings/app_settings_controller.dart';
-import '../../services/tracking/live_tracking_controller.dart';
 import '../../shared/widgets/vehicle_picker_tile.dart';
 import '../../services/tracking/location_service.dart';
 import '../../shared/formatters.dart';
@@ -161,16 +160,22 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final ctrl = widget.controller;
+    final isRunning = ctrl.stage == LiveSessionStage.running;
     return ListenableBuilder(
       listenable: widget.settingsController,
       builder: (context, _) => Scaffold(
+        extendBodyBehindAppBar: isRunning,
+        extendBody: isRunning,
         appBar: AppBar(
+          backgroundColor: isRunning ? Colors.transparent : null,
+          surfaceTintColor: isRunning ? Colors.transparent : null,
+          elevation: isRunning ? 0 : null,
           leading: buildDrawerLeading(
             context,
             widget.authService,
             widget.profileService,
           ),
-          title: Text(l.sessionTitle),
+          title: isRunning ? null : Text(l.sessionTitle),
         ),
         body: switch (ctrl.stage) {
           LiveSessionStage.selecting => _buildEmpty(context),
@@ -308,160 +313,127 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
     );
   }
 
+  bool _simExpanded = false;
+
   Widget _buildRunning(BuildContext context, LiveSessionController ctrl) {
     final l = AppLocalizations.of(context);
     final tracker = ctrl.tracker!;
     final snapshot = tracker.snapshot;
     final route = ctrl.selected!;
+    final theme = Theme.of(context);
 
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          Expanded(
-            child: Card(
-              clipBehavior: Clip.antiAlias,
-              child: SplitwayMap(
-                useMapbox: widget.config.hasMapbox,
-                route: route,
-                telemetry: tracker.ingested,
-                highlightSectorId: snapshot.lastCrossedSectorId,
-                userLocation: tracker.ingested.isNotEmpty
-                    ? tracker.ingested.last.location
-                    : null,
-              ),
-            ),
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: SplitwayMap(
+            useMapbox: widget.config.hasMapbox,
+            route: route,
+            telemetry: tracker.ingested,
+            highlightSectorId: snapshot.lastCrossedSectorId,
+            userLocation: tracker.ingested.isNotEmpty
+                ? tracker.ingested.last.location
+                : null,
           ),
-          const SizedBox(height: 12),
-          _MetricsRow(
-            snapshot: snapshot,
-            settingsController: widget.settingsController,
-          ),
-          const SizedBox(height: 8),
-          _LastEventTile(
-            snapshot: snapshot,
-            settingsController: widget.settingsController,
-          ),
-          const SizedBox(height: 12),
-          if (ctrl.source == TrackingSource.simulated) ...[
-            // Progress bar (visible only while auto-simulating)
-            if (ctrl.isAutoSimulating && ctrl.simTotal > 0) ...[
-              Row(
-                children: [
-                  Expanded(
-                    child: LinearProgressIndicator(
-                      value: ctrl.simProgress / ctrl.simTotal,
-                      minHeight: 6,
-                      borderRadius: BorderRadius.circular(3),
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (!ctrl.backgroundActive &&
+                    ctrl.source == TrackingSource.realGps) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.85),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.warning_amber_rounded,
+                              color: Colors.white, size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(l.backgroundDeniedBanner,
+                                style: theme.textTheme.bodySmall
+                                    ?.copyWith(color: Colors.white)),
+                          ),
+                          GestureDetector(
+                            onTap: () => Geolocator.openAppSettings(),
+                            child: Text(l.backgroundOpenSettings,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                )),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '${ctrl.simProgress} / ${ctrl.simTotal}',
-                    style: Theme.of(context).textTheme.labelSmall,
-                  ),
+                  const SizedBox(height: 8),
                 ],
-              ),
-              const SizedBox(height: 6),
-            ],
-            // Simulation buttons
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: ctrl.simulateOnePoint,
-                    icon: const Icon(Icons.fast_forward),
-                    label: Text(l.sessionSimulatePoint),
+                Container(
+                  decoration: BoxDecoration(
+                    color:
+                        theme.colorScheme.surface.withValues(alpha: 0.85),
+                    borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(20)),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: ctrl.toggleAutoSimulate,
-                    icon: Icon(ctrl.isAutoSimulating
-                        ? Icons.pause
-                        : Icons.autorenew),
-                    label: Text(ctrl.isAutoSimulating
-                        ? l.sessionPauseAuto
-                        : l.sessionAutoLap),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            // Speed selector
-            Row(
-              children: [
-                Text(l.sessionSpeedLabel,
-                    style: Theme.of(context).textTheme.labelMedium),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: SegmentedButton<int>(
-                    segments: const [
-                      ButtonSegment(value: 1, label: Text('1×')),
-                      ButtonSegment(value: 5, label: Text('5×')),
-                      ButtonSegment(value: 10, label: Text('10×')),
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _MetricsRow(
+                        snapshot: snapshot,
+                        settingsController: widget.settingsController,
+                      ),
+                      const SizedBox(height: 8),
+                      _LastEventTile(
+                        snapshot: snapshot,
+                        settingsController: widget.settingsController,
+                      ),
+                      if (ctrl.source == TrackingSource.simulated) ...[
+                        const SizedBox(height: 8),
+                        _SimulationToggle(
+                          expanded: _simExpanded,
+                          onToggle: () =>
+                              setState(() => _simExpanded = !_simExpanded),
+                          ctrl: ctrl,
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                      FilledButton.icon(
+                        onPressed: () async {
+                          final savedText = l.sessionSavedSnackBar;
+                          final messenger = ScaffoldMessenger.of(context);
+                          final session = await ctrl.finishSession();
+                          if (!mounted || session == null) return;
+                          messenger.showSnackBar(
+                            SnackBar(content: Text(savedText)),
+                          );
+                        },
+                        icon: const Icon(Icons.stop),
+                        label: Text(l.sessionFinishButton),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.redAccent,
+                          minimumSize: const Size.fromHeight(48),
+                        ),
+                      ),
                     ],
-                    selected: {ctrl.simSpeedMultiplier},
-                    onSelectionChanged: (s) =>
-                        ctrl.setSimSpeedMultiplier(s.first),
                   ),
                 ),
               ],
-            ),
-          ] else
-            _GpsStatusTile(
-              tracker: tracker,
-              telemetryCount: tracker.ingested.length,
-            ),
-          if (!ctrl.backgroundActive &&
-              ctrl.source == TrackingSource.realGps) ...[
-            const SizedBox(height: 4),
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: 0.12),
-                border: Border.all(
-                    color: Colors.orange.withValues(alpha: 0.5)),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              padding: const EdgeInsets.all(10),
-              child: Row(
-                children: [
-                  const Icon(Icons.warning_amber_rounded,
-                      color: Colors.orange, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(l.backgroundDeniedBanner,
-                        style: Theme.of(context).textTheme.bodySmall),
-                  ),
-                  TextButton(
-                    onPressed: () => Geolocator.openAppSettings(),
-                    child: Text(l.backgroundOpenSettings),
-                  ),
-                ],
-              ),
-            ),
-          ],
-          const SizedBox(height: 8),
-          FilledButton.icon(
-            onPressed: () async {
-              final savedText = l.sessionSavedSnackBar;
-              final messenger = ScaffoldMessenger.of(context);
-              final session = await ctrl.finishSession();
-              if (!mounted || session == null) return;
-              messenger.showSnackBar(
-                SnackBar(content: Text(savedText)),
-              );
-            },
-            icon: const Icon(Icons.stop),
-            label: Text(l.sessionFinishButton),
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.redAccent,
-              minimumSize: const Size.fromHeight(48),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -563,7 +535,7 @@ class _MetricsRow extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: _MetricCard(
+          child: _CompactMetric(
             label: l.sessionCurrentLapLabel,
             value: snapshot.currentLap == 0
                 ? l.sessionNoLapYet
@@ -571,7 +543,7 @@ class _MetricsRow extends StatelessWidget {
           ),
         ),
         Expanded(
-          child: _MetricCard(
+          child: _CompactMetric(
             label: l.sessionLapTimeLabel,
             value: Formatters.duration(
               snapshot.currentLapElapsed,
@@ -580,7 +552,7 @@ class _MetricsRow extends StatelessWidget {
           ),
         ),
         Expanded(
-          child: _MetricCard(
+          child: _CompactMetric(
             label: l.sessionBestLapLabel,
             value: snapshot.bestLap == null
                 ? l.sessionNoLapYet
@@ -595,8 +567,8 @@ class _MetricsRow extends StatelessWidget {
   }
 }
 
-class _MetricCard extends StatelessWidget {
-  const _MetricCard({required this.label, required this.value});
+class _CompactMetric extends StatelessWidget {
+  const _CompactMetric({required this.label, required this.value});
 
   final String label;
   final String value;
@@ -604,19 +576,14 @@ class _MetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-        child: Column(
-          children: [
-            Text(label,
-                style: theme.textTheme.labelSmall
-                    ?.copyWith(color: theme.colorScheme.outline)),
-            const SizedBox(height: 4),
-            Text(value, style: theme.textTheme.titleMedium),
-          ],
-        ),
-      ),
+    return Column(
+      children: [
+        Text(label,
+            style: theme.textTheme.labelSmall
+                ?.copyWith(color: theme.colorScheme.outline)),
+        const SizedBox(height: 4),
+        Text(value, style: theme.textTheme.titleMedium),
+      ],
     );
   }
 }
@@ -766,58 +733,113 @@ class _PermissionBanner extends StatelessWidget {
   }
 }
 
-class _GpsStatusTile extends StatelessWidget {
-  const _GpsStatusTile({
-    required this.tracker,
-    required this.telemetryCount,
+class _SimulationToggle extends StatelessWidget {
+  const _SimulationToggle({
+    required this.expanded,
+    required this.onToggle,
+    required this.ctrl,
   });
 
-  final LiveTrackingController tracker;
-  final int telemetryCount;
+  final bool expanded;
+  final VoidCallback onToggle;
+  final LiveSessionController ctrl;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    final last = telemetryCount == 0 ? null : tracker.ingested.last;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(
-          children: [
-            const Icon(Icons.gps_fixed, color: Colors.green),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l.sessionGpsStatus(telemetryCount),
-                    style: theme.textTheme.titleSmall,
-                  ),
-                  if (last != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      l.sessionGpsAccuracy(
-                        last.accuracyMeters?.toStringAsFixed(1) ?? '–',
-                        last.location.latitude.toStringAsFixed(5),
-                        last.location.longitude.toStringAsFixed(5),
-                      ),
-                      style: theme.textTheme.bodySmall,
-                    ),
-                  ] else ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      l.sessionAwaitingFirstFix,
-                      style: theme.textTheme.bodySmall,
-                    ),
-                  ],
-                ],
-              ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        InkWell(
+          onTap: onToggle,
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Row(
+              children: [
+                Icon(Icons.science_outlined,
+                    size: 18, color: theme.colorScheme.primary),
+                const SizedBox(width: 8),
+                Text(l.sessionSourceSimulated,
+                    style: theme.textTheme.titleSmall),
+                const Spacer(),
+                Icon(
+                  expanded
+                      ? Icons.keyboard_arrow_up
+                      : Icons.keyboard_arrow_down,
+                  color: theme.colorScheme.outline,
+                ),
+              ],
             ),
-          ],
+          ),
         ),
-      ),
+        if (expanded) ...[
+          const SizedBox(height: 8),
+          if (ctrl.isAutoSimulating && ctrl.simTotal > 0) ...[
+            Row(
+              children: [
+                Expanded(
+                  child: LinearProgressIndicator(
+                    value: ctrl.simProgress / ctrl.simTotal,
+                    minHeight: 6,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '${ctrl.simProgress} / ${ctrl.simTotal}',
+                  style: theme.textTheme.labelSmall,
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+          ],
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: ctrl.simulateOnePoint,
+                  icon: const Icon(Icons.fast_forward),
+                  label: Text(l.sessionSimulatePoint),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: ctrl.toggleAutoSimulate,
+                  icon: Icon(ctrl.isAutoSimulating
+                      ? Icons.pause
+                      : Icons.autorenew),
+                  label: Text(ctrl.isAutoSimulating
+                      ? l.sessionPauseAuto
+                      : l.sessionAutoLap),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Text(l.sessionSpeedLabel,
+                  style: theme.textTheme.labelMedium),
+              const SizedBox(width: 8),
+              Expanded(
+                child: SegmentedButton<int>(
+                  segments: const [
+                    ButtonSegment(value: 1, label: Text('1×')),
+                    ButtonSegment(value: 5, label: Text('5×')),
+                    ButtonSegment(value: 10, label: Text('10×')),
+                  ],
+                  selected: {ctrl.simSpeedMultiplier},
+                  onSelectionChanged: (s) =>
+                      ctrl.setSimSpeedMultiplier(s.first),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
     );
   }
 }

@@ -183,6 +183,33 @@ class AuthService extends ChangeNotifier {
   }
 
   // ---------------------------------------------------------------------------
+  // Password reset
+  // ---------------------------------------------------------------------------
+
+  Future<bool> resetPasswordForEmail(String email) async {
+    _loading = true;
+    _errorCode = null;
+    notifyListeners();
+
+    try {
+      await _client.auth.resetPasswordForEmail(email);
+      _loading = false;
+      notifyListeners();
+      return true;
+    } on AuthException catch (e) {
+      _errorCode = _mapAuthError(e);
+      _loading = false;
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _errorCode = _mapGenericError(e);
+      _loading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // Sign out
   // ---------------------------------------------------------------------------
 

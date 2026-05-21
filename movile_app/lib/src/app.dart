@@ -96,6 +96,7 @@ class _SplitwayAppState extends State<SplitwayApp> {
       _garageService = null;
       _router.garageService = null;
       _repository.userId = null;
+      _router.router.go('/routes');
     }
   }
 

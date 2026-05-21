@@ -125,6 +125,7 @@ class AppRouter {
           authService: authService,
           syncService: syncService,
           profileService: profileService,
+          settingsController: settingsController,
         ),
         branches: [
           StatefulShellBranch(
