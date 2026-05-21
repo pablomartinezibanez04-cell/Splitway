@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:flutter/services.dart';
 import 'package:splitway_core/splitway_core.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -379,6 +380,43 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
               tracker: tracker,
               telemetryCount: tracker.ingested.length,
             ),
+          if (ctrl.backgroundActive) ...[
+            const SizedBox(height: 4),
+            Chip(
+              avatar: const Icon(Icons.gps_fixed, color: Colors.green, size: 18),
+              label: Text(l.backgroundActiveChip),
+              backgroundColor: Colors.green.withValues(alpha: 0.12),
+              side: BorderSide(color: Colors.green.withValues(alpha: 0.4)),
+            ),
+          ],
+          if (!ctrl.backgroundActive &&
+              ctrl.source == TrackingSource.realGps) ...[
+            const SizedBox(height: 4),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.12),
+                border: Border.all(
+                    color: Colors.orange.withValues(alpha: 0.5)),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              padding: const EdgeInsets.all(10),
+              child: Row(
+                children: [
+                  const Icon(Icons.warning_amber_rounded,
+                      color: Colors.orange, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(l.backgroundDeniedBanner,
+                        style: Theme.of(context).textTheme.bodySmall),
+                  ),
+                  TextButton(
+                    onPressed: () => Geolocator.openAppSettings(),
+                    child: Text(l.backgroundOpenSettings),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
           FilledButton.icon(
             onPressed: () async {
