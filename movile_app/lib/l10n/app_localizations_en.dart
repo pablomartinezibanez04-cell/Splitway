@@ -1182,12 +1182,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backgroundNotificationTitle => 'Splitway · Recording route';
 
   @override
-  String get backgroundActiveChip => 'Background recording active';
-
-  @override
   String get backgroundDeniedBanner =>
       'Recording will stop if you leave the app. Grant \"Always\" location permission for background recording.';
 
   @override
   String get backgroundOpenSettings => 'Open settings';
+
+  @override
+  String get backgroundDialogTitle => 'Background recording';
+
+  @override
+  String get backgroundDialogBody =>
+      'To keep recording your route when the screen is off or you switch apps, you need to allow location access \"Always\".\n\nGo to Settings > Permissions > Location and select \"Allow always\".';
+
+  @override
+  String get backgroundDialogOpenSettings => 'Open settings';
+
+  @override
+  String get backgroundDialogSkip => 'Continue without background';
 }

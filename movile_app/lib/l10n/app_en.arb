@@ -415,7 +415,10 @@
   "@elevationRangeValueFeet": { "placeholders": { "value": { "type": "String" } } },
 
   "backgroundNotificationTitle": "Splitway · Recording route",
-  "backgroundActiveChip": "Background recording active",
   "backgroundDeniedBanner": "Recording will stop if you leave the app. Grant \"Always\" location permission for background recording.",
-  "backgroundOpenSettings": "Open settings"
+  "backgroundOpenSettings": "Open settings",
+  "backgroundDialogTitle": "Background recording",
+  "backgroundDialogBody": "To keep recording your route when the screen is off or you switch apps, you need to allow location access \"Always\".\n\nGo to Settings > Permissions > Location and select \"Allow always\".",
+  "backgroundDialogOpenSettings": "Open settings",
+  "backgroundDialogSkip": "Continue without background"
 }

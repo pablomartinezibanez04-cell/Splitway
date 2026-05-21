@@ -1185,12 +1185,22 @@ class AppLocalizationsEs extends AppLocalizations {
   String get backgroundNotificationTitle => 'Splitway · Grabando ruta';
 
   @override
-  String get backgroundActiveChip => 'Grabación en segundo plano activa';
-
-  @override
   String get backgroundDeniedBanner =>
       'La grabación se detendrá si sales de la app. Concede permiso \"Siempre\" para grabar en segundo plano.';
 
   @override
   String get backgroundOpenSettings => 'Abrir ajustes';
+
+  @override
+  String get backgroundDialogTitle => 'Grabación en segundo plano';
+
+  @override
+  String get backgroundDialogBody =>
+      'Para que la ruta siga grabándose con la pantalla apagada o al cambiar de app, necesitas permitir el acceso a la ubicación \"Siempre\".\n\nVe a Ajustes > Permisos > Ubicación y selecciona \"Permitir siempre\".';
+
+  @override
+  String get backgroundDialogOpenSettings => 'Abrir ajustes';
+
+  @override
+  String get backgroundDialogSkip => 'Continuar sin segundo plano';
 }

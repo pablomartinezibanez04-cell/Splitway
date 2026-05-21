@@ -2138,12 +2138,6 @@ abstract class AppLocalizations {
   /// **'Splitway · Recording route'**
   String get backgroundNotificationTitle;
 
-  /// No description provided for @backgroundActiveChip.
-  ///
-  /// In en, this message translates to:
-  /// **'Background recording active'**
-  String get backgroundActiveChip;
-
   /// No description provided for @backgroundDeniedBanner.
   ///
   /// In en, this message translates to:
@@ -2155,6 +2149,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open settings'**
   String get backgroundOpenSettings;
+
+  /// No description provided for @backgroundDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Background recording'**
+  String get backgroundDialogTitle;
+
+  /// No description provided for @backgroundDialogBody.
+  ///
+  /// In en, this message translates to:
+  /// **'To keep recording your route when the screen is off or you switch apps, you need to allow location access \"Always\".\n\nGo to Settings > Permissions > Location and select \"Allow always\".'**
+  String get backgroundDialogBody;
+
+  /// No description provided for @backgroundDialogOpenSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open settings'**
+  String get backgroundDialogOpenSettings;
+
+  /// No description provided for @backgroundDialogSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue without background'**
+  String get backgroundDialogSkip;
 }
 
 class _AppLocalizationsDelegate

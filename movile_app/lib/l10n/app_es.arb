@@ -415,7 +415,10 @@
   "@elevationRangeValueFeet": { "placeholders": { "value": { "type": "String" } } },
 
   "backgroundNotificationTitle": "Splitway · Grabando ruta",
-  "backgroundActiveChip": "Grabación en segundo plano activa",
   "backgroundDeniedBanner": "La grabación se detendrá si sales de la app. Concede permiso \"Siempre\" para grabar en segundo plano.",
-  "backgroundOpenSettings": "Abrir ajustes"
+  "backgroundOpenSettings": "Abrir ajustes",
+  "backgroundDialogTitle": "Grabación en segundo plano",
+  "backgroundDialogBody": "Para que la ruta siga grabándose con la pantalla apagada o al cambiar de app, necesitas permitir el acceso a la ubicación \"Siempre\".\n\nVe a Ajustes > Permisos > Ubicación y selecciona \"Permitir siempre\".",
+  "backgroundDialogOpenSettings": "Abrir ajustes",
+  "backgroundDialogSkip": "Continuar sin segundo plano"
 }
