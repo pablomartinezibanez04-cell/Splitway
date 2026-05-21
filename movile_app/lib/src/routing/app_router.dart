@@ -45,7 +45,12 @@ class AppRouter {
           defaultRoutingProfile: settingsController.defaultRoutingProfile,
         ),
         _sessionController = LiveSessionController(repository),
-        _freeRideController = FreeRideController(repository) {
+        _freeRideController = FreeRideController(
+          repository,
+          geocodingService: config.hasMapbox
+              ? ReverseGeocodingService(accessToken: config.mapboxToken!)
+              : null,
+        ) {
     if (syncService != null) this.syncService = syncService;
     if (profileService != null) this.profileService = profileService;
     if (garageService != null) this.garageService = garageService;

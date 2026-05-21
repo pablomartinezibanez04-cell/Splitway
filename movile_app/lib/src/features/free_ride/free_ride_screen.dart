@@ -179,19 +179,20 @@ class _FreeRideScreenState extends State<FreeRideScreen>
     return ListenableBuilder(
       listenable: widget.settingsController,
       builder: (context, _) => Scaffold(
-        extendBodyBehindAppBar: isRecording,
         extendBody: isRecording,
-        appBar: AppBar(
-          backgroundColor: isRecording ? Colors.transparent : null,
-          surfaceTintColor: isRecording ? Colors.transparent : null,
-          elevation: isRecording ? 0 : null,
-          leading: buildDrawerLeading(
-            context,
-            widget.authService,
-            widget.profileService,
-          ),
-          title: isRecording ? null : Text(l.freeRideTitle),
-        ),
+        // During recording: no AppBar — the drawer button is inside the map Stack
+        // so it is positioned with SafeArea and cannot be obscured by the
+        // system status bar.
+        appBar: isRecording
+            ? null
+            : AppBar(
+                leading: buildDrawerLeading(
+                  context,
+                  widget.authService,
+                  widget.profileService,
+                ),
+                title: Text(l.freeRideTitle),
+              ),
         body: switch (ctrl.stage) {
           FreeRideStage.idle => _buildIdle(context, ctrl),
           FreeRideStage.recording => _buildRecording(context, ctrl),
@@ -281,6 +282,12 @@ class _FreeRideScreenState extends State<FreeRideScreen>
     final snap = ctrl.snapshot;
     final theme = Theme.of(context);
 
+    final drawerLeading = buildDrawerLeading(
+      context,
+      widget.authService,
+      widget.profileService,
+    );
+
     return Stack(
       children: [
         Positioned.fill(
@@ -294,6 +301,16 @@ class _FreeRideScreenState extends State<FreeRideScreen>
             flyToNotifier: _flyToNotifier,
           ),
         ),
+        if (drawerLeading != null)
+          Positioned(
+            top: 0,
+            left: 0,
+            child: SafeArea(
+              bottom: false,
+              right: false,
+              child: drawerLeading,
+            ),
+          ),
         Positioned(
           left: 0,
           right: 0,

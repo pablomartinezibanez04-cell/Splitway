@@ -11,7 +11,7 @@ class SplitwayLocalDatabase {
 
   Database get raw => _db;
 
-  static const int _schemaVersion = 6;
+  static const int _schemaVersion = 7;
 
   static Future<SplitwayLocalDatabase> open({String? overridePath}) async {
     final path = overridePath ?? await _defaultPath();
@@ -158,6 +158,11 @@ class SplitwayLocalDatabase {
       );
       await db.execute(
         'ALTER TABLE free_rides ADD COLUMN vehicle_id TEXT',
+      );
+    }
+    if (from < 7 && to >= 7) {
+      await db.execute(
+        'ALTER TABLE route_templates ADD COLUMN elevation_range_m REAL',
       );
     }
   }

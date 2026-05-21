@@ -34,22 +34,32 @@ class LocalDraftRepository {
 
   Future<void> saveRouteTemplate(RouteTemplate route) async {
     await _db.transaction((txn) async {
+      final fields = {
+        'id': route.id,
+        'name': route.name,
+        'description': route.description,
+        'path_json': jsonEncode(route.path.map((p) => p.toJson()).toList()),
+        'start_finish_gate_json':
+            jsonEncode(route.startFinishGate.toJson()),
+        'difficulty': route.difficulty.id,
+        'created_at': route.createdAt.toUtc().millisecondsSinceEpoch,
+        'location_label': route.locationLabel,
+        'owner_id': _userId,
+        'thumbnail_url': route.thumbnailUrl,
+        'elevation_range_m': route.elevationRangeMeters,
+      };
+      // INSERT OR IGNORE avoids the DELETE+INSERT that ConflictAlgorithm.replace
+      // would trigger, which would cascade-delete all sessions for this route.
       await txn.insert(
         'route_templates',
-        {
-          'id': route.id,
-          'name': route.name,
-          'description': route.description,
-          'path_json': jsonEncode(route.path.map((p) => p.toJson()).toList()),
-          'start_finish_gate_json':
-              jsonEncode(route.startFinishGate.toJson()),
-          'difficulty': route.difficulty.id,
-          'created_at': route.createdAt.toUtc().millisecondsSinceEpoch,
-          'location_label': route.locationLabel,
-          'owner_id': _userId,
-          'thumbnail_url': route.thumbnailUrl,
-        },
-        conflictAlgorithm: ConflictAlgorithm.replace,
+        fields,
+        conflictAlgorithm: ConflictAlgorithm.ignore,
+      );
+      await txn.update(
+        'route_templates',
+        fields,
+        where: 'id = ?',
+        whereArgs: [route.id],
       );
       await txn.delete('sectors', where: 'route_id = ?', whereArgs: [route.id]);
       for (final sector in route.sectors) {
@@ -126,6 +136,7 @@ class LocalDraftRepository {
       ).toLocal(),
       locationLabel: row['location_label'] as String?,
       thumbnailUrl: row['thumbnail_url'] as String?,
+      elevationRangeMeters: (row['elevation_range_m'] as num?)?.toDouble(),
     );
   }
 
@@ -473,6 +484,18 @@ class LocalDraftRepository {
   Future<void> syncWithCloud() async {
     // No-op: use SyncService directly for bidirectional sync.
     // Kept as non-throwing to allow callers that reference it to compile.
+  }
+
+  /// Deletes all user-owned data (routes, sessions, free rides and their
+  /// telemetry) from the local database. Demo rows (owner_id IS NULL) are
+  /// kept. Called on login/logout to avoid stale data from a different account.
+  Future<void> clearUserData() async {
+    await _db.transaction((txn) async {
+      await txn.delete('route_templates', where: 'owner_id IS NOT NULL');
+      await txn.delete('session_runs', where: 'owner_id IS NOT NULL');
+      await txn.delete('free_rides', where: 'owner_id IS NOT NULL');
+    });
+    _changes.add(null);
   }
 
   Future<void> dispose() async {

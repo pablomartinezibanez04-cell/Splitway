@@ -50,6 +50,7 @@ class SupabaseRepository {
       'created_at': route.createdAt.toUtc().toIso8601String(),
       'updated_at': DateTime.now().toUtc().toIso8601String(),
       'thumbnail_url': route.thumbnailUrl,
+      'elevation_range_m': route.elevationRangeMeters,
     });
 
     // Delete old sectors and re-insert
@@ -317,6 +318,7 @@ class SupabaseRepository {
       locationLabel: row['location_label'] as String?,
       createdAt: DateTime.parse(row['created_at'] as String).toLocal(),
       thumbnailUrl: row['thumbnail_url'] as String?,
+      elevationRangeMeters: (row['elevation_range_m'] as num?)?.toDouble(),
     );
   }
 

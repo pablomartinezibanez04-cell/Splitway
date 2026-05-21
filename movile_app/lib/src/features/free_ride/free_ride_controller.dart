@@ -5,15 +5,17 @@ import 'package:flutter/foundation.dart';
 import 'package:splitway_core/splitway_core.dart';
 
 import '../../data/repositories/local_draft_repository.dart';
+import '../../services/geocoding/reverse_geocoding_service.dart';
 import '../../services/tracking/background_tracking_service.dart';
 import '../../services/tracking/location_service.dart';
 
 enum FreeRideStage { idle, recording, finished }
 
 class FreeRideController extends ChangeNotifier {
-  FreeRideController(this._repo);
+  FreeRideController(this._repo, {this.geocodingService});
 
   final LocalDraftRepository _repo;
+  final ReverseGeocodingService? geocodingService;
 
   FreeRideStage _stage = FreeRideStage.idle;
   FreeRideStage get stage => _stage;
@@ -179,6 +181,12 @@ class FreeRideController extends ChangeNotifier {
       ),
     );
 
+    // Resolve location: use provided label, fall back to run's label, then geocode.
+    String? resolvedLocation = locationLabel ?? run.locationLabel;
+    if (resolvedLocation == null && geocodingService != null && simplified.isNotEmpty) {
+      resolvedLocation = await geocodingService!.reverseGeocode(simplified.first);
+    }
+
     final route = RouteTemplate(
       id: 'rt-${DateTime.now().microsecondsSinceEpoch}',
       name: name,
@@ -188,11 +196,24 @@ class FreeRideController extends ChangeNotifier {
       sectors: const [],
       difficulty: difficulty,
       createdAt: DateTime.now(),
-      locationLabel: locationLabel ?? run.locationLabel,
+      locationLabel: resolvedLocation,
       elevationRangeMeters: run.elevationRangeMeters,
     );
 
     await _repo.saveRouteTemplate(route);
+
+    // Create a lap summary so the route detail shows the free ride duration as best time.
+    final endedAt = run.endedAt ?? DateTime.now();
+    final rideDuration = endedAt.difference(run.startedAt);
+    final lap = LapSummary(
+      lapNumber: 1,
+      duration: rideDuration,
+      startedAt: run.startedAt,
+      endedAt: endedAt,
+      distanceMeters: run.totalDistanceMeters,
+      avgSpeedMps: run.avgSpeedMps,
+      completed: true,
+    );
 
     final session = SessionRun(
       id: 'sess-${DateTime.now().microsecondsSinceEpoch}',
@@ -201,7 +222,7 @@ class FreeRideController extends ChangeNotifier {
       endedAt: run.endedAt,
       status: SessionStatus.completed,
       points: run.points,
-      laps: const [],
+      laps: [lap],
       sectorSummaries: const [],
       totalDistanceMeters: run.totalDistanceMeters,
       maxSpeedMps: run.maxSpeedMps,
@@ -214,7 +235,7 @@ class FreeRideController extends ChangeNotifier {
       run.id,
       name: name,
       description: description,
-      locationLabel: locationLabel,
+      locationLabel: resolvedLocation,
     );
 
     return route;
