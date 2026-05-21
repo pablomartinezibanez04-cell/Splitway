@@ -41,7 +41,8 @@ class FreeRideScreen extends StatefulWidget {
   State<FreeRideScreen> createState() => _FreeRideScreenState();
 }
 
-class _FreeRideScreenState extends State<FreeRideScreen> {
+class _FreeRideScreenState extends State<FreeRideScreen>
+    with WidgetsBindingObserver {
   final FlyToNotifier _flyToNotifier = FlyToNotifier();
   bool _followUser = true;
   int _lastPointCount = 0;
@@ -50,6 +51,7 @@ class _FreeRideScreenState extends State<FreeRideScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     widget.controller.addListener(_onChange);
     widget.settingsController.addListener(_onSettingsChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -65,11 +67,22 @@ class _FreeRideScreenState extends State<FreeRideScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     widget.controller.removeListener(_onChange);
     widget.settingsController.removeListener(_onSettingsChanged);
     WakelockPlus.disable().catchError((_) {});
     _flyToNotifier.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      final ctrl = widget.controller;
+      if (ctrl.stage == FreeRideStage.recording && !ctrl.backgroundActive) {
+        ctrl.upgradeToBackground();
+      }
+    }
   }
 
   void _onChange() {
@@ -221,11 +234,32 @@ class _FreeRideScreenState extends State<FreeRideScreen> {
                 message: AppLocalizations.of(context).loginBannerDefault,
               );
               if (!allowed || !mounted) return;
+
+              // Check background location permission before starting.
+              final bgPermission =
+                  await LocationService.ensureBackgroundPermission();
+              var hasBackground =
+                  bgPermission == LocationPermissionStatus.granted;
+
+              if (!hasBackground && mounted) {
+                final action =
+                    await _showBackgroundPermissionDialog(context);
+                if (!mounted) return;
+                if (action == null || action == true) {
+                  // null = dismissed, true = opened settings — don't start.
+                  return;
+                }
+                // action == false → user chose "Skip", start without bg.
+              }
+
+              if (!mounted) return;
               _initialCenter = await _getCurrentLocation();
               _followUser = true;
               _lastPointCount = 0;
               await ctrl.startRecording(
-                distanceFilterMeters: widget.settingsController.gpsSamplingDistanceFilter,
+                distanceFilterMeters:
+                    widget.settingsController.gpsSamplingDistanceFilter,
+                backgroundActive: hasBackground,
               );
             },
             icon: const Icon(Icons.play_arrow),
@@ -299,15 +333,6 @@ class _FreeRideScreenState extends State<FreeRideScreen> {
           ),
           const SizedBox(height: 8),
           _GpsStatusTile(pointCount: snap.pointCount),
-          if (ctrl.backgroundActive) ...[
-            const SizedBox(height: 4),
-            Chip(
-              avatar: const Icon(Icons.gps_fixed, color: Colors.green, size: 18),
-              label: Text(l.backgroundActiveChip),
-              backgroundColor: Colors.green.withValues(alpha: 0.12),
-              side: BorderSide(color: Colors.green.withValues(alpha: 0.4)),
-            ),
-          ],
           if (!ctrl.backgroundActive &&
               ctrl.stage == FreeRideStage.recording) ...[
             const SizedBox(height: 4),
@@ -431,6 +456,35 @@ class _FreeRideScreenState extends State<FreeRideScreen> {
           label: Text(l.freeRideNewRideButton),
         ),
       ],
+    );
+  }
+
+  /// Shows a dialog explaining that background location permission is needed
+  /// and offering to open settings or continue without it.
+  /// Returns `true` if the user chose to open settings, `false` if they chose
+  /// to skip, and `null` if they dismissed the dialog.
+  Future<bool?> _showBackgroundPermissionDialog(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.location_on_outlined, size: 32),
+        title: Text(l.backgroundDialogTitle),
+        content: Text(l.backgroundDialogBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l.backgroundDialogSkip),
+          ),
+          FilledButton(
+            onPressed: () {
+              Geolocator.openAppSettings();
+              Navigator.pop(ctx, true);
+            },
+            child: Text(l.backgroundDialogOpenSettings),
+          ),
+        ],
+      ),
     );
   }
 

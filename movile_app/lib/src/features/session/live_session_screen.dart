@@ -67,13 +67,15 @@ class LiveSessionScreen extends StatefulWidget {
   State<LiveSessionScreen> createState() => _LiveSessionScreenState();
 }
 
-class _LiveSessionScreenState extends State<LiveSessionScreen> {
+class _LiveSessionScreenState extends State<LiveSessionScreen>
+    with WidgetsBindingObserver {
   int _lastEventCount = 0;
   AudioPlayer? _audioPlayer;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     widget.controller.addListener(_onChange);
     widget.authService?.addListener(_onChange);
     widget.settingsController.addListener(_onSettingsChanged);
@@ -90,12 +92,25 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     widget.controller.removeListener(_onChange);
     widget.authService?.removeListener(_onChange);
     widget.settingsController.removeListener(_onSettingsChanged);
     WakelockPlus.disable().catchError((_) {});
     _audioPlayer?.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      final ctrl = widget.controller;
+      if (ctrl.stage == LiveSessionStage.running &&
+          ctrl.source == TrackingSource.realGps &&
+          !ctrl.backgroundActive) {
+        ctrl.upgradeToBackground();
+      }
+    }
   }
 
   void _onChange() {
@@ -251,10 +266,29 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
                       message: AppLocalizations.of(context).loginBannerDefault,
                     );
                     if (!allowed || !mounted) return;
+
+                    var hasBackground = false;
+                    if (ctrl.source == TrackingSource.realGps) {
+                      final bgPermission =
+                          await LocationService.ensureBackgroundPermission();
+                      hasBackground =
+                          bgPermission == LocationPermissionStatus.granted;
+
+                      if (!hasBackground && mounted) {
+                        final action =
+                            await _showBackgroundPermissionDialog(context);
+                        if (!mounted) return;
+                        if (action == null || action == true) return;
+                      }
+                    }
+
+                    if (!mounted) return;
                     _lastEventCount = 0;
                     // ignore: discarded_futures
                     ctrl.startSession(
-                      distanceFilterMeters: widget.settingsController.gpsSamplingDistanceFilter,
+                      distanceFilterMeters:
+                          widget.settingsController.gpsSamplingDistanceFilter,
+                      backgroundActive: hasBackground,
                     );
                   },
             icon: const Icon(Icons.play_arrow),
@@ -380,15 +414,6 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
               tracker: tracker,
               telemetryCount: tracker.ingested.length,
             ),
-          if (ctrl.backgroundActive) ...[
-            const SizedBox(height: 4),
-            Chip(
-              avatar: const Icon(Icons.gps_fixed, color: Colors.green, size: 18),
-              label: Text(l.backgroundActiveChip),
-              backgroundColor: Colors.green.withValues(alpha: 0.12),
-              side: BorderSide(color: Colors.green.withValues(alpha: 0.4)),
-            ),
-          ],
           if (!ctrl.backgroundActive &&
               ctrl.source == TrackingSource.realGps) ...[
             const SizedBox(height: 4),
@@ -434,6 +459,31 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
               backgroundColor: Colors.redAccent,
               minimumSize: const Size.fromHeight(48),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<bool?> _showBackgroundPermissionDialog(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.location_on_outlined, size: 32),
+        title: Text(l.backgroundDialogTitle),
+        content: Text(l.backgroundDialogBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l.backgroundDialogSkip),
+          ),
+          FilledButton(
+            onPressed: () {
+              Geolocator.openAppSettings();
+              Navigator.pop(ctx, true);
+            },
+            child: Text(l.backgroundDialogOpenSettings),
           ),
         ],
       ),

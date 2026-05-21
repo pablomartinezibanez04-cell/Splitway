@@ -47,15 +47,20 @@ class FreeRideController extends ChangeNotifier {
   FreeRideSnapshot get snapshot =>
       _engine?.snapshot ?? FreeRideSnapshot.initial;
 
-  Future<void> startRecording({int distanceFilterMeters = 0}) async {
+  int _distanceFilterMeters = 0;
+
+  Future<void> startRecording({
+    int distanceFilterMeters = 0,
+    bool backgroundActive = false,
+  }) async {
     _permissionStatus = await LocationService.ensurePermission();
     if (_permissionStatus != LocationPermissionStatus.granted) {
       notifyListeners();
       return;
     }
 
-    final bgStatus = await LocationService.ensureBackgroundPermission();
-    _backgroundActive = bgStatus == LocationPermissionStatus.granted;
+    _backgroundActive = backgroundActive;
+    _distanceFilterMeters = distanceFilterMeters;
 
     if (_backgroundActive) {
       await BackgroundTrackingService.startTracking(
@@ -91,6 +96,34 @@ class FreeRideController extends ChangeNotifier {
       }
       notifyListeners();
     });
+  }
+
+  /// Hot-upgrade from foreground-only to background tracking mid-recording.
+  /// Called when the user grants 'always' permission via app settings and
+  /// returns to the app.
+  Future<void> upgradeToBackground() async {
+    if (_backgroundActive || _stage != FreeRideStage.recording) return;
+
+    final permission = await LocationService.ensureBackgroundPermission();
+    if (permission != LocationPermissionStatus.granted) return;
+
+    _backgroundActive = true;
+
+    await BackgroundTrackingService.startTracking(
+      title: 'Splitway · Grabando ruta',
+      body: '0.0 km · 00:00:00',
+    );
+
+    // Restart the GPS stream with background mode enabled.
+    await _gpsSub?.cancel();
+    _gpsSub = LocationService.positionStream(
+      distanceFilterMeters: _distanceFilterMeters,
+      backgroundMode: true,
+    ).listen((point) {
+      ingestPoint(point);
+    }, onError: (_) {});
+
+    notifyListeners();
   }
 
   void ingestPoint(TelemetryPoint point) {

@@ -65,6 +65,7 @@ class LiveSessionController extends ChangeNotifier {
 
   StreamSubscription<TelemetryPoint>? _gpsSub;
   Timer? _bgNotificationTicker;
+  int _distanceFilterMeters = 0;
 
   Future<void> load() async {
     _routes = await _repo.getAllRoutes();
@@ -111,9 +112,13 @@ class LiveSessionController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> startSession({int distanceFilterMeters = 0}) async {
+  Future<void> startSession({
+    int distanceFilterMeters = 0,
+    bool backgroundActive = false,
+  }) async {
     final route = _selected;
     if (route == null) return;
+    _distanceFilterMeters = distanceFilterMeters;
     _tracker?.dispose();
     _tracker = LiveTrackingController(route: route)
       ..addListener(_onTrackerChange)
@@ -122,27 +127,14 @@ class LiveSessionController extends ChangeNotifier {
     notifyListeners();
 
     if (_source == TrackingSource.realGps) {
-      final bgStatus = await LocationService.ensureBackgroundPermission();
-      _backgroundActive = bgStatus == LocationPermissionStatus.granted;
+      _backgroundActive = backgroundActive;
 
       if (_backgroundActive) {
         await BackgroundTrackingService.startTracking(
           title: 'Splitway · Grabando ruta',
           body: '0.0 km · 00:00:00',
         );
-        _bgNotificationTicker = Timer.periodic(
-          const Duration(milliseconds: 500),
-          (_) {
-            final snap = _tracker?.snapshot;
-            if (snap == null) return;
-            final distKm =
-                (snap.totalDistanceMeters / 1000).toStringAsFixed(1);
-            BackgroundTrackingService.updateNotification(
-              distance: '$distKm km',
-              time: _formatElapsed(snap.currentLapElapsed),
-            );
-          },
-        );
+        _startBgNotificationTicker();
       }
 
       _gpsSub = LocationService.positionStream(
@@ -275,6 +267,58 @@ class LiveSessionController extends ChangeNotifier {
         ? LiveSessionStage.selecting
         : LiveSessionStage.ready;
     notifyListeners();
+  }
+
+  /// Hot-upgrade from foreground-only to background tracking mid-session.
+  /// Called when the user grants 'always' permission via OS settings and
+  /// returns to the app.
+  Future<void> upgradeToBackground() async {
+    if (_backgroundActive || _stage != LiveSessionStage.running) return;
+    if (_source != TrackingSource.realGps) return;
+
+    final permission = await LocationService.ensureBackgroundPermission();
+    if (permission != LocationPermissionStatus.granted) return;
+
+    _backgroundActive = true;
+
+    await BackgroundTrackingService.startTracking(
+      title: 'Splitway · Grabando ruta',
+      body: '0.0 km · 00:00:00',
+    );
+    _startBgNotificationTicker();
+
+    // Restart the GPS stream with background mode enabled.
+    await _gpsSub?.cancel();
+    _gpsSub = LocationService.positionStream(
+      distanceFilterMeters: _distanceFilterMeters,
+      backgroundMode: true,
+    ).listen((p) {
+      _tracker?.ingestSimulatedPoint(p);
+      notifyListeners();
+    }, onError: (_) {
+      _source = TrackingSource.simulated;
+      notifyListeners();
+    });
+
+    notifyListeners();
+  }
+
+  void _startBgNotificationTicker() {
+    _bgNotificationTicker?.cancel();
+    _bgNotificationTicker = Timer.periodic(
+      const Duration(milliseconds: 500),
+      (_) {
+        if (!_backgroundActive) return;
+        final snap = _tracker?.snapshot;
+        if (snap == null) return;
+        final distKm =
+            (snap.totalDistanceMeters / 1000).toStringAsFixed(1);
+        BackgroundTrackingService.updateNotification(
+          distance: '$distKm km',
+          time: _formatElapsed(snap.currentLapElapsed),
+        );
+      },
+    );
   }
 
   void _onTrackerChange() => notifyListeners();
