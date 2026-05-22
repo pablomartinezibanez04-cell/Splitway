@@ -1,18 +1,20 @@
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
 /// Plays the countdown ticks, GO cue, and false-start cue.
 ///
-/// Wraps every audio call in try/catch so that missing or invalid audio
-/// assets degrade silently — the Velocidad feature still works without
-/// audible cues if the user has not provided real MP3s yet.
+/// Uses `SystemSound` + `HapticFeedback` as the primary mechanism so that the
+/// feature works on every device without bundled audio assets. If real MP3
+/// assets are dropped into `assets/sounds/` they are also played on top, so
+/// users can override with custom drag-strip sounds.
 class BeepPlayer {
   BeepPlayer();
 
   final AudioPlayer _tick = AudioPlayer();
   final AudioPlayer _go = AudioPlayer();
   final AudioPlayer _falseStart = AudioPlayer();
-  bool _ready = false;
+  bool _assetsReady = false;
 
   Future<void> preload() async {
     try {
@@ -22,18 +24,33 @@ class BeepPlayer {
       await _tick.setReleaseMode(ReleaseMode.stop);
       await _go.setReleaseMode(ReleaseMode.stop);
       await _falseStart.setReleaseMode(ReleaseMode.stop);
-      _ready = true;
+      _assetsReady = true;
     } catch (e) {
-      debugPrint('BeepPlayer.preload failed: $e');
+      debugPrint('BeepPlayer.preload failed (assets invalid?): $e');
+      _assetsReady = false;
     }
   }
 
-  Future<void> tick() => _play(_tick);
-  Future<void> go() => _play(_go);
-  Future<void> falseStart() => _play(_falseStart);
+  Future<void> tick() async {
+    SystemSound.play(SystemSoundType.click);
+    HapticFeedback.lightImpact();
+    await _tryAsset(_tick);
+  }
 
-  Future<void> _play(AudioPlayer p) async {
-    if (!_ready) return;
+  Future<void> go() async {
+    SystemSound.play(SystemSoundType.alert);
+    HapticFeedback.mediumImpact();
+    await _tryAsset(_go);
+  }
+
+  Future<void> falseStart() async {
+    SystemSound.play(SystemSoundType.alert);
+    HapticFeedback.heavyImpact();
+    await _tryAsset(_falseStart);
+  }
+
+  Future<void> _tryAsset(AudioPlayer p) async {
+    if (!_assetsReady) return;
     try {
       await p.stop();
       await p.resume();

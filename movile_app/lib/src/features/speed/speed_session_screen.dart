@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:splitway_mobile/l10n/app_localizations.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
+import '../../services/speed/speed_metric.dart';
 import 'speed_session_controller.dart';
 import 'speed_setup_screen.dart';
 import 'widgets/countdown_overlay.dart';
@@ -111,7 +112,12 @@ class _SpeedSessionScreenState extends State<SpeedSessionScreen> {
     return ValueListenableBuilder(
       valueListenable: c.service.results,
       builder: (_, results, __) {
-        final metrics = c.metrics.toList();
+        // Render metrics in the canonical SpeedMetric enum order, not the
+        // (non-deterministic) Set insertion order, so the layout is stable
+        // across sessions regardless of the order the user selected them.
+        final metrics = SpeedMetric.values
+            .where(c.metrics.contains)
+            .toList();
         if (widget.view == SpeedView.grid) {
           return GridView.builder(
             padding: const EdgeInsets.all(12),

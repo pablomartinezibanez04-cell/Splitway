@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
@@ -32,7 +33,8 @@ class SpeedMeasurementService {
   static const double _quarterMileMeters = 402.336;
 
   static const double _reactionSpeedKmh = 0.5;
-  static const Duration _reactionSustain = Duration(milliseconds: 150);
+  static const double _reactionAccelMs2 = 1.0;
+  static const Duration _reactionSustain = Duration(milliseconds: 100);
 
   static const double _falseStartSpeedKmh = 1.5;
   static const double _falseStartAccelMs2 = 1.5;
@@ -105,12 +107,14 @@ class SpeedMeasurementService {
       final dt = now.difference(last).inMicroseconds / 1e6;
       _lastImuTickAt = now;
       if (dt <= 0 || dt > 0.5) return;
-      // crude longitudinal magnitude minus gravity
-      final mag2 = e.x * e.x + e.y * e.y + e.z * e.z;
-      const g2 = 9.81 * 9.81;
-      _liveAccelMs2 = (mag2 > g2 ? (mag2 - g2) : 0).toDouble() * 0.05;
-      final speedMs = _liveSpeedKmh / 3.6;
-      _liveDistanceM += speedMs * dt;
+      // Magnitude of total acceleration vector minus gravity. Shaking the
+      // phone produces values >> 1 m/s²; resting it gives ~0.
+      final magnitude =
+          math.sqrt(e.x * e.x + e.y * e.y + e.z * e.z);
+      _liveAccelMs2 = math.max(0, magnitude - 9.81);
+      // Integrate distance from current (GPS-resolved) speed.
+      final gpsSpeedMs = _liveSpeedKmh / 3.6;
+      _liveDistanceM += gpsSpeedMs * dt;
       _onSample(SpeedSample(
         tSinceStart:
             Duration(microseconds: _sessionClock.elapsedMicroseconds),
@@ -210,7 +214,12 @@ class SpeedMeasurementService {
 
     if (targets.contains(SpeedMetric.reactionTime) &&
         updated[SpeedMetric.reactionTime] == null) {
-      if (s.speedKmh >= _reactionSpeedKmh) {
+      // Reaction triggers on either real GPS motion or a clear IMU spike,
+      // whichever happens first. This lets the metric resolve even when
+      // GPS lag is hiding the start of motion.
+      final motion = s.speedKmh >= _reactionSpeedKmh ||
+          s.accelMs2 >= _reactionAccelMs2;
+      if (motion) {
         _reactionCandidateTime ??= s.tSinceStart;
         final sustained = s.tSinceStart - _reactionCandidateTime!;
         if (sustained >= _reactionSustain) {

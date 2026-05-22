@@ -124,6 +124,36 @@ void main() {
         closeTo(0.25, 1e-3),
       );
     });
+
+    test('reactionTime also triggers from accelerometer spike alone', () {
+      final svc = SpeedMeasurementService.forTesting(
+        targets: {SpeedMetric.reactionTime},
+      );
+      svc.start();
+      svc.debugInjectSample(const SpeedSample(
+        tSinceStart: Duration(milliseconds: 100),
+        speedKmh: 0,
+        distanceM: 0,
+        accelMs2: 0.1,
+      ));
+      svc.debugInjectSample(const SpeedSample(
+        tSinceStart: Duration(milliseconds: 200),
+        speedKmh: 0,
+        distanceM: 0,
+        accelMs2: 3.5,
+      ));
+      svc.debugInjectSample(const SpeedSample(
+        tSinceStart: Duration(milliseconds: 320),
+        speedKmh: 0,
+        distanceM: 0,
+        accelMs2: 3.5,
+      ));
+      svc.stop();
+      expect(
+        svc.results.value[SpeedMetric.reactionTime],
+        closeTo(0.2, 1e-3),
+      );
+    });
   });
 
   group('SpeedMeasurementService false start', () {

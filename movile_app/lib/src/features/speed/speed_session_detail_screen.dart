@@ -52,7 +52,8 @@ class SpeedSessionDetailScreen extends StatelessWidget {
                 ],
               ),
             ),
-            for (final m in session.selectedMetrics)
+            for (final m in SpeedMetric.values
+                .where(session.selectedMetrics.contains))
               SpeedMetricTile(metric: m, value: session.results[m]),
           ],
         ),
