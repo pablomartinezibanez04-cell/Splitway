@@ -2269,6 +2269,216 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Map style'**
   String get mapStyleLayersTooltip;
+
+  /// No description provided for @navSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed'**
+  String get navSpeed;
+
+  /// No description provided for @drawerSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed'**
+  String get drawerSpeed;
+
+  /// No description provided for @speedSetupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed'**
+  String get speedSetupTitle;
+
+  /// No description provided for @speedSetupVehicleSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Vehicle'**
+  String get speedSetupVehicleSection;
+
+  /// No description provided for @speedSetupVehicleEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No vehicles in your garage yet'**
+  String get speedSetupVehicleEmpty;
+
+  /// No description provided for @speedSetupMetricsSection.
+  ///
+  /// In en, this message translates to:
+  /// **'What to measure'**
+  String get speedSetupMetricsSection;
+
+  /// No description provided for @speedSetupCountdownSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Countdown'**
+  String get speedSetupCountdownSection;
+
+  /// No description provided for @speedSetupNameSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Name (optional)'**
+  String get speedSetupNameSection;
+
+  /// No description provided for @speedSetupNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave empty for default'**
+  String get speedSetupNameHint;
+
+  /// No description provided for @speedSetupViewSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Results view'**
+  String get speedSetupViewSection;
+
+  /// No description provided for @speedSetupViewList.
+  ///
+  /// In en, this message translates to:
+  /// **'List'**
+  String get speedSetupViewList;
+
+  /// No description provided for @speedSetupViewGrid.
+  ///
+  /// In en, this message translates to:
+  /// **'Grid'**
+  String get speedSetupViewGrid;
+
+  /// No description provided for @speedSetupContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get speedSetupContinue;
+
+  /// No description provided for @speedSetupSecondsValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{n}s'**
+  String speedSetupSecondsValue(int n);
+
+  /// No description provided for @speedReadyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'When you are ready, press Start'**
+  String get speedReadyMessage;
+
+  /// No description provided for @speedReadyStart.
+  ///
+  /// In en, this message translates to:
+  /// **'START'**
+  String get speedReadyStart;
+
+  /// No description provided for @speedSessionGo.
+  ///
+  /// In en, this message translates to:
+  /// **'GO!'**
+  String get speedSessionGo;
+
+  /// No description provided for @speedFinishedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Session complete'**
+  String get speedFinishedTitle;
+
+  /// No description provided for @speedFinishedSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get speedFinishedSave;
+
+  /// No description provided for @speedFinishedDiscard.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard'**
+  String get speedFinishedDiscard;
+
+  /// No description provided for @speedFinishedManualStop.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get speedFinishedManualStop;
+
+  /// No description provided for @speedFalseStartTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'FALSE START'**
+  String get speedFalseStartTitle;
+
+  /// No description provided for @speedFalseStartSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You moved before the final beep'**
+  String get speedFalseStartSubtitle;
+
+  /// No description provided for @speedFalseStartRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'RETRY'**
+  String get speedFalseStartRetry;
+
+  /// No description provided for @speedFalseStartCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get speedFalseStartCancel;
+
+  /// No description provided for @speedMetricReactionTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Reaction time'**
+  String get speedMetricReactionTime;
+
+  /// No description provided for @speedMetricSixtyFoot.
+  ///
+  /// In en, this message translates to:
+  /// **'60 ft'**
+  String get speedMetricSixtyFoot;
+
+  /// No description provided for @speedMetricEighthMile.
+  ///
+  /// In en, this message translates to:
+  /// **'1/8 mile'**
+  String get speedMetricEighthMile;
+
+  /// No description provided for @speedMetricQuarterMile.
+  ///
+  /// In en, this message translates to:
+  /// **'1/4 mile'**
+  String get speedMetricQuarterMile;
+
+  /// No description provided for @speedMetricZeroTo50.
+  ///
+  /// In en, this message translates to:
+  /// **'0-50'**
+  String get speedMetricZeroTo50;
+
+  /// No description provided for @speedMetricZeroTo100.
+  ///
+  /// In en, this message translates to:
+  /// **'0-100'**
+  String get speedMetricZeroTo100;
+
+  /// No description provided for @speedMetricZeroTo200.
+  ///
+  /// In en, this message translates to:
+  /// **'0-200'**
+  String get speedMetricZeroTo200;
+
+  /// No description provided for @speedMetricTopSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Top speed'**
+  String get speedMetricTopSpeed;
+
+  /// No description provided for @speedHistoryTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed'**
+  String get speedHistoryTab;
+
+  /// No description provided for @speedHistoryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No speed sessions yet'**
+  String get speedHistoryEmpty;
 }
 
 class _AppLocalizationsDelegate

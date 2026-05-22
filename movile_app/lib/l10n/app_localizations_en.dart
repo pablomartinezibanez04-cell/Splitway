@@ -1253,4 +1253,111 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mapStyleLayersTooltip => 'Map style';
+
+  @override
+  String get navSpeed => 'Speed';
+
+  @override
+  String get drawerSpeed => 'Speed';
+
+  @override
+  String get speedSetupTitle => 'Speed';
+
+  @override
+  String get speedSetupVehicleSection => 'Vehicle';
+
+  @override
+  String get speedSetupVehicleEmpty => 'No vehicles in your garage yet';
+
+  @override
+  String get speedSetupMetricsSection => 'What to measure';
+
+  @override
+  String get speedSetupCountdownSection => 'Countdown';
+
+  @override
+  String get speedSetupNameSection => 'Name (optional)';
+
+  @override
+  String get speedSetupNameHint => 'Leave empty for default';
+
+  @override
+  String get speedSetupViewSection => 'Results view';
+
+  @override
+  String get speedSetupViewList => 'List';
+
+  @override
+  String get speedSetupViewGrid => 'Grid';
+
+  @override
+  String get speedSetupContinue => 'Continue';
+
+  @override
+  String speedSetupSecondsValue(int n) {
+    return '${n}s';
+  }
+
+  @override
+  String get speedReadyMessage => 'When you are ready, press Start';
+
+  @override
+  String get speedReadyStart => 'START';
+
+  @override
+  String get speedSessionGo => 'GO!';
+
+  @override
+  String get speedFinishedTitle => 'Session complete';
+
+  @override
+  String get speedFinishedSave => 'Save';
+
+  @override
+  String get speedFinishedDiscard => 'Discard';
+
+  @override
+  String get speedFinishedManualStop => 'Stop';
+
+  @override
+  String get speedFalseStartTitle => 'FALSE START';
+
+  @override
+  String get speedFalseStartSubtitle => 'You moved before the final beep';
+
+  @override
+  String get speedFalseStartRetry => 'RETRY';
+
+  @override
+  String get speedFalseStartCancel => 'Cancel';
+
+  @override
+  String get speedMetricReactionTime => 'Reaction time';
+
+  @override
+  String get speedMetricSixtyFoot => '60 ft';
+
+  @override
+  String get speedMetricEighthMile => '1/8 mile';
+
+  @override
+  String get speedMetricQuarterMile => '1/4 mile';
+
+  @override
+  String get speedMetricZeroTo50 => '0-50';
+
+  @override
+  String get speedMetricZeroTo100 => '0-100';
+
+  @override
+  String get speedMetricZeroTo200 => '0-200';
+
+  @override
+  String get speedMetricTopSpeed => 'Top speed';
+
+  @override
+  String get speedHistoryTab => 'Speed';
+
+  @override
+  String get speedHistoryEmpty => 'No speed sessions yet';
 }
