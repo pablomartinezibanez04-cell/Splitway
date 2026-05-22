@@ -332,6 +332,18 @@ abstract class AppLocalizations {
   /// **'Minimum 6 characters'**
   String get loginPasswordMinLength;
 
+  /// No description provided for @loginConfirmPasswordHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm password'**
+  String get loginConfirmPasswordHint;
+
+  /// No description provided for @loginPasswordMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Passwords do not match'**
+  String get loginPasswordMismatch;
+
   /// No description provided for @loginSignInButton.
   ///
   /// In en, this message translates to:
@@ -457,6 +469,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unexpected error. Try again.'**
   String get authErrorUnexpected;
+
+  /// No description provided for @loginForgotPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Forgot your password?'**
+  String get loginForgotPassword;
+
+  /// No description provided for @loginForgotPasswordTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset password'**
+  String get loginForgotPasswordTitle;
+
+  /// No description provided for @loginForgotPasswordBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your email and we\'ll send you a link to reset your password.'**
+  String get loginForgotPasswordBody;
+
+  /// No description provided for @loginForgotPasswordButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Send reset link'**
+  String get loginForgotPasswordButton;
+
+  /// No description provided for @loginForgotPasswordSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'We sent a reset link to {email}. Check your inbox.'**
+  String loginForgotPasswordSuccess(String email);
+
+  /// No description provided for @loginForgotPasswordError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not send reset email. Try again.'**
+  String get loginForgotPasswordError;
 
   /// No description provided for @profileTitle.
   ///
@@ -2131,6 +2179,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{value} ft'**
   String elevationRangeValueFeet(String value);
+
+  /// No description provided for @backgroundNotificationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Splitway · Recording route'**
+  String get backgroundNotificationTitle;
+
+  /// No description provided for @backgroundDeniedBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Recording will stop if you leave the app. Grant \"Always\" location permission for background recording.'**
+  String get backgroundDeniedBanner;
+
+  /// No description provided for @backgroundOpenSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open settings'**
+  String get backgroundOpenSettings;
+
+  /// No description provided for @backgroundDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Background recording'**
+  String get backgroundDialogTitle;
+
+  /// No description provided for @backgroundDialogBody.
+  ///
+  /// In en, this message translates to:
+  /// **'To keep recording your route when the screen is off or you switch apps, you need to allow location access \"Always\".\n\nGo to Settings > Permissions > Location and select \"Allow always\".'**
+  String get backgroundDialogBody;
+
+  /// No description provided for @backgroundDialogOpenSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open settings'**
+  String get backgroundDialogOpenSettings;
+
+  /// No description provided for @backgroundDialogSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue without background'**
+  String get backgroundDialogSkip;
+
+  /// No description provided for @notificationDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable notifications'**
+  String get notificationDialogTitle;
+
+  /// No description provided for @notificationDialogBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Splitway uses notifications to keep you informed during route recording — showing elapsed time, distance, and tracking status even when the app is in the background.'**
+  String get notificationDialogBody;
+
+  /// No description provided for @notificationDialogAllow.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow notifications'**
+  String get notificationDialogAllow;
+
+  /// No description provided for @notificationDialogSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get notificationDialogSkip;
+
+  /// No description provided for @mapStyleOutdoors.
+  ///
+  /// In en, this message translates to:
+  /// **'Outdoor'**
+  String get mapStyleOutdoors;
+
+  /// No description provided for @mapStyleSatelliteStreets.
+  ///
+  /// In en, this message translates to:
+  /// **'Satellite'**
+  String get mapStyleSatelliteStreets;
+
+  /// No description provided for @mapStyleDark.
+  ///
+  /// In en, this message translates to:
+  /// **'Dark'**
+  String get mapStyleDark;
+
+  /// No description provided for @mapStyleLayersTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Map style'**
+  String get mapStyleLayersTooltip;
 }
 
 class _AppLocalizationsDelegate

@@ -1,12 +1,39 @@
 import 'package:flutter/material.dart' hide Image;
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mbx;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:splitway_core/splitway_core.dart';
 import 'package:splitway_mobile/l10n/app_localizations.dart';
 
 import '../../features/editor/draft_segment.dart';
 import 'route_map_painter.dart';
 import 'sector_segments.dart';
+
+enum MapStyle {
+  outdoors,
+  satelliteStreets,
+  dark;
+
+  String get uri => switch (this) {
+        MapStyle.outdoors => mbx.MapboxStyles.OUTDOORS,
+        MapStyle.satelliteStreets => mbx.MapboxStyles.SATELLITE_STREETS,
+        MapStyle.dark => mbx.MapboxStyles.DARK,
+      };
+
+  IconData get icon => switch (this) {
+        MapStyle.outdoors => Icons.terrain,
+        MapStyle.satelliteStreets => Icons.satellite_alt,
+        MapStyle.dark => Icons.dark_mode,
+      };
+
+  String label(AppLocalizations l) => switch (this) {
+        MapStyle.outdoors => l.mapStyleOutdoors,
+        MapStyle.satelliteStreets => l.mapStyleSatelliteStreets,
+        MapStyle.dark => l.mapStyleDark,
+      };
+}
+
+const _kMapStyleKey = 'splitway_map_style';
 
 /// A notifier that always fires, even when set to the same value.
 /// [ValueNotifier] silently ignores duplicate values, which breaks
@@ -92,11 +119,55 @@ class _SplitwayMapState extends State<SplitwayMap> {
   bool _isFreehandStrokeActive = false;
   bool _isRendering = false;
   bool _renderPending = false;
+  MapStyle _mapStyle = MapStyle.outdoors;
+  bool _styleMenuOpen = false;
 
   @override
   void initState() {
     super.initState();
     widget.flyToNotifier?.addListener(_onFlyToChanged);
+    _loadMapStyle();
+  }
+
+  Future<void> _loadMapStyle() async {
+    final prefs = await SharedPreferences.getInstance();
+    final stored = prefs.getString(_kMapStyleKey);
+    if (stored != null && mounted) {
+      final parsed = MapStyle.values.where((s) => s.name == stored);
+      if (parsed.isNotEmpty) {
+        setState(() => _mapStyle = parsed.first);
+        final map = _map;
+        if (map != null) {
+          await map.loadStyleURI(_mapStyle.uri);
+          await _recreateManagers();
+          await _renderAnnotations();
+        }
+      }
+    }
+  }
+
+  Future<void> _switchStyle(MapStyle style) async {
+    if (style == _mapStyle) {
+      setState(() => _styleMenuOpen = false);
+      return;
+    }
+    setState(() {
+      _mapStyle = style;
+      _styleMenuOpen = false;
+    });
+    SharedPreferences.getInstance().then((p) => p.setString(_kMapStyleKey, style.name));
+    final map = _map;
+    if (map == null) return;
+    await map.loadStyleURI(style.uri);
+    await _recreateManagers();
+    await _renderAnnotations();
+  }
+
+  Future<void> _recreateManagers() async {
+    final map = _map;
+    if (map == null) return;
+    _lineManager = await map.annotations.createPolylineAnnotationManager();
+    _circleManager = await map.annotations.createCircleAnnotationManager();
   }
 
   @override
@@ -133,9 +204,11 @@ class _SplitwayMapState extends State<SplitwayMap> {
     }
     final mapWidget = mbx.MapWidget(
       key: const ValueKey('splitway-mapbox'),
-      styleUri: widget.styleUri ?? mbx.MapboxStyles.OUTDOORS,
+      styleUri: widget.styleUri ?? _mapStyle.uri,
       onMapCreated: _onMapCreated,
     );
+
+    final showStyleButton = widget.interactive && widget.useMapbox;
 
     return Stack(
       children: [
@@ -150,7 +223,110 @@ class _SplitwayMapState extends State<SplitwayMap> {
               onPointerCancel: _onPointerCancel,
             ),
           ),
+        if (_styleMenuOpen)
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: () => setState(() => _styleMenuOpen = false),
+              behavior: HitTestBehavior.opaque,
+              child: const SizedBox.expand(),
+            ),
+          ),
+        if (showStyleButton && _styleMenuOpen)
+          Positioned(
+            top: 8,
+            right: 8,
+            child: _buildStyleMenu(context),
+          ),
+        if (showStyleButton && !_styleMenuOpen)
+          Positioned(
+            top: 8,
+            right: 8,
+            child: _buildLayersButton(context),
+          ),
       ],
+    );
+  }
+
+  Widget _buildLayersButton(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Material(
+      elevation: 4,
+      shape: const CircleBorder(),
+      color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: () => setState(() => _styleMenuOpen = true),
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Tooltip(
+            message: l.mapStyleLayersTooltip,
+            child: Icon(
+              Icons.layers,
+              size: 22,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStyleMenu(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
+    return Material(
+      elevation: 6,
+      borderRadius: BorderRadius.circular(12),
+      color: colorScheme.surface,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: IntrinsicWidth(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final style in MapStyle.values)
+                _buildStyleOption(context, l, colorScheme, style),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStyleOption(
+    BuildContext context,
+    AppLocalizations l,
+    ColorScheme colorScheme,
+    MapStyle style,
+  ) {
+    final isSelected = style == _mapStyle;
+    return InkWell(
+      onTap: () => _switchStyle(style),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          children: [
+            Icon(
+              style.icon,
+              size: 20,
+              color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 10),
+            Text(
+              style.label(l),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                color: isSelected ? colorScheme.primary : colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(width: 16),
+            if (isSelected)
+              Icon(Icons.check, size: 18, color: colorScheme.primary),
+          ],
+        ),
+      ),
     );
   }
 

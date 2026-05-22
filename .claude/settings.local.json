@@ -4,7 +4,8 @@
       "Bash(command -v dart)",
       "Bash(dart --version)",
       "Bash(dart pub *)",
-      "Bash(dart test *)"
+      "Bash(dart test *)",
+      "Bash(xargs grep -l \"elevationRange\\\\|elevation_range\")"
     ]
   }
 }

@@ -76,12 +76,14 @@ class _SplitwayAppState extends State<SplitwayApp> {
     final isLoggedIn = _authService?.isLoggedIn ?? false;
 
     if (isLoggedIn && _syncService == null && widget.config.hasSupabase) {
-      _repository.userId = Supabase.instance.client.auth.currentUser?.id;
-      _createSyncService(Supabase.instance.client);
-      _router.syncService = _syncService;
-      if (_profileService == null && widget.config.hasSupabase) {
-        _createProfileService(Supabase.instance.client);
-      }
+      _repository.clearUserData().then((_) {
+        _repository.userId = Supabase.instance.client.auth.currentUser?.id;
+        _createSyncService(Supabase.instance.client);
+        _router.syncService = _syncService;
+        if (_profileService == null && widget.config.hasSupabase) {
+          _createProfileService(Supabase.instance.client);
+        }
+      });
     } else if (!isLoggedIn && _syncService != null) {
       _syncService!.stopPeriodicSync();
       _syncService!.dispose();
@@ -95,7 +97,10 @@ class _SplitwayAppState extends State<SplitwayApp> {
       _garageService?.dispose();
       _garageService = null;
       _router.garageService = null;
-      _repository.userId = null;
+      _repository.clearUserData().then((_) {
+        _repository.userId = null;
+      });
+      _router.router.go('/routes');
     }
   }
 

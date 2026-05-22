@@ -132,6 +132,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get loginPasswordMinLength => 'Mínimo 6 caracteres';
 
   @override
+  String get loginConfirmPasswordHint => 'Confirmar contraseña';
+
+  @override
+  String get loginPasswordMismatch => 'Las contraseñas no coinciden';
+
+  @override
   String get loginSignInButton => 'Iniciar sesión';
 
   @override
@@ -198,6 +204,28 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get authErrorUnexpected => 'Error inesperado. Inténtalo de nuevo.';
+
+  @override
+  String get loginForgotPassword => '¿Olvidaste tu contraseña?';
+
+  @override
+  String get loginForgotPasswordTitle => 'Restablecer contraseña';
+
+  @override
+  String get loginForgotPasswordBody =>
+      'Introduce tu email y te enviaremos un enlace para restablecer tu contraseña.';
+
+  @override
+  String get loginForgotPasswordButton => 'Enviar enlace';
+
+  @override
+  String loginForgotPasswordSuccess(String email) {
+    return 'Te enviamos un enlace a $email. Revisa tu bandeja de entrada.';
+  }
+
+  @override
+  String get loginForgotPasswordError =>
+      'No se pudo enviar el email. Inténtalo de nuevo.';
 
   @override
   String get profileTitle => 'Perfil';
@@ -1180,4 +1208,52 @@ class AppLocalizationsEs extends AppLocalizations {
   String elevationRangeValueFeet(String value) {
     return '$value ft';
   }
+
+  @override
+  String get backgroundNotificationTitle => 'Splitway · Grabando ruta';
+
+  @override
+  String get backgroundDeniedBanner =>
+      'La grabación se detendrá si sales de la app. Concede permiso \"Siempre\" para grabar en segundo plano.';
+
+  @override
+  String get backgroundOpenSettings => 'Abrir ajustes';
+
+  @override
+  String get backgroundDialogTitle => 'Grabación en segundo plano';
+
+  @override
+  String get backgroundDialogBody =>
+      'Para que la ruta siga grabándose con la pantalla apagada o al cambiar de app, necesitas permitir el acceso a la ubicación \"Siempre\".\n\nVe a Ajustes > Permisos > Ubicación y selecciona \"Permitir siempre\".';
+
+  @override
+  String get backgroundDialogOpenSettings => 'Abrir ajustes';
+
+  @override
+  String get backgroundDialogSkip => 'Continuar sin segundo plano';
+
+  @override
+  String get notificationDialogTitle => 'Activar notificaciones';
+
+  @override
+  String get notificationDialogBody =>
+      'Splitway usa notificaciones para mantenerte informado durante la grabación de rutas: tiempo transcurrido, distancia y estado del seguimiento, incluso con la app en segundo plano.';
+
+  @override
+  String get notificationDialogAllow => 'Permitir notificaciones';
+
+  @override
+  String get notificationDialogSkip => 'Ahora no';
+
+  @override
+  String get mapStyleOutdoors => 'Exterior';
+
+  @override
+  String get mapStyleSatelliteStreets => 'Satélite';
+
+  @override
+  String get mapStyleDark => 'Oscuro';
+
+  @override
+  String get mapStyleLayersTooltip => 'Estilo del mapa';
 }

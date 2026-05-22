@@ -5,6 +5,7 @@ import 'package:splitway_core/splitway_core.dart';
 
 import '../../data/repositories/local_draft_repository.dart';
 import '../../services/tracking/live_tracking_controller.dart';
+import '../../services/tracking/background_tracking_service.dart';
 import '../../services/tracking/location_service.dart';
 
 enum LiveSessionStage { selecting, ready, running, finished }
@@ -41,6 +42,9 @@ class LiveSessionController extends ChangeNotifier {
   String? _selectedVehicleId;
   String? get selectedVehicleId => _selectedVehicleId;
 
+  bool _backgroundActive = false;
+  bool get backgroundActive => _backgroundActive;
+
   void selectVehicle(String? vehicleId) {
     _selectedVehicleId = vehicleId;
     notifyListeners();
@@ -60,12 +64,14 @@ class LiveSessionController extends ChangeNotifier {
       Duration(milliseconds: 600 ~/ _simSpeedMultiplier.clamp(1, 20));
 
   StreamSubscription<TelemetryPoint>? _gpsSub;
+  Timer? _bgNotificationTicker;
+  int _distanceFilterMeters = 0;
 
   Future<void> load() async {
     _routes = await _repo.getAllRoutes();
     if (_selected != null) {
-      final stillExists = _routes.any((r) => r.id == _selected!.id);
-      if (!stillExists) _selected = null;
+      final updated = _routes.where((r) => r.id == _selected!.id).firstOrNull;
+      _selected = updated;
     }
     _selected ??= _routes.isNotEmpty ? _routes.first : null;
     _stage =
@@ -106,9 +112,13 @@ class LiveSessionController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> startSession({int distanceFilterMeters = 0}) async {
+  Future<void> startSession({
+    int distanceFilterMeters = 0,
+    bool backgroundActive = false,
+  }) async {
     final route = _selected;
     if (route == null) return;
+    _distanceFilterMeters = distanceFilterMeters;
     _tracker?.dispose();
     _tracker = LiveTrackingController(route: route)
       ..addListener(_onTrackerChange)
@@ -117,8 +127,19 @@ class LiveSessionController extends ChangeNotifier {
     notifyListeners();
 
     if (_source == TrackingSource.realGps) {
+      _backgroundActive = backgroundActive;
+
+      if (_backgroundActive) {
+        await BackgroundTrackingService.startTracking(
+          title: 'Splitway · Grabando ruta',
+          body: '0.0 km · 00:00:00',
+        );
+        _startBgNotificationTicker();
+      }
+
       _gpsSub = LocationService.positionStream(
         distanceFilterMeters: distanceFilterMeters,
+        backgroundMode: _backgroundActive,
       ).listen((p) {
         _tracker?.ingestSimulatedPoint(p);
         notifyListeners();
@@ -215,6 +236,12 @@ class LiveSessionController extends ChangeNotifier {
   Future<SessionRun?> finishSession() async {
     await _gpsSub?.cancel();
     _gpsSub = null;
+    _bgNotificationTicker?.cancel();
+    _bgNotificationTicker = null;
+    if (_backgroundActive) {
+      await BackgroundTrackingService.stopTracking();
+      _backgroundActive = false;
+    }
     _autoSimulator?.cancel();
     _autoSimulator = null;
     final t = _tracker;
@@ -235,13 +262,73 @@ class LiveSessionController extends ChangeNotifier {
     _autoIndex = 0;
     _autoScript = const [];
     _result = null;
+    _backgroundActive = false;
     _stage = _selected == null
         ? LiveSessionStage.selecting
         : LiveSessionStage.ready;
     notifyListeners();
   }
 
+  /// Hot-upgrade from foreground-only to background tracking mid-session.
+  /// Called when the user grants 'always' permission via OS settings and
+  /// returns to the app.
+  Future<void> upgradeToBackground() async {
+    if (_backgroundActive || _stage != LiveSessionStage.running) return;
+    if (_source != TrackingSource.realGps) return;
+
+    final permission = await LocationService.ensureBackgroundPermission();
+    if (permission != LocationPermissionStatus.granted) return;
+
+    _backgroundActive = true;
+
+    await BackgroundTrackingService.startTracking(
+      title: 'Splitway · Grabando ruta',
+      body: '0.0 km · 00:00:00',
+    );
+    _startBgNotificationTicker();
+
+    // Restart the GPS stream with background mode enabled.
+    await _gpsSub?.cancel();
+    _gpsSub = LocationService.positionStream(
+      distanceFilterMeters: _distanceFilterMeters,
+      backgroundMode: true,
+    ).listen((p) {
+      _tracker?.ingestSimulatedPoint(p);
+      notifyListeners();
+    }, onError: (_) {
+      _source = TrackingSource.simulated;
+      notifyListeners();
+    });
+
+    notifyListeners();
+  }
+
+  void _startBgNotificationTicker() {
+    _bgNotificationTicker?.cancel();
+    _bgNotificationTicker = Timer.periodic(
+      const Duration(milliseconds: 500),
+      (_) {
+        if (!_backgroundActive) return;
+        final snap = _tracker?.snapshot;
+        if (snap == null) return;
+        final distKm =
+            (snap.totalDistanceMeters / 1000).toStringAsFixed(1);
+        BackgroundTrackingService.updateNotification(
+          distance: '$distKm km',
+          time: _formatElapsed(snap.currentLapElapsed),
+        );
+      },
+    );
+  }
+
   void _onTrackerChange() => notifyListeners();
+
+  static String _formatElapsed(Duration d) {
+    final h = d.inHours;
+    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return h > 0 ? '$h:$m:$s' : '$m:$s';
+  }
 
   @override
   void dispose() {
@@ -251,6 +338,10 @@ class LiveSessionController extends ChangeNotifier {
     _autoSimulator?.cancel();
     _tracker?.removeListener(_onTrackerChange);
     _tracker?.dispose();
+    _bgNotificationTicker?.cancel();
+    if (_backgroundActive) {
+      BackgroundTrackingService.stopTracking();
+    }
     super.dispose();
   }
 }

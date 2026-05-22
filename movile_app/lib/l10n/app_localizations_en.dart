@@ -132,6 +132,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loginPasswordMinLength => 'Minimum 6 characters';
 
   @override
+  String get loginConfirmPasswordHint => 'Confirm password';
+
+  @override
+  String get loginPasswordMismatch => 'Passwords do not match';
+
+  @override
   String get loginSignInButton => 'Sign in';
 
   @override
@@ -198,6 +204,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get authErrorUnexpected => 'Unexpected error. Try again.';
+
+  @override
+  String get loginForgotPassword => 'Forgot your password?';
+
+  @override
+  String get loginForgotPasswordTitle => 'Reset password';
+
+  @override
+  String get loginForgotPasswordBody =>
+      'Enter your email and we\'ll send you a link to reset your password.';
+
+  @override
+  String get loginForgotPasswordButton => 'Send reset link';
+
+  @override
+  String loginForgotPasswordSuccess(String email) {
+    return 'We sent a reset link to $email. Check your inbox.';
+  }
+
+  @override
+  String get loginForgotPasswordError =>
+      'Could not send reset email. Try again.';
 
   @override
   String get profileTitle => 'Profile';
@@ -1177,4 +1205,52 @@ class AppLocalizationsEn extends AppLocalizations {
   String elevationRangeValueFeet(String value) {
     return '$value ft';
   }
+
+  @override
+  String get backgroundNotificationTitle => 'Splitway · Recording route';
+
+  @override
+  String get backgroundDeniedBanner =>
+      'Recording will stop if you leave the app. Grant \"Always\" location permission for background recording.';
+
+  @override
+  String get backgroundOpenSettings => 'Open settings';
+
+  @override
+  String get backgroundDialogTitle => 'Background recording';
+
+  @override
+  String get backgroundDialogBody =>
+      'To keep recording your route when the screen is off or you switch apps, you need to allow location access \"Always\".\n\nGo to Settings > Permissions > Location and select \"Allow always\".';
+
+  @override
+  String get backgroundDialogOpenSettings => 'Open settings';
+
+  @override
+  String get backgroundDialogSkip => 'Continue without background';
+
+  @override
+  String get notificationDialogTitle => 'Enable notifications';
+
+  @override
+  String get notificationDialogBody =>
+      'Splitway uses notifications to keep you informed during route recording — showing elapsed time, distance, and tracking status even when the app is in the background.';
+
+  @override
+  String get notificationDialogAllow => 'Allow notifications';
+
+  @override
+  String get notificationDialogSkip => 'Not now';
+
+  @override
+  String get mapStyleOutdoors => 'Outdoor';
+
+  @override
+  String get mapStyleSatelliteStreets => 'Satellite';
+
+  @override
+  String get mapStyleDark => 'Dark';
+
+  @override
+  String get mapStyleLayersTooltip => 'Map style';
 }

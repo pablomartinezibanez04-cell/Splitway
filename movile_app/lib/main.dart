@@ -11,6 +11,7 @@ import 'src/data/local/splitway_local_database.dart';
 import 'src/data/repositories/local_draft_repository.dart';
 import 'src/services/locale/locale_controller.dart';
 import 'src/services/settings/app_settings_controller.dart';
+import 'src/services/tracking/background_tracking_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,6 +19,8 @@ Future<void> main() async {
   // Formatters.dateTime works regardless of which locale the user picks.
   await initializeDateFormatting('es_ES');
   await initializeDateFormatting('en_US');
+
+  BackgroundTrackingService.init();
 
   final config = await AppConfig.load();
   if (config.hasMapbox) {

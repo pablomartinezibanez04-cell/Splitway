@@ -153,7 +153,9 @@ class SyncService extends ChangeNotifier {
       await local.saveRouteTemplate(route);
     }
 
-    // Pull remote → local (only routes that don't exist locally)
+    // Pull remote → local (anything in Supabase not on this device).
+    // Supabase RLS already scopes results to the current user, so any route
+    // returned here either came from another device or a failed prior sync.
     final localRouteIds = {for (final r in localRoutes) r.id};
     final remoteRoutes = await remote.fetchAllRoutes();
     for (final route in remoteRoutes) {

@@ -48,6 +48,8 @@
   "loginEmailInvalid": "Invalid email",
   "loginPasswordRequired": "Enter a password",
   "loginPasswordMinLength": "Minimum 6 characters",
+  "loginConfirmPasswordHint": "Confirm password",
+  "loginPasswordMismatch": "Passwords do not match",
   "loginSignInButton": "Sign in",
   "loginSignUpButton": "Create account",
   "loginOrSeparator": "— or —",
@@ -71,6 +73,14 @@
   "authErrorPasswordTooShort": "Password must be at least 6 characters.",
   "authErrorNoConnection": "No connection. Try again.",
   "authErrorUnexpected": "Unexpected error. Try again.",
+
+  "loginForgotPassword": "Forgot your password?",
+  "loginForgotPasswordTitle": "Reset password",
+  "loginForgotPasswordBody": "Enter your email and we'll send you a link to reset your password.",
+  "loginForgotPasswordButton": "Send reset link",
+  "loginForgotPasswordSuccess": "We sent a reset link to {email}. Check your inbox.",
+  "@loginForgotPasswordSuccess": { "placeholders": { "email": { "type": "String" } } },
+  "loginForgotPasswordError": "Could not send reset email. Try again.",
 
   "profileTitle": "Profile",
   "profileAvatarUpdated": "Avatar updated",
@@ -412,5 +422,23 @@
   "elevationRangeValue": "{value} m",
   "@elevationRangeValue": { "placeholders": { "value": { "type": "String" } } },
   "elevationRangeValueFeet": "{value} ft",
-  "@elevationRangeValueFeet": { "placeholders": { "value": { "type": "String" } } }
+  "@elevationRangeValueFeet": { "placeholders": { "value": { "type": "String" } } },
+
+  "backgroundNotificationTitle": "Splitway · Recording route",
+  "backgroundDeniedBanner": "Recording will stop if you leave the app. Grant \"Always\" location permission for background recording.",
+  "backgroundOpenSettings": "Open settings",
+  "backgroundDialogTitle": "Background recording",
+  "backgroundDialogBody": "To keep recording your route when the screen is off or you switch apps, you need to allow location access \"Always\".\n\nGo to Settings > Permissions > Location and select \"Allow always\".",
+  "backgroundDialogOpenSettings": "Open settings",
+  "backgroundDialogSkip": "Continue without background",
+
+  "notificationDialogTitle": "Enable notifications",
+  "notificationDialogBody": "Splitway uses notifications to keep you informed during route recording — showing elapsed time, distance, and tracking status even when the app is in the background.",
+  "notificationDialogAllow": "Allow notifications",
+  "notificationDialogSkip": "Not now",
+
+  "mapStyleOutdoors": "Outdoor",
+  "mapStyleSatelliteStreets": "Satellite",
+  "mapStyleDark": "Dark",
+  "mapStyleLayersTooltip": "Map style"
 }
