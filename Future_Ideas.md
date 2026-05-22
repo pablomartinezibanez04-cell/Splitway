@@ -1,4 +1,4 @@
-funcion para medir el 0-100
+en la funcion de medir velocidades añadir la recopilacion de samples para crear graficas
 poder compartir rutas de forma global-amigos
 añadir tus amigos para ver sus rutas/coches/tiempos
 añadir tu coche con su informacion
