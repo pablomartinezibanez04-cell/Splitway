@@ -297,20 +297,49 @@ class _HistoryScreenState extends State<HistoryScreen> {
         final top = s.results[SpeedMetric.topSpeed];
         final dateLabel =
             DateFormat.yMd(l.localeName).add_Hm().format(s.startedAt);
+        final subtitle = top == null
+            ? dateLabel
+            : '$dateLabel  ·  ${top.round()} km/h';
         return ListTile(
           leading: const CircleAvatar(child: Icon(Icons.speed_outlined)),
           title: Text(s.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-          subtitle: Text(dateLabel),
-          trailing: top == null
-              ? null
-              : Text(
-                  '${top.round()} km/h',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
+          subtitle: Text(subtitle),
+          trailing: IconButton(
+            tooltip: l.speedHistoryDeleteTooltip,
+            icon: const Icon(Icons.delete_outline),
+            onPressed: () => _confirmDeleteSpeed(s),
+          ),
           onTap: () => context.push('/history/speed/${s.id}'),
         );
       },
     );
+  }
+
+  Future<void> _confirmDeleteSpeed(SpeedSession s) async {
+    final l = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l.speedHistoryDeleteTitle),
+        content: Text(l.speedHistoryDeleteConfirm(s.name)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l.commonCancel),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l.commonDelete),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    if (widget.speedRepository == null) return;
+    await widget.speedRepository!.softDelete(s.id);
+    if (!mounted) return;
+    await _loadSpeed();
   }
 }
 

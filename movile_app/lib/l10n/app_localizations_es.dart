@@ -491,7 +491,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get editorStartDrawingButton => 'Empezar a dibujar';
 
   @override
-  String get historyTitle => 'Historial';
+  String get historyTitle => 'Rutas';
 
   @override
   String get historyNoSessionsTitle => 'Aún no has grabado ninguna sesión';
@@ -1363,4 +1363,15 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get speedHistoryEmpty => 'Aún no hay sesiones de velocidad';
+
+  @override
+  String get speedHistoryDeleteTooltip => 'Eliminar';
+
+  @override
+  String get speedHistoryDeleteTitle => 'Eliminar sesión';
+
+  @override
+  String speedHistoryDeleteConfirm(String name) {
+    return '¿Eliminar \"$name\"? Esta acción no se puede deshacer.';
+  }
 }

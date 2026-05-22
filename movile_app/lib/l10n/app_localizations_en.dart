@@ -489,7 +489,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get editorStartDrawingButton => 'Start drawing';
 
   @override
-  String get historyTitle => 'History';
+  String get historyTitle => 'Sessions';
 
   @override
   String get historyNoSessionsTitle => 'No sessions recorded yet';
@@ -1360,4 +1360,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get speedHistoryEmpty => 'No speed sessions yet';
+
+  @override
+  String get speedHistoryDeleteTooltip => 'Delete';
+
+  @override
+  String get speedHistoryDeleteTitle => 'Delete session';
+
+  @override
+  String speedHistoryDeleteConfirm(String name) {
+    return 'Delete \"$name\"? This cannot be undone.';
+  }
 }

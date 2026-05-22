@@ -164,7 +164,7 @@
   "editorDifficultyLabel": "Difficulty",
   "editorStartDrawingButton": "Start drawing",
 
-  "historyTitle": "History",
+  "historyTitle": "Sessions",
   "historyNoSessionsTitle": "No sessions recorded yet",
   "historyNoSessionsMessage": "Go to the Session tab, pick a route, and tap \"Start\".",
   "historyDeletedRoute": "Deleted route",
@@ -477,5 +477,9 @@
   "speedMetricZeroTo200": "0-200",
   "speedMetricTopSpeed": "Top speed",
   "speedHistoryTab": "Speed",
-  "speedHistoryEmpty": "No speed sessions yet"
+  "speedHistoryEmpty": "No speed sessions yet",
+  "speedHistoryDeleteTooltip": "Delete",
+  "speedHistoryDeleteTitle": "Delete session",
+  "speedHistoryDeleteConfirm": "Delete \"{name}\"? This cannot be undone.",
+  "@speedHistoryDeleteConfirm": { "placeholders": { "name": { "type": "String" } } }
 }

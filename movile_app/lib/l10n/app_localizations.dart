@@ -935,7 +935,7 @@ abstract class AppLocalizations {
   /// No description provided for @historyTitle.
   ///
   /// In en, this message translates to:
-  /// **'History'**
+  /// **'Sessions'**
   String get historyTitle;
 
   /// No description provided for @historyNoSessionsTitle.
@@ -2479,6 +2479,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No speed sessions yet'**
   String get speedHistoryEmpty;
+
+  /// No description provided for @speedHistoryDeleteTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get speedHistoryDeleteTooltip;
+
+  /// No description provided for @speedHistoryDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete session'**
+  String get speedHistoryDeleteTitle;
+
+  /// No description provided for @speedHistoryDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete \"{name}\"? This cannot be undone.'**
+  String speedHistoryDeleteConfirm(String name);
 }
 
 class _AppLocalizationsDelegate
