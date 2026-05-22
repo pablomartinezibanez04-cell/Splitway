@@ -124,6 +124,8 @@ class _SplitwayAppState extends State<SplitwayApp> {
     _syncService = SyncService(
       local: _repository,
       remote: SupabaseRepository(client, thumbnailService: thumbnailService),
+      speedRepository: _speedRepository,
+      userId: client.auth.currentUser?.id,
     );
     _syncService!.startPeriodicSync();
   }
