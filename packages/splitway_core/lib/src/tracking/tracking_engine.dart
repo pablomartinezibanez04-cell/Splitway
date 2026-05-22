@@ -77,12 +77,17 @@ class TrackingEngine {
   double _sectorDistanceAccumulator = 0;
   Duration? _bestLap;
   DateTime? _lastCrossingAt;
+  DateTime? _finishedAt;
   String? _lastCrossedSectorId;
   Duration? _lastSectorTime;
 
   /// Minimum time between two recognised start/finish crossings.
   /// Prevents double-counting from GPS noise or rapid simulation steps.
   static const _crossingCooldown = Duration(seconds: 3);
+
+  /// Maximum distance (in meters) from the last path point to trigger
+  /// an automatic finish on open (non-closed) routes.
+  static const _finishProximityMeters = 20.0;
 
   static const _gapThreshold = Duration(seconds: 5);
   static const _recoveryDuration = Duration(seconds: 3);
@@ -159,6 +164,16 @@ class TrackingEngine {
       }
     }
 
+    // Open route finish: check proximity to the last path point.
+    if (!_route.isClosed &&
+        _status == TrackingStatus.inLap &&
+        _route.path.length >= 2) {
+      final finish = _route.path.last;
+      if (point.location.distanceTo(finish) <= _finishProximityMeters) {
+        _finishOpenRoute(point.timestamp);
+      }
+    }
+
     _previous = point;
   }
 
@@ -166,15 +181,19 @@ class TrackingEngine {
   /// Safe to call multiple times — subsequent calls return the same snapshot.
   SessionRun finish() {
     if (_status == TrackingStatus.finished) {
-      return _buildSession();
+      return _buildSession(endedAt: _finishedAt);
     }
     final endedAt = _clock();
-    if (_status == TrackingStatus.inLap && _lapStartedAt != null) {
+    // Only record an incomplete lap for closed routes (open routes have no laps).
+    if (_route.isClosed &&
+        _status == TrackingStatus.inLap &&
+        _lapStartedAt != null) {
       _laps.add(_buildLap(
         endedAt: endedAt,
         completed: false,
       ));
     }
+    _finishedAt = endedAt;
     _status = TrackingStatus.finished;
     _events.add(TrackingFinished(endedAt));
     return _buildSession(endedAt: endedAt);
@@ -210,6 +229,9 @@ class TrackingEngine {
       return;
     }
     if (_status == TrackingStatus.inLap && _lapStartedAt != null) {
+      // Open routes have no laps — ignore subsequent start/finish crossings.
+      if (!_route.isClosed) return;
+
       final closed = _buildLap(endedAt: at, completed: true);
       _laps.add(closed);
       if (_bestLap == null || closed.duration < _bestLap!) {
@@ -223,6 +245,14 @@ class TrackingEngine {
       _lapDistanceAccumulator = 0;
       _sectorDistanceAccumulator = 0;
     }
+  }
+
+  /// Automatically finishes the session for open routes (e.g. when the rider
+  /// reaches the last path point).
+  void _finishOpenRoute(DateTime at) {
+    _finishedAt = at;
+    _status = TrackingStatus.finished;
+    _events.add(TrackingFinished(at));
   }
 
   void _onSectorCrossed(SectorDefinition sector, DateTime at) {

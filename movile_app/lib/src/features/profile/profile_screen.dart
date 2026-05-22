@@ -78,7 +78,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return;
     }
 
+    final oldUrl = widget.profileService.profile?.avatarUrl;
     final success = await widget.profileService.uploadAvatar(compressed, 'webp');
+
+    if (oldUrl != null) {
+      PaintingBinding.instance.imageCache.evict(NetworkImage(oldUrl));
+    }
+
     if (!mounted) return;
     final l = AppLocalizations.of(context);
     ScaffoldMessenger.of(context).showSnackBar(

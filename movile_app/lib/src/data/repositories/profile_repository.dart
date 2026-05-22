@@ -64,7 +64,8 @@ class ProfileRepository {
       }
     } catch (_) {}
 
-    final path = '$_uid/avatar.$extension';
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final path = '$_uid/avatar_$timestamp.$extension';
     await _client.storage.from(_avatarBucket).uploadBinary(
           path,
           bytes,
