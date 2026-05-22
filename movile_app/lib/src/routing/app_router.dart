@@ -269,6 +269,7 @@ class AppRouter {
                   authService: authService,
                   profileService: profileService,
                   garageService: garageService,
+                  speedRepository: speedRepository,
                   settingsController: settingsController,
                 ),
               ),

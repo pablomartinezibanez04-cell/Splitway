@@ -4,13 +4,19 @@ import 'package:flutter/material.dart';
 import 'package:splitway_core/splitway_core.dart';
 import 'package:splitway_mobile/l10n/app_localizations.dart';
 
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+
 import '../../config/app_config.dart';
 import '../../data/repositories/local_draft_repository.dart';
+import '../../data/repositories/speed_repository.dart';
 import '../../services/auth/auth_service.dart';
 import '../../services/garage/garage_service.dart';
 import '../../services/garage/vehicle.dart';
 import '../../services/profile/profile_service.dart';
 import '../../services/settings/app_settings_controller.dart';
+import '../../services/speed/speed_metric.dart';
+import '../../services/speed/speed_session.dart';
 import '../../shared/formatters.dart';
 import '../../shared/widgets/empty_state.dart';
 import '../../shared/widgets/splitway_map.dart';
@@ -40,6 +46,8 @@ class _FreeRideEntry extends _HistoryEntry {
   DateTime get date => ride.startedAt;
 }
 
+enum _HistoryFilter { all, speed }
+
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({
     super.key,
@@ -49,6 +57,7 @@ class HistoryScreen extends StatefulWidget {
     this.authService,
     this.profileService,
     this.garageService,
+    this.speedRepository,
   });
 
   final LocalDraftRepository repository;
@@ -57,6 +66,7 @@ class HistoryScreen extends StatefulWidget {
   final AuthService? authService;
   final ProfileService? profileService;
   final GarageService? garageService;
+  final SpeedRepository? speedRepository;
 
   @override
   State<HistoryScreen> createState() => _HistoryScreenState();
@@ -71,6 +81,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
   bool _hasMore = true;
   int _sessionOffset = 0;
   int _freeRideOffset = 0;
+  _HistoryFilter _filter = _HistoryFilter.all;
+  List<SpeedSession> _speedSessions = const [];
+  bool _speedLoading = false;
 
   StreamSubscription<void>? _changesSub;
   Timer? _reloadDebouncer;
@@ -163,48 +176,129 @@ class _HistoryScreenState extends State<HistoryScreen> {
             ),
           ],
         ),
-        body: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : _entries.isEmpty
-                ? EmptyState(
-                    icon: Icons.history_toggle_off,
-                    title: l.historyNoEntriesTitle,
-                    message: l.historyNoEntriesMessage,
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.all(8),
-                    itemCount: _entries.length + (_hasMore ? 1 : 0),
-                    separatorBuilder: (_, __) => const SizedBox(height: 4),
-                    itemBuilder: (_, index) {
-                      if (index >= _entries.length) {
-                        // Load-more sentinel: trigger next page when visible.
-                        _load();
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          child: Center(child: CircularProgressIndicator()),
-                        );
-                      }
-                      final entry = _entries[index];
-                      return switch (entry) {
-                        _SessionEntry(:final session) => _SessionTile(
-                            session: session,
-                            route: _routes[session.routeTemplateId],
-                            repository: widget.repository,
-                            config: widget.config,
-                            garageService: widget.garageService,
-                            settingsController: widget.settingsController,
-                          ),
-                        _FreeRideEntry(:final ride) => _FreeRideTile(
-                            ride: ride,
-                            repository: widget.repository,
-                            config: widget.config,
-                            garageService: widget.garageService,
-                            settingsController: widget.settingsController,
-                          ),
-                      };
-                    },
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: SegmentedButton<_HistoryFilter>(
+                segments: [
+                  ButtonSegment(
+                    value: _HistoryFilter.all,
+                    label: Text(l.historyTitle),
                   ),
+                  ButtonSegment(
+                    value: _HistoryFilter.speed,
+                    label: Text(l.speedHistoryTab),
+                    icon: const Icon(Icons.speed_outlined),
+                  ),
+                ],
+                selected: {_filter},
+                onSelectionChanged: (s) {
+                  setState(() => _filter = s.first);
+                  if (_filter == _HistoryFilter.speed) _loadSpeed();
+                },
+              ),
+            ),
+            Expanded(
+              child: _filter == _HistoryFilter.speed
+                  ? _buildSpeedList(l)
+                  : _buildMainList(l),
+            ),
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildMainList(AppLocalizations l) {
+    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_entries.isEmpty) {
+      return EmptyState(
+        icon: Icons.history_toggle_off,
+        title: l.historyNoEntriesTitle,
+        message: l.historyNoEntriesMessage,
+      );
+    }
+    return ListView.separated(
+      padding: const EdgeInsets.all(8),
+      itemCount: _entries.length + (_hasMore ? 1 : 0),
+      separatorBuilder: (_, __) => const SizedBox(height: 4),
+      itemBuilder: (_, index) {
+        if (index >= _entries.length) {
+          // Load-more sentinel: trigger next page when visible.
+          _load();
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        final entry = _entries[index];
+        return switch (entry) {
+          _SessionEntry(:final session) => _SessionTile(
+              session: session,
+              route: _routes[session.routeTemplateId],
+              repository: widget.repository,
+              config: widget.config,
+              garageService: widget.garageService,
+              settingsController: widget.settingsController,
+            ),
+          _FreeRideEntry(:final ride) => _FreeRideTile(
+              ride: ride,
+              repository: widget.repository,
+              config: widget.config,
+              garageService: widget.garageService,
+              settingsController: widget.settingsController,
+            ),
+        };
+      },
+    );
+  }
+
+  Future<void> _loadSpeed() async {
+    if (widget.speedRepository == null) return;
+    final userId = widget.authService?.currentUser?.id;
+    if (userId == null) {
+      if (mounted) setState(() => _speedSessions = const []);
+      return;
+    }
+    if (mounted) setState(() => _speedLoading = true);
+    final list = await widget.speedRepository!.listForUser(userId);
+    if (!mounted) return;
+    setState(() {
+      _speedSessions = list;
+      _speedLoading = false;
+    });
+  }
+
+  Widget _buildSpeedList(AppLocalizations l) {
+    if (_speedLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_speedSessions.isEmpty) {
+      return Center(child: Text(l.speedHistoryEmpty));
+    }
+    return ListView.separated(
+      padding: const EdgeInsets.all(8),
+      itemCount: _speedSessions.length,
+      separatorBuilder: (_, __) => const Divider(height: 1),
+      itemBuilder: (_, i) {
+        final s = _speedSessions[i];
+        final top = s.results[SpeedMetric.topSpeed];
+        final dateLabel =
+            DateFormat.yMd(l.localeName).add_Hm().format(s.startedAt);
+        return ListTile(
+          leading: const CircleAvatar(child: Icon(Icons.speed_outlined)),
+          title: Text(s.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+          subtitle: Text(dateLabel),
+          trailing: top == null
+              ? null
+              : Text(
+                  '${top.round()} km/h',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+          onTap: () => context.push('/history/speed/${s.id}'),
+        );
+      },
     );
   }
 }
