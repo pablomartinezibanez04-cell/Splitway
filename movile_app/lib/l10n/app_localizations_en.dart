@@ -1024,6 +1024,78 @@ class AppLocalizationsEn extends AppLocalizations {
   String get historyRenameRouteLabel => 'Name';
 
   @override
+  String get historySearchHint => 'Search…';
+
+  @override
+  String get historyFiltersTitle => 'Filters';
+
+  @override
+  String get historyFiltersOpen => 'Open filters';
+
+  @override
+  String get historyFiltersApply => 'Apply';
+
+  @override
+  String get historyFiltersClear => 'Clear';
+
+  @override
+  String get historyFilterKindLabel => 'Type';
+
+  @override
+  String get historyFilterKindSession => 'Session';
+
+  @override
+  String get historyFilterKindFreeRide => 'Free ride';
+
+  @override
+  String get historyFilterVehicleLabel => 'Vehicle';
+
+  @override
+  String get historyNoVehicle => 'No vehicle';
+
+  @override
+  String get historyFilterDateRangeLabel => 'Date range';
+
+  @override
+  String get historyDateLast7Days => 'Last 7 days';
+
+  @override
+  String get historyDateLast30Days => 'Last 30 days';
+
+  @override
+  String get historyDateThisYear => 'This year';
+
+  @override
+  String get historyDateCustom => 'Custom…';
+
+  @override
+  String get historyFilterMinMaxSpeedLabel => 'Min max speed';
+
+  @override
+  String get historyFilterMinDistanceLabel => 'Min distance';
+
+  @override
+  String historyFilterMinSpeedChip(String value) {
+    return '≥ $value';
+  }
+
+  @override
+  String historyFilterMinDistanceChip(String value) {
+    return '≥ $value';
+  }
+
+  @override
+  String historyFilterVehicleChipMany(int count) {
+    return 'Vehicles ($count)';
+  }
+
+  @override
+  String get historyFilteredEmptyTitle => 'No matches';
+
+  @override
+  String get historyFilteredEmptyAction => 'Clear filters';
+
+  @override
   String get routesTitle => 'My routes';
 
   @override
@@ -1330,6 +1402,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get speedFalseStartCancel => 'Cancel';
+
+  @override
+  String get speedCategoryDrag => 'Drag';
+
+  @override
+  String get speedCategoryStopwatch => 'Stopwatch';
+
+  @override
+  String get speedCategoryOther => 'Other';
 
   @override
   String get speedMetricReactionTime => 'Reaction time';

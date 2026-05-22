@@ -1862,6 +1862,138 @@ abstract class AppLocalizations {
   /// **'Name'**
   String get historyRenameRouteLabel;
 
+  /// No description provided for @historySearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search…'**
+  String get historySearchHint;
+
+  /// No description provided for @historyFiltersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Filters'**
+  String get historyFiltersTitle;
+
+  /// No description provided for @historyFiltersOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open filters'**
+  String get historyFiltersOpen;
+
+  /// No description provided for @historyFiltersApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get historyFiltersApply;
+
+  /// No description provided for @historyFiltersClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get historyFiltersClear;
+
+  /// No description provided for @historyFilterKindLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get historyFilterKindLabel;
+
+  /// No description provided for @historyFilterKindSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Session'**
+  String get historyFilterKindSession;
+
+  /// No description provided for @historyFilterKindFreeRide.
+  ///
+  /// In en, this message translates to:
+  /// **'Free ride'**
+  String get historyFilterKindFreeRide;
+
+  /// No description provided for @historyFilterVehicleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Vehicle'**
+  String get historyFilterVehicleLabel;
+
+  /// No description provided for @historyNoVehicle.
+  ///
+  /// In en, this message translates to:
+  /// **'No vehicle'**
+  String get historyNoVehicle;
+
+  /// No description provided for @historyFilterDateRangeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Date range'**
+  String get historyFilterDateRangeLabel;
+
+  /// No description provided for @historyDateLast7Days.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 7 days'**
+  String get historyDateLast7Days;
+
+  /// No description provided for @historyDateLast30Days.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 30 days'**
+  String get historyDateLast30Days;
+
+  /// No description provided for @historyDateThisYear.
+  ///
+  /// In en, this message translates to:
+  /// **'This year'**
+  String get historyDateThisYear;
+
+  /// No description provided for @historyDateCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom…'**
+  String get historyDateCustom;
+
+  /// No description provided for @historyFilterMinMaxSpeedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Min max speed'**
+  String get historyFilterMinMaxSpeedLabel;
+
+  /// No description provided for @historyFilterMinDistanceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Min distance'**
+  String get historyFilterMinDistanceLabel;
+
+  /// No description provided for @historyFilterMinSpeedChip.
+  ///
+  /// In en, this message translates to:
+  /// **'≥ {value}'**
+  String historyFilterMinSpeedChip(String value);
+
+  /// No description provided for @historyFilterMinDistanceChip.
+  ///
+  /// In en, this message translates to:
+  /// **'≥ {value}'**
+  String historyFilterMinDistanceChip(String value);
+
+  /// No description provided for @historyFilterVehicleChipMany.
+  ///
+  /// In en, this message translates to:
+  /// **'Vehicles ({count})'**
+  String historyFilterVehicleChipMany(int count);
+
+  /// No description provided for @historyFilteredEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No matches'**
+  String get historyFilteredEmptyTitle;
+
+  /// No description provided for @historyFilteredEmptyAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear filters'**
+  String get historyFilteredEmptyAction;
+
   /// No description provided for @routesTitle.
   ///
   /// In en, this message translates to:
@@ -2419,6 +2551,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cancel'**
   String get speedFalseStartCancel;
+
+  /// No description provided for @speedCategoryDrag.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag'**
+  String get speedCategoryDrag;
+
+  /// No description provided for @speedCategoryStopwatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopwatch'**
+  String get speedCategoryStopwatch;
+
+  /// No description provided for @speedCategoryOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get speedCategoryOther;
 
   /// No description provided for @speedMetricReactionTime.
   ///
