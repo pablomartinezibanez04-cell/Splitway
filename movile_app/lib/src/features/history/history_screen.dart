@@ -58,6 +58,7 @@ class HistoryScreen extends StatefulWidget {
     this.profileService,
     this.garageService,
     this.speedRepository,
+    this.initialTab,
   });
 
   final LocalDraftRepository repository;
@@ -67,6 +68,10 @@ class HistoryScreen extends StatefulWidget {
   final ProfileService? profileService;
   final GarageService? garageService;
   final SpeedRepository? speedRepository;
+
+  /// When set to `'speed'`, the screen opens directly on the Velocidad tab.
+  /// Defaults to the combined "all" view.
+  final String? initialTab;
 
   @override
   State<HistoryScreen> createState() => _HistoryScreenState();
@@ -91,12 +96,18 @@ class _HistoryScreenState extends State<HistoryScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialTab == 'speed') {
+      _filter = _HistoryFilter.speed;
+    }
     _changesSub = widget.repository.changes.listen((_) {
       _reloadDebouncer?.cancel();
       _reloadDebouncer = Timer(const Duration(milliseconds: 300), _reload);
     });
     widget.authService?.addListener(_onAuthChanged);
     _load();
+    if (_filter == _HistoryFilter.speed) {
+      _loadSpeed();
+    }
   }
 
   @override

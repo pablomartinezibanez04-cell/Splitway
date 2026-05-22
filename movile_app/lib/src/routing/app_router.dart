@@ -263,7 +263,7 @@ class AppRouter {
             routes: [
               GoRoute(
                 path: '/history',
-                builder: (_, __) => HistoryScreen(
+                builder: (context, state) => HistoryScreen(
                   repository: repository,
                   config: config,
                   authService: authService,
@@ -271,6 +271,9 @@ class AppRouter {
                   garageService: garageService,
                   speedRepository: speedRepository,
                   settingsController: settingsController,
+                  initialTab: state.uri.queryParameters['tab'] == 'speed'
+                      ? 'speed'
+                      : null,
                 ),
               ),
             ],
