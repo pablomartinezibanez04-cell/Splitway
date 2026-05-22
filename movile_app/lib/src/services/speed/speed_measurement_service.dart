@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:sensors_plus/sensors_plus.dart';
 
 import 'speed_metric.dart';
 import 'speed_sample.dart';
@@ -48,6 +50,85 @@ class SpeedMeasurementService {
   SpeedSample? _previousSample;
   Duration? _reactionCandidateTime;
   Duration? _falseStartCandidateTime;
+
+  StreamSubscription<Position>? _gpsSub;
+  StreamSubscription<AccelerometerEvent>? _accelSub;
+  Stopwatch _sessionClock = Stopwatch();
+  DateTime? _lastImuTickAt;
+  double _liveSpeedKmh = 0;
+  double _liveDistanceM = 0;
+  double _liveAccelMs2 = 0;
+
+  Future<void> liveArm() async {
+    arm();
+    _sessionClock = Stopwatch()..start();
+    _lastImuTickAt = DateTime.now();
+    _liveSpeedKmh = 0;
+    _liveDistanceM = 0;
+    _liveAccelMs2 = 0;
+    await _subscribeSensors();
+  }
+
+  Future<void> liveStart() async {
+    start();
+    _liveDistanceM = 0;
+    _sessionClock = Stopwatch()..start();
+    _lastImuTickAt = DateTime.now();
+    await _subscribeSensors();
+  }
+
+  Future<void> liveStop() async {
+    await _gpsSub?.cancel();
+    await _accelSub?.cancel();
+    _gpsSub = null;
+    _accelSub = null;
+    _sessionClock.stop();
+    if (phase.value != SpeedPhase.idle) stop();
+  }
+
+  Future<void> _subscribeSensors() async {
+    await _gpsSub?.cancel();
+    await _accelSub?.cancel();
+
+    _gpsSub = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.bestForNavigation,
+        distanceFilter: 0,
+      ),
+    ).listen((p) {
+      if (p.speed >= 0) _liveSpeedKmh = p.speed * 3.6;
+    });
+
+    _accelSub = accelerometerEventStream().listen((e) {
+      final now = DateTime.now();
+      final last = _lastImuTickAt ?? now;
+      final dt = now.difference(last).inMicroseconds / 1e6;
+      _lastImuTickAt = now;
+      if (dt <= 0 || dt > 0.5) return;
+      // crude longitudinal magnitude minus gravity
+      final mag2 = e.x * e.x + e.y * e.y + e.z * e.z;
+      const g2 = 9.81 * 9.81;
+      _liveAccelMs2 = (mag2 > g2 ? (mag2 - g2) : 0).toDouble() * 0.05;
+      final speedMs = _liveSpeedKmh / 3.6;
+      _liveDistanceM += speedMs * dt;
+      _onSample(SpeedSample(
+        tSinceStart:
+            Duration(microseconds: _sessionClock.elapsedMicroseconds),
+        speedKmh: _liveSpeedKmh,
+        distanceM: _liveDistanceM,
+        accelMs2: _liveAccelMs2,
+      ));
+    });
+  }
+
+  Future<void> disposeAsync() async {
+    await _gpsSub?.cancel();
+    await _accelSub?.cancel();
+    _falseStart.close();
+    results.dispose();
+    phase.dispose();
+    instantaneousKmh.dispose();
+  }
 
   void arm() {
     phase.value = SpeedPhase.armed;
