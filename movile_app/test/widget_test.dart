@@ -59,7 +59,7 @@ void main() {
     final boot = await _bootRepo();
     final routes = await boot.repo.getAllRoutes();
     expect(routes, hasLength(1));
-    expect(routes.first.name, 'Pista demo (Madrid)');
+    expect(routes.first.name, 'Circuito del Jarama');
     expect(routes.first.sectors, hasLength(2));
     expect(routes.first.startFinishGate, isA<GateDefinition>());
     await _shutdown(boot);
@@ -136,7 +136,7 @@ void main() {
       await tester.pump();
     }
 
-    expect(find.text('Pista demo (Madrid)'), findsAtLeastNWidgets(1));
+    expect(find.text('Circuito del Jarama'), findsAtLeastNWidgets(1));
 
     controller.dispose();
     await tester.runAsync(() => _shutdown(boot));
