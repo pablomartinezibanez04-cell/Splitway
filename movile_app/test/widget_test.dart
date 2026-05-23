@@ -146,7 +146,6 @@ void main() {
 
   testWidgets('HistoryScreen shows the empty state with no sessions',
       (tester) async {
-    SharedPreferences.setMockInitialValues({});
     late ({SplitwayLocalDatabase db, LocalDraftRepository repo}) boot;
     late AppSettingsController settings;
     await tester.runAsync(() async {
