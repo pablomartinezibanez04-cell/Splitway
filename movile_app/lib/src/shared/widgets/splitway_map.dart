@@ -235,13 +235,13 @@ class _SplitwayMapState extends State<SplitwayMap> {
           Positioned(
             top: 8,
             right: 8,
-            child: _buildStyleMenu(context),
+            child: SafeArea(child: _buildStyleMenu(context)),
           ),
         if (showStyleButton && !_styleMenuOpen)
           Positioned(
-            top: 8,
+            top: 13,
             right: 8,
-            child: _buildLayersButton(context),
+            child: SafeArea(child: _buildLayersButton(context)),
           ),
       ],
     );

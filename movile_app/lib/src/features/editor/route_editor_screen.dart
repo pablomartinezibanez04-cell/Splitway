@@ -388,9 +388,9 @@ class _DrawingViewState extends State<_DrawingView> {
                 ),
                 if (widget.config.hasMapbox)
                   Positioned(
-                    top: 12,
+                    top: 8,
                     left: 12,
-                    right: 12,
+                    right: 56,
                     child: SafeArea(
                       child: LocationSearchBar(
                         accessToken: widget.config.mapboxToken!,
