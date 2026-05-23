@@ -92,6 +92,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
   List<SpeedSession> _speedSessions = const [];
   bool _speedLoading = false;
 
+  /// True when we've loaded the full set of entries (because at least one
+  /// filter / non-empty query was active). Used to (a) skip the load-more
+  /// sentinel and (b) decide whether we need to reload on filter changes.
+  bool _fullyLoaded = false;
+
   StreamSubscription<void>? _changesSub;
   Timer? _reloadDebouncer;
 
@@ -108,7 +113,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
     _changesSub = widget.repository.changes.listen((_) {
       _reloadDebouncer?.cancel();
-      _reloadDebouncer = Timer(const Duration(milliseconds: 300), _reload);
+      _reloadDebouncer = Timer(const Duration(milliseconds: 300), () {
+        if (!_filters.isEmpty) {
+          _fullyLoaded = false; // force the next _loadAll to run
+          _loadAll();
+        } else {
+          _reload();
+        }
+      });
     });
     widget.authService?.addListener(_onAuthChanged);
     _load();
@@ -140,6 +152,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       setState(() {
         _filters = _filters.copyWith(query: value);
       });
+      _onFiltersChanged();
     });
     // Force rebuild so the suffix clear icon updates synchronously.
     setState(() {});
@@ -147,7 +160,27 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   void _clearAllFilters() {
     _searchCtrl.clear();
-    setState(() => _filters = const HistoryFilters());
+    _updateFilters(const HistoryFilters());
+  }
+
+  // --- Filter-change helpers ---
+
+  /// Convenience wrapper: update _filters and react to the change.
+  void _updateFilters(HistoryFilters next) {
+    setState(() => _filters = next);
+    _onFiltersChanged();
+  }
+
+  /// Called whenever `_filters` changes. Decides whether we need to swap
+  /// loading modes:
+  /// - Filters became active and we were paginated → trigger a full load.
+  /// - Filters cleared and we were fully loaded → trigger a paginated reload.
+  Future<void> _onFiltersChanged() async {
+    if (!_filters.isEmpty && !_fullyLoaded) {
+      await _loadAll();
+    } else if (_filters.isEmpty && _fullyLoaded) {
+      _reload();
+    }
   }
 
   /// Drops vehicle ids from the filter that no longer exist in the garage.
@@ -250,7 +283,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       chips.add(InputChip(
         label: Text(label),
         onDeleted: () =>
-            setState(() => _filters = _filters.copyWith(kinds: const {})),
+            _updateFilters(_filters.copyWith(kinds: const {})),
       ));
     }
 
@@ -270,15 +303,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
         if (label.isNotEmpty) {
           chips.add(InputChip(
             label: Text(label),
-            onDeleted: () => setState(
-                () => _filters = _filters.copyWith(vehicleIds: const {})),
+            onDeleted: () =>
+                _updateFilters(_filters.copyWith(vehicleIds: const {})),
           ));
         }
       } else {
         chips.add(InputChip(
           label: Text(l.historyFilterVehicleChipMany(_filters.vehicleIds.length)),
-          onDeleted: () => setState(
-              () => _filters = _filters.copyWith(vehicleIds: const {})),
+          onDeleted: () =>
+              _updateFilters(_filters.copyWith(vehicleIds: const {})),
         ));
       }
     }
@@ -289,7 +322,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       chips.add(InputChip(
         label: Text(_dateRangeChipLabel(l, dateRange)),
         onDeleted: () =>
-            setState(() => _filters = _filters.copyWith(dateRange: null)),
+            _updateFilters(_filters.copyWith(dateRange: null)),
       ));
     }
 
@@ -305,8 +338,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
           : '$speedStr km/h';
       chips.add(InputChip(
         label: Text(l.historyFilterMinSpeedChip(speedWithUnit)),
-        onDeleted: () => setState(
-            () => _filters = _filters.copyWith(minMaxSpeedMps: null)),
+        onDeleted: () =>
+            _updateFilters(_filters.copyWith(minMaxSpeedMps: null)),
       ));
     }
 
@@ -321,8 +354,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
           unit == UnitSystem.imperial ? '$distStr mi' : '$distStr km';
       chips.add(InputChip(
         label: Text(l.historyFilterMinDistanceChip(distWithUnit)),
-        onDeleted: () => setState(
-            () => _filters = _filters.copyWith(minDistanceMeters: null)),
+        onDeleted: () =>
+            _updateFilters(_filters.copyWith(minDistanceMeters: null)),
       ));
     }
 
@@ -369,11 +402,41 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   /// Full reload: resets pagination and re-fetches the first page.
   void _reload() {
+    _fullyLoaded = false;
     _sessionOffset = 0;
     _freeRideOffset = 0;
     _hasMore = true;
     _entries = const [];
     _load();
+  }
+
+  /// One-shot fetch of the entire history (sessions + free rides) up to a
+  /// defensive cap of 1000. Replaces the current pagination state.
+  Future<void> _loadAll() async {
+    if (!mounted) return;
+    setState(() => _loading = true);
+
+    final sessions =
+        await widget.repository.getAllSessions(limit: 1000, offset: 0);
+    final freeRides =
+        await widget.repository.getAllFreeRides(limit: 1000, offset: 0);
+    final routeList = await widget.repository.getAllRoutes();
+    if (!mounted) return;
+
+    final newEntries = <_HistoryEntry>[
+      ...sessions.map(_SessionEntry.new),
+      ...freeRides.map(_FreeRideEntry.new),
+    ]..sort();
+
+    setState(() {
+      _entries = newEntries;
+      _routes = {for (final r in routeList) r.id: r};
+      _sessionOffset = sessions.length;
+      _freeRideOffset = freeRides.length;
+      _hasMore = false;
+      _fullyLoaded = true;
+      _loading = false;
+    });
   }
 
   /// Loads the next page of entries (both sessions and free rides).
@@ -480,7 +543,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             widget.settingsController.unitSystem,
                       );
                       if (result != null) {
-                        setState(() => _filters = result);
+                        _updateFilters(result);
                       }
                     },
                   ),
@@ -543,8 +606,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
 
     // Hide the load-more sentinel when any filter is active to avoid loading
-    // pages that will be entirely filtered out.
-    final showSentinel = _hasMore && _filters.isEmpty;
+    // pages that will be entirely filtered out; also hide when fully loaded.
+    final showSentinel = _hasMore && _filters.isEmpty && !_fullyLoaded;
 
     return ListView.separated(
       padding: const EdgeInsets.all(8),

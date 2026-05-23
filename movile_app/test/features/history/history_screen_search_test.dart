@@ -151,9 +151,9 @@ void main() {
     // Type into the search field.
     await tester.enterText(find.byType(TextField).first, 'jara');
 
-    // Wait for the 250 ms debounce to fire.
+    // Wait for the 250 ms debounce to fire, then let the full-load complete.
     await tester.pump(const Duration(milliseconds: 300));
-    await tester.pump();
+    await _pumpUntilLoaded(tester);
 
     // Only the Jarama session should remain.
     expect(find.text('Jarama'), findsOneWidget);
@@ -188,17 +188,17 @@ void main() {
     // Type a query.
     await tester.enterText(find.byType(TextField).first, 'jara');
     await tester.pump(const Duration(milliseconds: 300));
-    await tester.pump();
+    await _pumpUntilLoaded(tester);
 
     // Filtered to one entry.
     expect(find.text('Montmeló'), findsNothing);
 
     // Tap the clear (✕) icon button.
     await tester.tap(find.byIcon(Icons.clear));
-    // The clear button fires _onQueryChanged('') immediately — no debounce needed,
-    // but we still need to let the debounce timer expire.
+    // The clear button fires _onQueryChanged('') → debounce → _onFiltersChanged.
+    // Wait for debounce + paginated reload to complete.
     await tester.pump(const Duration(milliseconds: 300));
-    await tester.pump();
+    await _pumpUntilLoaded(tester);
 
     // All entries are back.
     expect(find.text('Jarama'), findsOneWidget);
@@ -234,7 +234,7 @@ void main() {
     // Type a query that matches nothing.
     await tester.enterText(find.byType(TextField).first, 'zzz');
     await tester.pump(const Duration(milliseconds: 300));
-    await tester.pump();
+    await _pumpUntilLoaded(tester);
 
     // Filtered empty state.
     expect(find.text('Sin resultados'), findsOneWidget);
@@ -242,7 +242,7 @@ void main() {
     // Tap the "Limpiar filtros" button.
     await tester.tap(find.text('Limpiar filtros'));
     await tester.pump(const Duration(milliseconds: 300));
-    await tester.pump();
+    await _pumpUntilLoaded(tester);
 
     // All entries are restored.
     expect(find.text('Jarama'), findsOneWidget);
@@ -332,7 +332,11 @@ void main() {
     await tester.ensureVisible(find.widgetWithText(FilledButton, 'Aplicar'));
     await tester.pump();
     await tester.tap(find.widgetWithText(FilledButton, 'Aplicar'));
-    await tester.pumpAndSettle();
+    // Close animation for the bottom sheet.
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump();
+    // Allow the _loadAll to complete.
+    await _pumpUntilLoaded(tester);
 
     // An InputChip with the vehicle name should now be visible in the chip row.
     expect(
@@ -399,7 +403,9 @@ void main() {
     await tester.ensureVisible(find.widgetWithText(FilledButton, 'Aplicar'));
     await tester.pump();
     await tester.tap(find.widgetWithText(FilledButton, 'Aplicar'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump();
+    await _pumpUntilLoaded(tester);
 
     // Only Ruta Del A visible; Ruta Del B is hidden.
     expect(find.text('Ruta Del A'), findsOneWidget);
@@ -428,12 +434,188 @@ void main() {
     } else {
       await tester.tap(deleteIcon);
     }
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
+    await _pumpUntilLoaded(tester);
 
     // Both routes are visible again and chip is gone.
     expect(find.text('Ruta Del A'), findsOneWidget);
     expect(find.text('Ruta Del B'), findsOneWidget);
     expect(find.widgetWithText(InputChip, 'Coche Del A'), findsNothing);
+
+    await tester.runAsync(() => boot.repo.dispose());
+    await tester.runAsync(() => boot.db.close());
+  });
+
+  // ---------------------------------------------------------------------------
+  // Test 8: Full-load triggered when filtering reveals items past first page
+  // ---------------------------------------------------------------------------
+  testWidgets('filter triggers full-load and reveals items beyond page 1',
+      (tester) async {
+    late ({SplitwayLocalDatabase db, LocalDraftRepository repo}) boot;
+    late AppSettingsController settings;
+
+    await tester.runAsync(() async {
+      boot = await _openRepo();
+      settings = await AppSettingsController.load();
+
+      // Create one special "needle" route/session with the oldest date so it
+      // sorts last in the descending-date order (i.e. it will be beyond the
+      // first 30 entries when pagination is active).
+      final needleRoute = _makeRoute('route-needle', 'needle-in-haystack');
+      await boot.repo.saveRouteTemplate(needleRoute);
+
+      // Seed 35 "common" sessions with recent dates to fill the first page.
+      for (var i = 0; i < 35; i++) {
+        final routeId = 'route-common-$i';
+        await boot.repo.saveRouteTemplate(_makeRoute(routeId, 'Common $i'));
+        await boot.repo.saveSessionRun(
+          SessionRun(
+            id: 'session-common-$i',
+            routeTemplateId: routeId,
+            startedAt: DateTime(2025, 1, 2, 0, 0, i), // newer dates
+            status: SessionStatus.completed,
+            points: const [],
+            laps: const [],
+            sectorSummaries: const [],
+            totalDistanceMeters: 1000,
+            maxSpeedMps: 30,
+            avgSpeedMps: 20,
+          ),
+        );
+      }
+
+      // The needle session has the oldest date so it's at the very end.
+      await boot.repo.saveSessionRun(
+        SessionRun(
+          id: 'session-needle',
+          routeTemplateId: 'route-needle',
+          startedAt: DateTime(2024, 1, 1), // oldest → sorts last (index 35)
+          status: SessionStatus.completed,
+          points: const [],
+          laps: const [],
+          sectorSummaries: const [],
+          totalDistanceMeters: 1000,
+          maxSpeedMps: 30,
+          avgSpeedMps: 20,
+        ),
+      );
+    });
+
+    await tester.pumpWidget(_harness(
+      child: HistoryScreen(
+        repository: boot.repo,
+        settingsController: settings,
+      ),
+    ));
+
+    // Wait for initial load (first 30 items — needle is NOT yet loaded).
+    await _pumpUntilLoaded(tester);
+
+    // The needle should NOT be visible in the paginated (first-page-only) view.
+    expect(find.text('needle-in-haystack'), findsNothing);
+
+    // Type into the search field to activate the query filter.
+    await tester.enterText(find.byType(TextField).first, 'needle');
+
+    // Wait for debounce (250 ms) plus a bit of async-load time.
+    await tester.pump(const Duration(milliseconds: 300));
+    // Allow the async _loadAll to complete.
+    await _pumpUntilLoaded(tester);
+
+    // After full-load, the needle session should be visible.
+    expect(find.text('needle-in-haystack'), findsOneWidget);
+
+    await tester.runAsync(() => boot.repo.dispose());
+    await tester.runAsync(() => boot.db.close());
+  });
+
+  // ---------------------------------------------------------------------------
+  // Test 9: Clearing filters returns to paginated mode
+  // ---------------------------------------------------------------------------
+  testWidgets('clearing filters returns to paginated mode', (tester) async {
+    late ({SplitwayLocalDatabase db, LocalDraftRepository repo}) boot;
+    late AppSettingsController settings;
+
+    // We need an item that is only loaded when ALL entries are fetched (i.e.
+    // in full-load mode).  Seed 35 sessions with recent timestamps (so they
+    // land in the first page in descending date order) plus one extra session
+    // with the oldest date so it is always the last item (index 35 in the
+    // full list, beyond the 30-item paginated first page).
+    const String oldestRouteId = 'route-old-pg';
+    const String oldestRouteName = 'OldestRoutePG';
+
+    await tester.runAsync(() async {
+      boot = await _openRepo();
+      settings = await AppSettingsController.load();
+
+      // 35 "filler" sessions with newer dates.
+      for (var i = 0; i < 35; i++) {
+        final routeId = 'route-pg-$i';
+        await boot.repo.saveRouteTemplate(_makeRoute(routeId, 'Route PG $i'));
+        await boot.repo.saveSessionRun(
+          SessionRun(
+            id: 'session-pg-$i',
+            routeTemplateId: routeId,
+            startedAt: DateTime(2025, 1, 2, 0, 0, i),
+            status: SessionStatus.completed,
+            points: const [],
+            laps: const [],
+            sectorSummaries: const [],
+            totalDistanceMeters: 1000,
+            maxSpeedMps: 30,
+            avgSpeedMps: 20,
+          ),
+        );
+      }
+
+      // The oldest session — only visible in full-load mode.
+      await boot.repo.saveRouteTemplate(
+          _makeRoute(oldestRouteId, oldestRouteName));
+      await boot.repo.saveSessionRun(
+        SessionRun(
+          id: 'session-oldest-pg',
+          routeTemplateId: oldestRouteId,
+          startedAt: DateTime(2020, 1, 1), // oldest → last in desc sort
+          status: SessionStatus.completed,
+          points: const [],
+          laps: const [],
+          sectorSummaries: const [],
+          totalDistanceMeters: 1000,
+          maxSpeedMps: 30,
+          avgSpeedMps: 20,
+        ),
+      );
+    });
+
+    await tester.pumpWidget(_harness(
+      child: HistoryScreen(
+        repository: boot.repo,
+        settingsController: settings,
+      ),
+    ));
+
+    await _pumpUntilLoaded(tester);
+
+    // The oldest item is NOT shown in paginated mode (only first 30 loaded).
+    expect(find.text(oldestRouteName), findsNothing);
+
+    // Apply a query filter — this triggers _loadAll which fetches all 36.
+    await tester.enterText(find.byType(TextField).first, 'OldestRoutePG');
+    await tester.pump(const Duration(milliseconds: 300));
+    await _pumpUntilLoaded(tester);
+
+    // The oldest item IS now visible because full-load fetched everything.
+    // Use widgetWithText(Card, ...) to avoid matching the search TextField.
+    expect(find.widgetWithText(Card, oldestRouteName), findsOneWidget);
+
+    // Clear the search filter by tapping the ✕ icon.
+    await tester.tap(find.byIcon(Icons.clear));
+    await tester.pump(const Duration(milliseconds: 300));
+    await _pumpUntilLoaded(tester);
+
+    // After clearing filters, we're back to paginated mode (only 30 loaded).
+    // The oldest item is no longer visible — it's beyond the first page.
+    expect(find.widgetWithText(Card, oldestRouteName), findsNothing);
 
     await tester.runAsync(() => boot.repo.dispose());
     await tester.runAsync(() => boot.db.close());
@@ -503,7 +685,9 @@ void main() {
 
     // Tap "Aplicar".
     await tester.tap(find.widgetWithText(FilledButton, 'Aplicar'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump();
+    await _pumpUntilLoaded(tester);
 
     // Only "Ruta A" (linked to vehicle A) should appear.
     expect(find.text('Ruta A'), findsOneWidget);
