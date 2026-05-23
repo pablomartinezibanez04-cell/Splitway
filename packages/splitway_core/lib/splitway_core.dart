@@ -4,6 +4,7 @@ library splitway_core;
 export 'src/models/free_ride_run.dart';
 export 'src/models/free_ride_snapshot.dart';
 export 'src/models/gate_definition.dart';
+export 'src/models/geocoding_result.dart';
 export 'src/models/geo_point.dart';
 export 'src/models/lap_summary.dart';
 export 'src/models/route_template.dart';
