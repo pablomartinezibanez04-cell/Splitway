@@ -318,4 +318,28 @@ void main() {
       expect(saved!.isClosed, isTrue);
     });
   });
+
+  group('deleteRoute callback', () {
+    test('onRouteDeleted fires with correct id when route deleted', () async {
+      // Save a route first
+      ctrl.startDrawing(name: 'To Delete', difficulty: RouteDifficulty.easy);
+      ctrl.handleMapTap(const GeoPoint(latitude: 1.0, longitude: 1.0));
+      ctrl.handleMapTap(const GeoPoint(latitude: 1.0, longitude: 1.1));
+      ctrl.handleMapTap(const GeoPoint(latitude: 1.0, longitude: 1.2));
+      await ctrl.saveDraft();
+      await ctrl.load();
+      final routeId = ctrl.routes.first.id;
+
+      final captured = <String>[];
+      final ctrlWithCallback = RouteEditorController(
+        repo,
+        onRouteDeleted: (id) async => captured.add(id),
+      );
+      await ctrlWithCallback.load();
+
+      await ctrlWithCallback.deleteRoute(routeId);
+
+      expect(captured, [routeId]);
+    });
+  });
 }
