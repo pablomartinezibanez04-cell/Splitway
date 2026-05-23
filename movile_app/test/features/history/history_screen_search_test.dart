@@ -8,8 +8,22 @@ import 'package:splitway_mobile/l10n/app_localizations.dart';
 import 'package:splitway_mobile/src/data/local/splitway_local_database.dart';
 import 'package:splitway_mobile/src/data/repositories/local_draft_repository.dart';
 import 'package:splitway_mobile/src/features/history/history_screen.dart';
+import 'package:splitway_mobile/src/services/garage/garage_service.dart';
+import 'package:splitway_mobile/src/services/garage/vehicle.dart';
 import 'package:splitway_mobile/src/services/locale/locale_controller.dart';
 import 'package:splitway_mobile/src/services/settings/app_settings_controller.dart';
+
+// (GarageService.withVehicles is used directly in tests — no fake class needed.)
+
+Vehicle _makeVehicle(String id, String name) => Vehicle(
+      id: id,
+      userId: 'test-user',
+      name: name,
+      type: VehicleType.car,
+      createdAt: DateTime(2024, 1, 1),
+    );
+
+// ---------------------------------------------------------------------------
 
 Widget _harness({required Widget child}) => MaterialApp(
       locale: const Locale('es'),
@@ -51,7 +65,8 @@ RouteTemplate _makeRoute(String id, String name) => RouteTemplate(
       createdAt: DateTime(2024, 1, 1),
     );
 
-SessionRun _makeSession(String id, String routeId) => SessionRun(
+SessionRun _makeSession(String id, String routeId, {String? vehicleId}) =>
+    SessionRun(
       id: id,
       routeTemplateId: routeId,
       startedAt: DateTime(2024, 6, 1, 10, 0),
@@ -62,6 +77,7 @@ SessionRun _makeSession(String id, String routeId) => SessionRun(
       totalDistanceMeters: 1000,
       maxSpeedMps: 30,
       avgSpeedMps: 20,
+      vehicleId: vehicleId,
     );
 
 FreeRideRun _makeFreeRide(String id, String name) => FreeRideRun(
@@ -232,6 +248,112 @@ void main() {
     expect(find.text('Jarama'), findsOneWidget);
     expect(find.text('Montmeló'), findsOneWidget);
     expect(find.text('Paseo casual'), findsOneWidget);
+
+    await tester.runAsync(() => boot.repo.dispose());
+    await tester.runAsync(() => boot.db.close());
+  });
+
+  // ---------------------------------------------------------------------------
+  // Test 4: Tapping the tune icon opens the filters sheet
+  // ---------------------------------------------------------------------------
+  testWidgets('tapping tune icon opens the filters sheet', (tester) async {
+    late ({SplitwayLocalDatabase db, LocalDraftRepository repo}) boot;
+    late AppSettingsController settings;
+    await tester.runAsync(() async {
+      boot = await _openRepo();
+      settings = await AppSettingsController.load();
+      await _seed(boot.repo);
+    });
+
+    await tester.pumpWidget(_harness(
+      child: HistoryScreen(
+        repository: boot.repo,
+        settingsController: settings,
+      ),
+    ));
+
+    await _pumpUntilLoaded(tester);
+
+    // Tap the tune (filter) icon button.
+    await tester.tap(find.byIcon(Icons.tune));
+    await tester.pumpAndSettle();
+
+    // The filters sheet should be open and show its title.
+    expect(find.text('Filtros'), findsOneWidget);
+
+    await tester.runAsync(() => boot.repo.dispose());
+    await tester.runAsync(() => boot.db.close());
+  });
+
+  // ---------------------------------------------------------------------------
+  // Test 5: Vehicle filter via filters sheet narrows the list
+  // ---------------------------------------------------------------------------
+  testWidgets('vehicle filter via sheet reduces displayed entries',
+      (tester) async {
+    late ({SplitwayLocalDatabase db, LocalDraftRepository repo}) boot;
+    late AppSettingsController settings;
+
+    const vehicleAId = 'vehicle-a';
+    const vehicleBId = 'vehicle-b';
+
+    await tester.runAsync(() async {
+      boot = await _openRepo();
+      settings = await AppSettingsController.load();
+
+      // Two routes.
+      final routeA = _makeRoute('route-a', 'Ruta A');
+      final routeB = _makeRoute('route-b', 'Ruta B');
+      await boot.repo.saveRouteTemplate(routeA);
+      await boot.repo.saveRouteTemplate(routeB);
+
+      // Two sessions: one for vehicle A, one for vehicle B.
+      await boot.repo.saveSessionRun(
+        _makeSession('session-a', 'route-a', vehicleId: vehicleAId),
+      );
+      await boot.repo.saveSessionRun(
+        _makeSession('session-b', 'route-b', vehicleId: vehicleBId),
+      );
+    });
+
+    // ignore: invalid_use_of_visible_for_testing_member
+    final garageService = GarageService.withVehicles([
+      _makeVehicle(vehicleAId, 'Coche A'),
+      _makeVehicle(vehicleBId, 'Coche B'),
+    ]);
+
+    await tester.pumpWidget(_harness(
+      child: HistoryScreen(
+        repository: boot.repo,
+        settingsController: settings,
+        garageService: garageService,
+      ),
+    ));
+
+    await _pumpUntilLoaded(tester);
+
+    // Both routes are visible initially.
+    expect(find.text('Ruta A'), findsOneWidget);
+    expect(find.text('Ruta B'), findsOneWidget);
+
+    // Open the filters sheet.
+    await tester.tap(find.byIcon(Icons.tune));
+    await tester.pumpAndSettle();
+
+    // Tap the "Coche A" vehicle FilterChip (inside the sheet).
+    await tester.tap(find.widgetWithText(FilterChip, 'Coche A'));
+    await tester.pump();
+
+    // Scroll to bring "Aplicar" into view (sheet may be taller than viewport).
+    await tester.ensureVisible(find.widgetWithText(FilledButton, 'Aplicar'));
+    await tester.pump();
+
+    // Tap "Aplicar".
+    await tester.tap(find.widgetWithText(FilledButton, 'Aplicar'));
+    await tester.pumpAndSettle();
+
+    // Only "Ruta A" (linked to vehicle A) should appear.
+    expect(find.text('Ruta A'), findsOneWidget);
+    expect(find.text('Ruta B'), findsNothing);
 
     await tester.runAsync(() => boot.repo.dispose());
     await tester.runAsync(() => boot.db.close());

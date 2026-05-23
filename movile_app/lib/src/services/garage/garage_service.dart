@@ -5,9 +5,17 @@ import '../../data/repositories/garage_repository.dart';
 import 'vehicle.dart';
 
 class GarageService extends ChangeNotifier {
-  GarageService(this._repository);
+  GarageService(GarageRepository repository) : _repository = repository;
 
-  final GarageRepository _repository;
+  /// Testing-only constructor: creates a [GarageService] pre-populated with a
+  /// fixed list of vehicles and no backing repository. Repository methods must
+  /// not be called on an instance created this way.
+  @visibleForTesting
+  GarageService.withVehicles(List<Vehicle> vehicles)
+      : _repository = null,
+        _vehicles = List.unmodifiable(vehicles);
+
+  final GarageRepository? _repository;
 
   List<Vehicle> _vehicles = const [];
   List<Vehicle> get vehicles => _vehicles;
@@ -24,7 +32,7 @@ class GarageService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _vehicles = await _repository.getVehicles();
+      _vehicles = await _repository!.getVehicles();
     } catch (e) {
       debugPrint('GarageService.loadVehicles error: $e');
       _error = e.toString();
@@ -49,7 +57,7 @@ class GarageService extends ChangeNotifier {
 
     try {
       final id = const Uuid().v4();
-      final vehicle = await _repository.createVehicle(
+      final vehicle = await _repository!.createVehicle(
         id: id,
         name: name,
         type: type,
@@ -76,7 +84,7 @@ class GarageService extends ChangeNotifier {
     _error = null;
 
     try {
-      await _repository.updateVehicle(vehicle);
+      await _repository!.updateVehicle(vehicle);
       _vehicles = [
         for (final v in _vehicles)
           if (v.id == vehicle.id) vehicle else v,
@@ -95,7 +103,7 @@ class GarageService extends ChangeNotifier {
     _error = null;
 
     try {
-      await _repository.deleteVehicle(vehicleId);
+      await _repository!.deleteVehicle(vehicleId);
       _vehicles = [
         for (final v in _vehicles)
           if (v.id != vehicleId) v,
@@ -120,7 +128,7 @@ class GarageService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final photoUrl = await _repository.uploadPhoto(vehicleId, bytes, extension);
+      final photoUrl = await _repository!.uploadPhoto(vehicleId, bytes, extension);
       _vehicles = [
         for (final v in _vehicles)
           if (v.id == vehicleId) v.copyWith(photoUrl: photoUrl) else v,

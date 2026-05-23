@@ -23,6 +23,7 @@ import '../../shared/widgets/splitway_map.dart';
 import '../garage/vehicle_detail_screen.dart';
 import '../home/home_shell.dart';
 import 'history_filters.dart';
+import 'history_filters_sheet.dart';
 
 sealed class _HistoryEntry implements Comparable<_HistoryEntry> {
   DateTime get date;
@@ -275,29 +276,54 @@ class _HistoryScreenState extends State<HistoryScreen> {
           children: [
             // Search row — always visible on both tabs.
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-              child: TextField(
-                controller: _searchCtrl,
-                onChanged: _onQueryChanged,
-                decoration: InputDecoration(
-                  hintText: l.historySearchHint,
-                  isDense: true,
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon: _searchCtrl.text.isEmpty
-                      ? null
-                      : IconButton(
-                          tooltip: MaterialLocalizations.of(context)
-                              .deleteButtonTooltip,
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            _searchCtrl.clear();
-                            _onQueryChanged('');
-                          },
+              padding: const EdgeInsets.fromLTRB(12, 8, 4, 0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _searchCtrl,
+                      onChanged: _onQueryChanged,
+                      decoration: InputDecoration(
+                        hintText: l.historySearchHint,
+                        isDense: true,
+                        prefixIcon: const Icon(Icons.search),
+                        suffixIcon: _searchCtrl.text.isEmpty
+                            ? null
+                            : IconButton(
+                                tooltip: MaterialLocalizations.of(context)
+                                    .deleteButtonTooltip,
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  _searchCtrl.clear();
+                                  _onQueryChanged('');
+                                },
+                              ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
                   ),
-                ),
+                  // Filter button with optional badge showing active filter count.
+                  _FilterButton(
+                    tooltip: l.historyFiltersOpen,
+                    activeCount: _filters.activeCount,
+                    onPressed: () async {
+                      final result = await showHistoryFiltersSheet(
+                        context: context,
+                        initial: _filters,
+                        vehicles:
+                            widget.garageService?.vehicles ?? const [],
+                        isSpeedTab: _filter == _HistoryFilter.speed,
+                        unitSystem:
+                            widget.settingsController.unitSystem,
+                      );
+                      if (result != null) {
+                        setState(() => _filters = result);
+                      }
+                    },
+                  ),
+                ],
               ),
             ),
             Padding(
@@ -481,6 +507,61 @@ class _HistoryScreenState extends State<HistoryScreen> {
     await widget.speedRepository!.softDelete(s.id);
     if (!mounted) return;
     await _loadSpeed();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Filter icon button with an active-count badge.
+// ---------------------------------------------------------------------------
+
+class _FilterButton extends StatelessWidget {
+  const _FilterButton({
+    required this.tooltip,
+    required this.activeCount,
+    required this.onPressed,
+  });
+
+  final String tooltip;
+  final int activeCount;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        IconButton(
+          tooltip: tooltip,
+          icon: const Icon(Icons.tune),
+          onPressed: onPressed,
+        ),
+        if (activeCount > 0)
+          Positioned(
+            top: 4,
+            right: 4,
+            child: IgnorePointer(
+              child: Container(
+                width: 16,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: colorScheme.error,
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  '$activeCount',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: colorScheme.onError,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
   }
 }
 
