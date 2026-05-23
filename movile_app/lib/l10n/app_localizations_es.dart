@@ -491,7 +491,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get editorStartDrawingButton => 'Empezar a dibujar';
 
   @override
-  String get historyTitle => 'Historial';
+  String get historyTitle => 'Rutas';
 
   @override
   String get historyNoSessionsTitle => 'Aún no has grabado ninguna sesión';
@@ -1027,6 +1027,70 @@ class AppLocalizationsEs extends AppLocalizations {
   String get historyRenameRouteLabel => 'Nombre';
 
   @override
+  String get historySearchHint => 'Buscar…';
+
+  @override
+  String get historyFiltersTitle => 'Filtros';
+
+  @override
+  String get historyFiltersOpen => 'Abrir filtros';
+
+  @override
+  String get historyFiltersApply => 'Aplicar';
+
+  @override
+  String get historyFiltersClear => 'Limpiar';
+
+  @override
+  String get historyFilterKindLabel => 'Tipo';
+
+  @override
+  String get historyFilterKindSession => 'Sesión';
+
+  @override
+  String get historyFilterKindFreeRide => 'Free ride';
+
+  @override
+  String get historyFilterVehicleLabel => 'Vehículo';
+
+  @override
+  String get historyNoVehicle => 'Sin vehículo';
+
+  @override
+  String get historyFilterDateRangeLabel => 'Rango de fechas';
+
+  @override
+  String get historyDateLast7Days => 'Últimos 7 días';
+
+  @override
+  String get historyDateLast30Days => 'Últimos 30 días';
+
+  @override
+  String get historyDateThisYear => 'Este año';
+
+  @override
+  String get historyDateCustom => 'Personalizado…';
+
+  @override
+  String get historyFilterMinDistanceLabel => 'Distancia mínima';
+
+  @override
+  String historyFilterMinDistanceChip(String value) {
+    return '≥ $value';
+  }
+
+  @override
+  String historyFilterVehicleChipMany(int count) {
+    return 'Vehículos ($count)';
+  }
+
+  @override
+  String get historyFilteredEmptyTitle => 'Sin resultados';
+
+  @override
+  String get historyFilteredEmptyAction => 'Limpiar filtros';
+
+  @override
   String get routesTitle => 'Mis rutas';
 
   @override
@@ -1256,4 +1320,131 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get mapStyleLayersTooltip => 'Estilo del mapa';
+
+  @override
+  String get navSpeed => 'Test de velocidad';
+
+  @override
+  String get drawerSpeed => 'Test de velocidad';
+
+  @override
+  String get speedSetupTitle => 'Test de velocidad';
+
+  @override
+  String get speedSetupVehicleSection => 'Vehículo';
+
+  @override
+  String get speedSetupVehicleEmpty => 'Aún no tienes vehículos en tu garaje';
+
+  @override
+  String get speedSetupMetricsSection => 'Qué medir';
+
+  @override
+  String get speedSetupCountdownSection => 'Cuenta atrás';
+
+  @override
+  String get speedSetupNameSection => 'Nombre (opcional)';
+
+  @override
+  String get speedSetupNameHint => 'Deja vacío para el nombre por defecto';
+
+  @override
+  String get speedSetupViewSection => 'Vista de resultados';
+
+  @override
+  String get speedSetupViewList => 'Lista';
+
+  @override
+  String get speedSetupViewGrid => 'Cuadrícula';
+
+  @override
+  String get speedSetupContinue => 'Continuar';
+
+  @override
+  String speedSetupSecondsValue(int n) {
+    return '${n}s';
+  }
+
+  @override
+  String get speedReadyMessage => 'Cuando estés listo, pulsa Start';
+
+  @override
+  String get speedReadyStart => 'START';
+
+  @override
+  String get speedSessionGo => '¡YA!';
+
+  @override
+  String get speedFinishedTitle => 'Sesión completada';
+
+  @override
+  String get speedFinishedSave => 'Guardar';
+
+  @override
+  String get speedFinishedDiscard => 'Descartar';
+
+  @override
+  String get speedFinishedManualStop => 'Parar';
+
+  @override
+  String get speedFalseStartTitle => 'SALIDA EN FALSO';
+
+  @override
+  String get speedFalseStartSubtitle => 'Has arrancado antes del pitido final';
+
+  @override
+  String get speedFalseStartRetry => 'REINTENTAR';
+
+  @override
+  String get speedFalseStartCancel => 'Cancelar';
+
+  @override
+  String get speedCategoryDrag => 'Drag';
+
+  @override
+  String get speedCategoryStopwatch => 'Cronómetro';
+
+  @override
+  String get speedCategoryOther => 'Otros';
+
+  @override
+  String get speedMetricReactionTime => 'Tiempo de reacción';
+
+  @override
+  String get speedMetricSixtyFoot => '60 pies';
+
+  @override
+  String get speedMetricEighthMile => '1/8 milla';
+
+  @override
+  String get speedMetricQuarterMile => '1/4 milla';
+
+  @override
+  String get speedMetricZeroTo50 => '0-50';
+
+  @override
+  String get speedMetricZeroTo100 => '0-100';
+
+  @override
+  String get speedMetricZeroTo200 => '0-200';
+
+  @override
+  String get speedMetricTopSpeed => 'Velocidad máxima';
+
+  @override
+  String get speedHistoryTab => 'Test de velocidad';
+
+  @override
+  String get speedHistoryEmpty => 'Aún no hay sesiones de velocidad';
+
+  @override
+  String get speedHistoryDeleteTooltip => 'Eliminar';
+
+  @override
+  String get speedHistoryDeleteTitle => 'Eliminar sesión';
+
+  @override
+  String speedHistoryDeleteConfirm(String name) {
+    return '¿Eliminar \"$name\"? Esta acción no se puede deshacer.';
+  }
 }

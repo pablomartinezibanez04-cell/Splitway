@@ -18,7 +18,7 @@ class AppSettingsController extends ChangeNotifier {
     _timeFormatDot = _prefs.getBool(_kTimeFormatDot) ?? true;
     _keepScreenAwake = _prefs.getBool(_kKeepScreenAwake) ?? true;
     _hapticFeedback = _prefs.getBool(_kHapticFeedback) ?? true;
-    _audioAlerts = _prefs.getBool(_kAudioAlerts) ?? false;
+    _audioAlerts = _prefs.getBool(_kAudioAlerts) ?? true;
     _gpsSamplingInterval = GpsSamplingInterval.values.byName(
       _prefs.getString(_kGpsSamplingInterval) ??
           GpsSamplingInterval.oneSecond.name,
@@ -38,6 +38,7 @@ class AppSettingsController extends ChangeNotifier {
   static const _kDefaultVehicleId = 'default_vehicle_id';
   static const _kDefaultRoutingProfile = 'default_routing_profile';
   static const _kNotificationPermissionAsked = 'notification_permission_asked';
+  static const _kDismissedDemoIds = 'dismissed_demo_route_ids';
 
   final SharedPreferences _prefs;
 
@@ -62,6 +63,9 @@ class AppSettingsController extends ChangeNotifier {
   String get defaultRoutingProfile => _defaultRoutingProfile;
   bool get notificationPermissionAsked =>
       _prefs.getBool(_kNotificationPermissionAsked) ?? false;
+
+  Set<String> get dismissedDemoIds =>
+      (_prefs.getStringList(_kDismissedDemoIds) ?? []).toSet();
 
   ThemeMode get flutterThemeMode => switch (_themeMode) {
         AppThemeMode.system => ThemeMode.system,
@@ -150,5 +154,11 @@ class AppSettingsController extends ChangeNotifier {
 
   Future<void> markNotificationPermissionAsked() async {
     await _prefs.setBool(_kNotificationPermissionAsked, true);
+  }
+
+  Future<void> dismissDemoRoute(String id) async {
+    final current = dismissedDemoIds;
+    if (current.contains(id)) return;
+    await _prefs.setStringList(_kDismissedDemoIds, [...current, id]);
   }
 }

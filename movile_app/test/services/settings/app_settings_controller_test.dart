@@ -15,7 +15,7 @@ void main() {
     expect(ctrl.timeFormatDot, isTrue);
     expect(ctrl.keepScreenAwake, isTrue);
     expect(ctrl.hapticFeedback, isTrue);
-    expect(ctrl.audioAlerts, isFalse);
+    expect(ctrl.audioAlerts, isTrue);
     expect(ctrl.gpsSamplingDistanceFilter, 0);
     expect(ctrl.defaultVehicleId, isNull);
     expect(ctrl.defaultRoutingProfile, 'driving');
@@ -85,5 +85,25 @@ void main() {
     expect(ctrl.defaultVehicleId, 'vehicle-123');
     await ctrl.setDefaultVehicleId(null);
     expect(ctrl.defaultVehicleId, isNull);
+  });
+
+  test('dismissedDemoIds is empty by default', () async {
+    final ctrl = await AppSettingsController.load();
+    expect(ctrl.dismissedDemoIds, isEmpty);
+  });
+
+  test('dismissDemoRoute persists across reloads', () async {
+    final ctrl = await AppSettingsController.load();
+    await ctrl.dismissDemoRoute('demo-jarama');
+
+    final ctrl2 = await AppSettingsController.load();
+    expect(ctrl2.dismissedDemoIds, contains('demo-jarama'));
+  });
+
+  test('dismissDemoRoute is idempotent', () async {
+    final ctrl = await AppSettingsController.load();
+    await ctrl.dismissDemoRoute('demo-jarama');
+    await ctrl.dismissDemoRoute('demo-jarama');
+    expect(ctrl.dismissedDemoIds, {'demo-jarama'});
   });
 }

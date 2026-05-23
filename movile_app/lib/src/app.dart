@@ -4,8 +4,10 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'config/app_config.dart';
+import 'data/local/speed_session_dao.dart';
 import 'data/local/splitway_local_database.dart';
 import 'data/repositories/local_draft_repository.dart';
+import 'data/repositories/speed_repository.dart';
 import 'data/repositories/supabase_repository.dart';
 import 'data/services/route_thumbnail_service.dart';
 import 'routing/app_router.dart';
@@ -38,6 +40,7 @@ class SplitwayApp extends StatefulWidget {
 
 class _SplitwayAppState extends State<SplitwayApp> {
   late final LocalDraftRepository _repository;
+  late final SpeedRepository _speedRepository;
   late final AppRouter _router;
   AuthService? _authService;
   SyncService? _syncService;
@@ -48,6 +51,10 @@ class _SplitwayAppState extends State<SplitwayApp> {
   void initState() {
     super.initState();
     _repository = LocalDraftRepository(widget.database);
+    _speedRepository = SpeedRepository(
+      localDao: SpeedSessionDao(widget.database.raw),
+      supabase: widget.config.hasSupabase ? Supabase.instance.client : null,
+    );
 
     if (widget.config.hasSupabase) {
       final client = Supabase.instance.client;
@@ -62,6 +69,7 @@ class _SplitwayAppState extends State<SplitwayApp> {
 
     _router = AppRouter(
       repository: _repository,
+      speedRepository: _speedRepository,
       config: widget.config,
       authService: _authService,
       syncService: _syncService,
@@ -116,6 +124,8 @@ class _SplitwayAppState extends State<SplitwayApp> {
     _syncService = SyncService(
       local: _repository,
       remote: SupabaseRepository(client, thumbnailService: thumbnailService),
+      speedRepository: _speedRepository,
+      userId: client.auth.currentUser?.id,
     );
     _syncService!.startPeriodicSync();
   }

@@ -132,7 +132,9 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
     final newEvents = events.sublist(_lastEventCount);
     bool hasCrossing = false;
     for (final evt in newEvents) {
-      if (evt is SectorCrossed || evt is LapClosed) {
+      if (evt is TrackingStarted ||
+          evt is SectorCrossed ||
+          evt is LapClosed) {
         hasCrossing = true;
         break;
       }
