@@ -21,7 +21,7 @@ void main() {
       expect(f.isEmpty, isFalse);
     });
 
-    test('cleared() resets every field', () {
+    test('clear() resets every field', () {
       final f = HistoryFilters(
         query: 'foo',
         kinds: const {HistoryEntryKind.freeRide},
@@ -33,8 +33,23 @@ void main() {
         minMaxSpeedMps: 10,
         minDistanceMeters: 1000,
       );
-      final cleared = f.cleared();
-      expect(cleared.isEmpty, isTrue);
+      expect(f.clear().isEmpty, isTrue);
+    });
+
+    test('copyWith preserves other fields and can explicitly clear nullables',
+        () {
+      final f = HistoryFilters(
+        query: 'monza',
+        dateRange: DateTimeRange(
+          start: DateTime(2026, 1, 1),
+          end: DateTime(2026, 2, 1),
+        ),
+        minMaxSpeedMps: 20,
+      );
+      final next = f.copyWith(dateRange: null, query: 'mugello');
+      expect(next.query, 'mugello');           // overridden
+      expect(next.minMaxSpeedMps, 20);         // preserved
+      expect(next.dateRange, isNull);          // explicitly cleared
     });
   });
 

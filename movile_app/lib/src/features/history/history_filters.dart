@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/material.dart' show DateTimeRange;
 
 /// Which kind of timeline entry this is.
@@ -77,7 +78,7 @@ class HistoryFilters {
     );
   }
 
-  HistoryFilters cleared() => const HistoryFilters();
+  HistoryFilters clear() => const HistoryFilters();
 }
 
 const _sentinel = Object();
@@ -123,6 +124,10 @@ class SpeedSessionFields {
 /// We don't pull in a full Unicode normaliser — a small lookup over the
 /// common Latin characters used in route and vehicle names is sufficient and
 /// keeps the build dependency-free.
+///
+/// Public only so unit tests can pin its behaviour directly; production code
+/// reaches it through [matchesHistoryFilters] / [matchesSpeedFilters].
+@visibleForTesting
 String foldForSearch(String input) {
   const folds = {
     'á': 'a', 'à': 'a', 'ä': 'a', 'â': 'a', 'ã': 'a', 'å': 'a',
@@ -195,7 +200,7 @@ bool matchesSpeedFilters(HistoryFilters f, SpeedSessionFields s) {
   if (f.minMaxSpeedMps != null) {
     final top = s.topSpeedKmh;
     if (top == null) return false;
-    final topMps = top / 3.6;
+    final topMps = top / 3.6; // km/h → m/s
     if (topMps < f.minMaxSpeedMps!) return false;
   }
   return true;
