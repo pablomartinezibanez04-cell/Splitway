@@ -25,6 +25,7 @@ int _dbCounter = 0;
 
 Future<({SplitwayLocalDatabase db, LocalDraftRepository repo})> _bootRepo({
   bool seed = true,
+  AppSettingsController? settingsController,
 }) async {
   // Each test needs a fresh in-memory DB; sqflite_common_ffi caches
   // connections by path, so we use a counter to keep them distinct.
@@ -34,7 +35,8 @@ Future<({SplitwayLocalDatabase db, LocalDraftRepository repo})> _bootRepo({
   );
   final repo = LocalDraftRepository(db);
   if (seed) {
-    await DemoSeed.ensureSeeded(repo);
+    final settings = settingsController ?? await AppSettingsController.load();
+    await DemoSeed.ensureSeeded(repo, settings);
   }
   return (db: db, repo: repo);
 }

@@ -35,15 +35,15 @@ Future<void> main() async {
   }
 
   final database = await SplitwayLocalDatabase.open();
+  final settingsController = await AppSettingsController.load();
   final seedRepo = LocalDraftRepository(database);
-  await DemoSeed.ensureSeeded(seedRepo);
+  await DemoSeed.ensureSeeded(seedRepo, settingsController);
   await seedRepo.dispose();
 
   final deviceLocale =
       WidgetsBinding.instance.platformDispatcher.locale;
   final localeController =
       await LocaleController.load(deviceLocale: deviceLocale);
-  final settingsController = await AppSettingsController.load();
 
   runApp(SplitwayApp(
     config: config,

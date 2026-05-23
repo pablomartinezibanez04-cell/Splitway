@@ -36,7 +36,7 @@ void main() {
   setUp(() async {
     database = await SplitwayLocalDatabase.open();
     seedRepo = LocalDraftRepository(database);
-    await DemoSeed.ensureSeeded(seedRepo);
+    await DemoSeed.ensureSeeded(seedRepo, settingsController);
     await seedRepo.dispose();
   });
 
