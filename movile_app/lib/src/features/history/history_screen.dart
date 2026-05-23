@@ -22,6 +22,7 @@ import '../../shared/widgets/empty_state.dart';
 import '../../shared/widgets/splitway_map.dart';
 import '../garage/vehicle_detail_screen.dart';
 import '../home/home_shell.dart';
+import 'history_filters.dart';
 
 sealed class _HistoryEntry implements Comparable<_HistoryEntry> {
   DateTime get date;
@@ -93,6 +94,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
   StreamSubscription<void>? _changesSub;
   Timer? _reloadDebouncer;
 
+  // --- Search / filter state ---
+  final TextEditingController _searchCtrl = TextEditingController();
+  HistoryFilters _filters = const HistoryFilters();
+  Timer? _searchDebounce;
+
   @override
   void initState() {
     super.initState();
@@ -114,12 +120,90 @@ class _HistoryScreenState extends State<HistoryScreen> {
   void dispose() {
     _changesSub?.cancel();
     _reloadDebouncer?.cancel();
+    _searchDebounce?.cancel();
+    _searchCtrl.dispose();
     widget.authService?.removeListener(_onAuthChanged);
     super.dispose();
   }
 
   void _onAuthChanged() {
     _reload();
+  }
+
+  // --- Search helpers ---
+
+  void _onQueryChanged(String value) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 250), () {
+      if (!mounted) return;
+      setState(() {
+        _filters = _filters.copyWith(query: value);
+      });
+    });
+    // Force rebuild so the suffix clear icon updates synchronously.
+    setState(() {});
+  }
+
+  void _clearAllFilters() {
+    _searchCtrl.clear();
+    setState(() => _filters = const HistoryFilters());
+  }
+
+  // --- Filter mapping helpers ---
+
+  HistoryEntryFields _toFilterFields(AppLocalizations l, _HistoryEntry e) {
+    return switch (e) {
+      _SessionEntry(:final session) => HistoryEntryFields(
+          kind: HistoryEntryKind.session,
+          displayName: _routes[session.routeTemplateId]?.name ??
+              l.historyDeletedRoute,
+          vehicleId: session.vehicleId,
+          date: session.startedAt,
+          maxSpeedMps: session.maxSpeedMps,
+          totalDistanceMeters: session.totalDistanceMeters,
+        ),
+      _FreeRideEntry(:final ride) => HistoryEntryFields(
+          kind: HistoryEntryKind.freeRide,
+          displayName: ride.name ?? l.historyFreeRideLabel,
+          vehicleId: ride.vehicleId,
+          date: ride.startedAt,
+          maxSpeedMps: ride.maxSpeedMps,
+          totalDistanceMeters: ride.totalDistanceMeters,
+        ),
+    };
+  }
+
+  SpeedSessionFields _toSpeedFilterFields(SpeedSession s) {
+    return SpeedSessionFields(
+      displayName: s.name,
+      vehicleId: s.vehicleId,
+      date: s.startedAt,
+      topSpeedKmh: s.results[SpeedMetric.topSpeed],
+    );
+  }
+
+  // --- Filtered empty state widget ---
+
+  Widget _filteredEmptyState(AppLocalizations l) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.search_off, size: 56),
+          const SizedBox(height: 12),
+          Text(
+            l.historyFilteredEmptyTitle,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          TextButton.icon(
+            icon: const Icon(Icons.clear),
+            label: Text(l.historyFilteredEmptyAction),
+            onPressed: _clearAllFilters,
+          ),
+        ],
+      ),
+    );
   }
 
   /// Full reload: resets pagination and re-fetches the first page.
@@ -189,6 +273,33 @@ class _HistoryScreenState extends State<HistoryScreen> {
         ),
         body: Column(
           children: [
+            // Search row — always visible on both tabs.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+              child: TextField(
+                controller: _searchCtrl,
+                onChanged: _onQueryChanged,
+                decoration: InputDecoration(
+                  hintText: l.historySearchHint,
+                  isDense: true,
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _searchCtrl.text.isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: MaterialLocalizations.of(context)
+                              .deleteButtonTooltip,
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchCtrl.clear();
+                            _onQueryChanged('');
+                          },
+                        ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: SegmentedButton<_HistoryFilter>(
@@ -230,12 +341,29 @@ class _HistoryScreenState extends State<HistoryScreen> {
         message: l.historyNoEntriesMessage,
       );
     }
+
+    // Apply filters.
+    final filtered = _filters.isEmpty
+        ? _entries
+        : _entries
+            .where((e) =>
+                matchesHistoryFilters(_filters, _toFilterFields(l, e)))
+            .toList();
+
+    if (filtered.isEmpty) {
+      return _filteredEmptyState(l);
+    }
+
+    // Hide the load-more sentinel when any filter is active to avoid loading
+    // pages that will be entirely filtered out.
+    final showSentinel = _hasMore && _filters.isEmpty;
+
     return ListView.separated(
       padding: const EdgeInsets.all(8),
-      itemCount: _entries.length + (_hasMore ? 1 : 0),
+      itemCount: filtered.length + (showSentinel ? 1 : 0),
       separatorBuilder: (_, __) => const SizedBox(height: 4),
       itemBuilder: (_, index) {
-        if (index >= _entries.length) {
+        if (index >= filtered.length) {
           // Load-more sentinel: trigger next page when visible.
           _load();
           return const Padding(
@@ -243,7 +371,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             child: Center(child: CircularProgressIndicator()),
           );
         }
-        final entry = _entries[index];
+        final entry = filtered[index];
         return switch (entry) {
           _SessionEntry(:final session) => _SessionTile(
               session: session,
@@ -285,15 +413,28 @@ class _HistoryScreenState extends State<HistoryScreen> {
     if (_speedLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (_speedSessions.isEmpty) {
+    if (_speedSessions.isEmpty && _filters.isEmpty) {
       return Center(child: Text(l.speedHistoryEmpty));
     }
+
+    // Apply filters.
+    final filtered = _filters.isEmpty
+        ? _speedSessions
+        : _speedSessions
+            .where((s) =>
+                matchesSpeedFilters(_filters, _toSpeedFilterFields(s)))
+            .toList();
+
+    if (filtered.isEmpty) {
+      return _filteredEmptyState(l);
+    }
+
     return ListView.separated(
       padding: const EdgeInsets.all(8),
-      itemCount: _speedSessions.length,
+      itemCount: filtered.length,
       separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (_, i) {
-        final s = _speedSessions[i];
+        final s = filtered[i];
         final top = s.results[SpeedMetric.topSpeed];
         final dateLabel =
             DateFormat.yMd(l.localeName).add_Hm().format(s.startedAt);
