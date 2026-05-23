@@ -2269,6 +2269,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Map style'**
   String get mapStyleLayersTooltip;
+
+  /// No description provided for @editorSearchLocationHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search location...'**
+  String get editorSearchLocationHint;
+
+  /// No description provided for @editorSearchNoResults.
+  ///
+  /// In en, this message translates to:
+  /// **'No results found'**
+  String get editorSearchNoResults;
 }
 
 class _AppLocalizationsDelegate

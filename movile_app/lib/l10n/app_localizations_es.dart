@@ -1256,4 +1256,10 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get mapStyleLayersTooltip => 'Estilo del mapa';
+
+  @override
+  String get editorSearchLocationHint => 'Buscar ubicación...';
+
+  @override
+  String get editorSearchNoResults => 'Sin resultados';
 }

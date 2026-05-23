@@ -1253,4 +1253,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mapStyleLayersTooltip => 'Map style';
+
+  @override
+  String get editorSearchLocationHint => 'Search location...';
+
+  @override
+  String get editorSearchNoResults => 'No results found';
 }

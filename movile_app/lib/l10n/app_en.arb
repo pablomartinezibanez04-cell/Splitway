@@ -440,5 +440,8 @@
   "mapStyleOutdoors": "Outdoor",
   "mapStyleSatelliteStreets": "Satellite",
   "mapStyleDark": "Dark",
-  "mapStyleLayersTooltip": "Map style"
+  "mapStyleLayersTooltip": "Map style",
+
+  "editorSearchLocationHint": "Search location...",
+  "editorSearchNoResults": "No results found"
 }
