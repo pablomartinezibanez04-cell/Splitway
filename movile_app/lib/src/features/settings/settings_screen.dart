@@ -454,6 +454,7 @@ class SettingsScreen extends StatelessWidget {
       final routes = await repository.getAllRoutes();
       for (final r in routes) {
         await repository.deleteRoute(r.id);
+        await settingsController.dismissDemoRoute(r.id);
       }
 
       if (!context.mounted) return;

@@ -50,6 +50,7 @@ class AppRouter {
               ? ReverseGeocodingService(accessToken: config.mapboxToken!)
               : null,
           defaultRoutingProfile: settingsController.defaultRoutingProfile,
+          onRouteDeleted: settingsController.dismissDemoRoute,
         ),
         _sessionController = LiveSessionController(repository),
         _freeRideController = FreeRideController(
