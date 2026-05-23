@@ -3,7 +3,13 @@ import 'package:go_router/go_router.dart';
 
 import '../config/app_config.dart';
 import '../data/repositories/local_draft_repository.dart';
+import '../data/repositories/speed_repository.dart';
 import '../features/auth/login_screen.dart';
+import '../features/speed/speed_session_controller.dart';
+import '../features/speed/speed_session_detail_screen.dart';
+import '../features/speed/speed_session_screen.dart';
+import '../features/speed/speed_ready_screen.dart';
+import '../features/speed/speed_setup_screen.dart';
 import '../features/editor/route_editor_controller.dart';
 import '../features/editor/route_editor_screen.dart';
 import '../features/history/history_screen.dart';
@@ -27,6 +33,7 @@ import '../services/sync/sync_service.dart';
 class AppRouter {
   AppRouter({
     required this.repository,
+    required this.speedRepository,
     required this.config,
     required this.localeController,
     required this.settingsController,
@@ -43,6 +50,7 @@ class AppRouter {
               ? ReverseGeocodingService(accessToken: config.mapboxToken!)
               : null,
           defaultRoutingProfile: settingsController.defaultRoutingProfile,
+          onRouteDeleted: settingsController.dismissDemoRoute,
         ),
         _sessionController = LiveSessionController(repository),
         _freeRideController = FreeRideController(
@@ -57,6 +65,7 @@ class AppRouter {
   }
 
   final LocalDraftRepository repository;
+  final SpeedRepository speedRepository;
   final AppConfig config;
   final LocaleController localeController;
   final AppSettingsController settingsController;
@@ -123,6 +132,80 @@ class AppRouter {
         ),
       ),
 
+      // Velocidad (drag-strip measurements).
+      GoRoute(
+        path: '/speed',
+        builder: (context, _) => SpeedSetupScreen(
+          garageService: garageService,
+          onContinue: (result) {
+            final controller = SpeedSessionController(
+              userId: authService?.currentUser?.id,
+              vehicleId: result.vehicle.id,
+              vehicleName: result.vehicle.name,
+              metrics: result.metrics,
+              countdownSeconds: result.countdownSeconds,
+              userProvidedName: result.name,
+              repository: speedRepository,
+            );
+            context.push(
+              '/speed/ready',
+              extra: _SpeedNavExtra(
+                controller: controller,
+                view: result.view,
+              ),
+            );
+          },
+        ),
+      ),
+      GoRoute(
+        path: '/speed/ready',
+        builder: (context, state) {
+          final extra = state.extra as _SpeedNavExtra;
+          return SpeedReadyScreen(
+            onStart: () => context.pushReplacement(
+              '/speed/session',
+              extra: extra,
+            ),
+          );
+        },
+      ),
+      GoRoute(
+        path: '/speed/session',
+        builder: (context, state) {
+          final extra = state.extra as _SpeedNavExtra;
+          return SpeedSessionScreen(
+            controller: extra.controller,
+            view: extra.view,
+            onSaved: (id) => context.go('/history/speed/$id'),
+            onDiscarded: () => context.go('/routes'),
+            onCancelled: () => context.go('/routes'),
+          );
+        },
+      ),
+      GoRoute(
+        path: '/history/speed/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return FutureBuilder(
+            future: speedRepository.getById(id),
+            builder: (_, snap) {
+              if (snap.connectionState != ConnectionState.done) {
+                return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                );
+              }
+              final s = snap.data;
+              if (s == null) {
+                return const Scaffold(
+                  body: Center(child: Text('Not found')),
+                );
+              }
+              return SpeedSessionDetailScreen(session: s);
+            },
+          );
+        },
+      ),
+
       // Main tabbed shell.
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => HomeShell(
@@ -181,13 +264,17 @@ class AppRouter {
             routes: [
               GoRoute(
                 path: '/history',
-                builder: (_, __) => HistoryScreen(
+                builder: (context, state) => HistoryScreen(
                   repository: repository,
                   config: config,
                   authService: authService,
                   profileService: profileService,
                   garageService: garageService,
+                  speedRepository: speedRepository,
                   settingsController: settingsController,
+                  initialTab: state.uri.queryParameters['tab'] == 'speed'
+                      ? 'speed'
+                      : null,
                 ),
               ),
             ],
@@ -202,6 +289,12 @@ class AppRouter {
     _sessionController.dispose();
     _freeRideController.dispose();
   }
+}
+
+class _SpeedNavExtra {
+  const _SpeedNavExtra({required this.controller, required this.view});
+  final SpeedSessionController controller;
+  final SpeedView view;
 }
 
 /// Helper to check auth and navigate to login if needed.

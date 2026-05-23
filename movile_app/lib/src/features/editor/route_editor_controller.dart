@@ -33,6 +33,7 @@ class RouteEditorController extends ChangeNotifier {
     this.routingService,
     this.geocodingService,
     String defaultRoutingProfile = 'driving',
+    this.onRouteDeleted,
   }) : _defaultRoutingProfile = defaultRoutingProfile {
     _routingProfile = _defaultRoutingProfile;
     _changesSub = _repo.changes.listen((_) => _onRepoChanged());
@@ -55,6 +56,10 @@ class RouteEditorController extends ChangeNotifier {
   /// Optional: when present, deletions are propagated to the remote backend
   /// so sync cannot re-download routes the user has deleted.
   SyncService? syncService;
+
+  /// Optional: called when a route is deleted, to allow listeners to react
+  /// (e.g., to tombstone demo routes in settings).
+  final Future<void> Function(String id)? onRouteDeleted;
 
   List<SessionRun> _sessionsForSelected = const [];
   List<SessionRun> get sessionsForSelected => _sessionsForSelected;
@@ -597,6 +602,7 @@ class RouteEditorController extends ChangeNotifier {
     } else {
       await _repo.deleteRoute(id);
     }
+    await onRouteDeleted?.call(id);
     if (_selected?.id == id) {
       _selected = null;
     }

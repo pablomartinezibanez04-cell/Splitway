@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:splitway_core/splitway_core.dart';
 
 import '../../data/repositories/local_draft_repository.dart';
+import '../../data/repositories/speed_repository.dart';
 import '../../data/repositories/supabase_repository.dart';
 
 /// Bidirectional sync between [LocalDraftRepository] (SQLite) and
@@ -22,6 +23,8 @@ class SyncService extends ChangeNotifier {
   SyncService({
     required this.local,
     required this.remote,
+    this.speedRepository,
+    this.userId,
     this.syncInterval = const Duration(minutes: 5),
   }) {
     _connectivitySubscription =
@@ -30,6 +33,8 @@ class SyncService extends ChangeNotifier {
 
   final LocalDraftRepository local;
   final SupabaseRepository remote;
+  final SpeedRepository? speedRepository;
+  final String? userId;
   final Duration syncInterval;
 
   Timer? _periodicTimer;
@@ -133,7 +138,7 @@ class SyncService extends ChangeNotifier {
     // a single UI rebuild (avoids one flicker per thumbnail loaded).
     final routesWithNewThumbnails = <RouteTemplate>[];
     for (final route in localRoutes) {
-      if (route.id == 'demo-oval') continue; // never push demo route
+      if (route.id == 'demo-jarama') continue; // never push demo route
       final remoteUpdated = remoteRouteTs[route.id];
       final needsPush = remoteUpdated == null ||
           route.createdAt.isAfter(remoteUpdated);
@@ -228,6 +233,12 @@ class SyncService extends ChangeNotifier {
           transferred++;
         }
       }
+    }
+
+    // --- Speed sessions ---
+    if (speedRepository != null && userId != null) {
+      transferred += await speedRepository!.pushAllForUser(userId!);
+      transferred += await speedRepository!.pullAllForUser(userId!);
     }
 
     return transferred;

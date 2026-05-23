@@ -25,6 +25,7 @@ int _dbCounter = 0;
 
 Future<({SplitwayLocalDatabase db, LocalDraftRepository repo})> _bootRepo({
   bool seed = true,
+  AppSettingsController? settingsController,
 }) async {
   // Each test needs a fresh in-memory DB; sqflite_common_ffi caches
   // connections by path, so we use a counter to keep them distinct.
@@ -34,7 +35,8 @@ Future<({SplitwayLocalDatabase db, LocalDraftRepository repo})> _bootRepo({
   );
   final repo = LocalDraftRepository(db);
   if (seed) {
-    await DemoSeed.ensureSeeded(repo);
+    final settings = settingsController ?? await AppSettingsController.load();
+    await DemoSeed.ensureSeeded(repo, settings);
   }
   return (db: db, repo: repo);
 }
@@ -53,11 +55,13 @@ void main() {
     await initializeDateFormatting('es_ES');
   });
 
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+
   test('SplitwayLocalDatabase + DemoSeed populate the demo route', () async {
     final boot = await _bootRepo();
     final routes = await boot.repo.getAllRoutes();
     expect(routes, hasLength(1));
-    expect(routes.first.name, 'Pista demo (Madrid)');
+    expect(routes.first.name, 'Circuito del Jarama');
     expect(routes.first.sectors, hasLength(2));
     expect(routes.first.startFinishGate, isA<GateDefinition>());
     await _shutdown(boot);
@@ -134,7 +138,7 @@ void main() {
       await tester.pump();
     }
 
-    expect(find.text('Pista demo (Madrid)'), findsAtLeastNWidgets(1));
+    expect(find.text('Circuito del Jarama'), findsAtLeastNWidgets(1));
 
     controller.dispose();
     await tester.runAsync(() => _shutdown(boot));
@@ -142,7 +146,6 @@ void main() {
 
   testWidgets('HistoryScreen shows the empty state with no sessions',
       (tester) async {
-    SharedPreferences.setMockInitialValues({});
     late ({SplitwayLocalDatabase db, LocalDraftRepository repo}) boot;
     late AppSettingsController settings;
     await tester.runAsync(() async {

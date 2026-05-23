@@ -178,6 +178,14 @@ class _LoggedInContent extends StatelessWidget {
                 },
               ),
               _MenuItem(
+                icon: Icons.speed_outlined,
+                label: l.drawerSpeed,
+                onTap: () {
+                  Navigator.pop(context);
+                  context.push('/speed');
+                },
+              ),
+              _MenuItem(
                 icon: Icons.settings_outlined,
                 label: l.drawerSettings,
                 onTap: () {
