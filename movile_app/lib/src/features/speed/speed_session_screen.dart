@@ -3,10 +3,12 @@ import 'package:splitway_mobile/l10n/app_localizations.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../services/speed/speed_metric.dart';
+import '../../services/speed/speed_metric_labels.dart';
 import 'speed_session_controller.dart';
 import 'speed_setup_screen.dart';
 import 'widgets/countdown_overlay.dart';
 import 'widgets/false_start_overlay.dart';
+import 'widgets/speed_category_header.dart';
 import 'widgets/speed_metric_card.dart';
 import 'widgets/speed_metric_tile.dart';
 
@@ -83,63 +85,116 @@ class _SpeedSessionScreenState extends State<SpeedSessionScreen> {
   }
 
   Widget _speedHeader(SpeedSessionController c) {
-    return ValueListenableBuilder<double>(
-      valueListenable: c.service.instantaneousKmh,
-      builder: (_, v, __) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        child: Column(
-          children: [
-            Text(
-              '${v.round()}',
-              style: const TextStyle(
-                fontSize: 96,
-                fontWeight: FontWeight.w900,
-                color: Colors.white,
-                height: 1,
-              ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          ValueListenableBuilder<double>(
+            valueListenable: c.service.instantaneousKmh,
+            builder: (_, v, __) => Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '${v.round()}',
+                  style: const TextStyle(
+                    fontSize: 80,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    height: 1,
+                  ),
+                ),
+                const Text(
+                  'km/h',
+                  style: TextStyle(color: Colors.white70, fontSize: 14),
+                ),
+              ],
             ),
-            const Text(
-              'km/h',
-              style: TextStyle(color: Colors.white70, fontSize: 16),
+          ),
+          ValueListenableBuilder<Duration>(
+            valueListenable: c.service.elapsed,
+            builder: (_, d, __) => Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _formatChrono(d),
+                  style: const TextStyle(
+                    fontSize: 40,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    height: 1,
+                    fontFeatures: [FontFeature.tabularFigures()],
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'mm:ss.SSS',
+                  style: TextStyle(color: Colors.white54, fontSize: 11),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
+  static String _formatChrono(Duration d) {
+    final m = d.inMinutes;
+    final s = d.inSeconds % 60;
+    final ms = d.inMilliseconds % 1000;
+    return '${m.toString().padLeft(2, '0')}:'
+        '${s.toString().padLeft(2, '0')}.'
+        '${ms.toString().padLeft(3, '0')}';
+  }
+
   Widget _body(SpeedSessionController c) {
+    final l = AppLocalizations.of(context);
     return ValueListenableBuilder(
       valueListenable: c.service.results,
       builder: (_, results, __) {
-        // Render metrics in the canonical SpeedMetric enum order, not the
-        // (non-deterministic) Set insertion order, so the layout is stable
-        // across sessions regardless of the order the user selected them.
-        final metrics = SpeedMetric.values
-            .where(c.metrics.contains)
-            .toList();
+        final groups = <SpeedMetricCategory, List<SpeedMetric>>{};
+        for (final cat in SpeedMetricCategory.values) {
+          final items = cat.metrics.where(c.metrics.contains).toList();
+          if (items.isNotEmpty) groups[cat] = items;
+        }
         if (widget.view == SpeedView.grid) {
-          return GridView.builder(
+          return ListView(
             padding: const EdgeInsets.all(12),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              mainAxisExtent: 96,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-            ),
-            itemCount: metrics.length,
-            itemBuilder: (_, i) {
-              final m = metrics[i];
-              return SpeedMetricCard(metric: m, value: results[m]);
-            },
+            children: [
+              for (final entry in groups.entries) ...[
+                SpeedCategoryHeader(label: entry.key.label(l), light: true),
+                GridView.count(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: (MediaQuery.of(context).size.width - 36) /
+                      2 /
+                      96,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    for (final m in entry.value)
+                      SpeedMetricCard(metric: m, value: results[m]),
+                  ],
+                ),
+              ],
+            ],
           );
         }
-        return ListView.builder(
-          itemCount: metrics.length,
-          itemBuilder: (_, i) {
-            final m = metrics[i];
-            return SpeedMetricTile(metric: m, value: results[m]);
-          },
+        return ListView(
+          children: [
+            for (final entry in groups.entries) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: SpeedCategoryHeader(
+                    label: entry.key.label(l), light: true),
+              ),
+              for (final m in entry.value)
+                SpeedMetricTile(metric: m, value: results[m]),
+            ],
+          ],
         );
       },
     );

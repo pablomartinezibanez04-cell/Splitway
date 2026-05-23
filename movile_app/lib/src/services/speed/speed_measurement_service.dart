@@ -44,6 +44,7 @@ class SpeedMeasurementService {
       ValueNotifier(const {});
   final ValueNotifier<SpeedPhase> phase = ValueNotifier(SpeedPhase.idle);
   final ValueNotifier<double> instantaneousKmh = ValueNotifier(0);
+  final ValueNotifier<Duration> elapsed = ValueNotifier(Duration.zero);
   final StreamController<FalseStartDetected> _falseStart =
       StreamController.broadcast();
 
@@ -132,6 +133,7 @@ class SpeedMeasurementService {
     results.dispose();
     phase.dispose();
     instantaneousKmh.dispose();
+    elapsed.dispose();
   }
 
   void arm() {
@@ -146,6 +148,7 @@ class SpeedMeasurementService {
     _resetResults();
     _previousSample = null;
     _reactionCandidateTime = null;
+    elapsed.value = Duration.zero;
   }
 
   void stop() {
@@ -161,6 +164,7 @@ class SpeedMeasurementService {
     results.dispose();
     phase.dispose();
     instantaneousKmh.dispose();
+    elapsed.dispose();
   }
 
   @visibleForTesting
@@ -180,6 +184,7 @@ class SpeedMeasurementService {
         _checkFalseStart(s);
         break;
       case SpeedPhase.running:
+        elapsed.value = s.tSinceStart;
         _detectMilestones(s);
         break;
       case SpeedPhase.idle:
