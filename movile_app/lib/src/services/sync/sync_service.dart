@@ -138,7 +138,7 @@ class SyncService extends ChangeNotifier {
     // a single UI rebuild (avoids one flicker per thumbnail loaded).
     final routesWithNewThumbnails = <RouteTemplate>[];
     for (final route in localRoutes) {
-      if (route.id == 'demo-oval') continue; // never push demo route
+      if (route.id == 'demo-jarama') continue; // never push demo route
       final remoteUpdated = remoteRouteTs[route.id];
       final needsPush = remoteUpdated == null ||
           route.createdAt.isAfter(remoteUpdated);

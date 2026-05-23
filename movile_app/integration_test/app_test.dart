@@ -56,7 +56,7 @@ void main() {
 
       // Editor is the initial tab — should show the demo route chip.
       expect(find.text('Editor'), findsOneWidget);
-      expect(find.text('Pista demo (Madrid)'), findsAtLeastNWidgets(1));
+      expect(find.text('Circuito del Jarama'), findsAtLeastNWidgets(1));
     });
 
     testWidgets('navigates to Session tab and shows route selector',
