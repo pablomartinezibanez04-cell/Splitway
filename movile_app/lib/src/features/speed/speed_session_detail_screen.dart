@@ -4,13 +4,29 @@ import 'package:intl/intl.dart';
 import 'package:splitway_mobile/l10n/app_localizations.dart';
 
 import '../../services/speed/speed_metric.dart';
+import '../../services/speed/speed_metric_labels.dart';
 import '../../services/speed/speed_session.dart';
+import 'widgets/speed_category_header.dart';
 import 'widgets/speed_metric_tile.dart';
 
 class SpeedSessionDetailScreen extends StatelessWidget {
   const SpeedSessionDetailScreen({super.key, required this.session});
 
   final SpeedSession session;
+
+  List<Widget> _categorySection(AppLocalizations l, SpeedMetricCategory cat) {
+    final metrics =
+        cat.metrics.where(session.selectedMetrics.contains).toList();
+    if (metrics.isEmpty) return const [];
+    return [
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: SpeedCategoryHeader(label: cat.label(l), light: true),
+      ),
+      for (final m in metrics)
+        SpeedMetricTile(metric: m, value: session.results[m]),
+    ];
+  }
 
   void _goToHistory(BuildContext context) {
     if (context.canPop()) {
@@ -71,9 +87,8 @@ class SpeedSessionDetailScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              for (final m in SpeedMetric.values
-                  .where(session.selectedMetrics.contains))
-                SpeedMetricTile(metric: m, value: session.results[m]),
+              for (final cat in SpeedMetricCategory.values)
+                ..._categorySection(l, cat),
             ],
           ),
         ),

@@ -2,6 +2,14 @@ import 'package:splitway_mobile/l10n/app_localizations.dart';
 
 import 'speed_metric.dart';
 
+extension SpeedMetricCategoryLabel on SpeedMetricCategory {
+  String label(AppLocalizations l) => switch (this) {
+        SpeedMetricCategory.drag => l.speedCategoryDrag,
+        SpeedMetricCategory.stopwatch => l.speedCategoryStopwatch,
+        SpeedMetricCategory.other => l.speedCategoryOther,
+      };
+}
+
 extension SpeedMetricLabel on SpeedMetric {
   String label(AppLocalizations l) {
     switch (this) {

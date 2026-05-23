@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../data/repositories/speed_repository.dart';
@@ -73,17 +72,17 @@ class SpeedSessionController extends ChangeNotifier {
 
   void _startCountdown() {
     _countdownTimer?.cancel();
-    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) async {
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (_disposed) return;
       if (countdownValue > 0) {
-        await beep.tick();
+        beep.tick();
         countdownValue--;
         notifyListeners();
       }
       if (countdownValue == 0) {
         _countdownTimer?.cancel();
-        await beep.go();
-        await _go();
+        beep.go();
+        _go();
       }
     });
   }
@@ -124,8 +123,7 @@ class SpeedSessionController extends ChangeNotifier {
     if (_disposed) return;
     _countdownTimer?.cancel();
     await service.liveStop();
-    await beep.falseStart();
-    HapticFeedback.heavyImpact();
+    beep.falseStart();
     phase = SpeedScreenPhase.falseStart;
     notifyListeners();
   }

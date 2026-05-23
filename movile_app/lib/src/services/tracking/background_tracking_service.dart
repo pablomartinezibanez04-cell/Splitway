@@ -51,7 +51,21 @@ class BackgroundTrackingService {
         notificationText: body,
         callback: _taskCallback,
       );
-      _running = result is ServiceRequestSuccess;
+      if (result is ServiceRequestSuccess) {
+        _running = true;
+      } else if (result is ServiceRequestFailure &&
+          result.error is ServiceAlreadyStartedException) {
+        // Service survived a hot-reload or app kill without a clean stop.
+        // Adopt the orphaned service and reset its notification content.
+        _running = true;
+        FlutterForegroundTask.updateService(
+          notificationTitle: title,
+          notificationText: body,
+        );
+      } else {
+        debugPrint(
+            'BackgroundTrackingService.startTracking failed: ${(result as ServiceRequestFailure).error}');
+      }
       return _running;
     } catch (e) {
       debugPrint('BackgroundTrackingService.startTracking failed: $e');

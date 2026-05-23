@@ -4,64 +4,65 @@ import 'package:flutter/services.dart';
 
 /// Plays the countdown ticks, GO cue, and false-start cue.
 ///
-/// Uses `SystemSound` + `HapticFeedback` as the primary mechanism so that the
-/// feature works on every device without bundled audio assets. If real MP3
-/// assets are dropped into `assets/sounds/` they are also played on top, so
-/// users can override with custom drag-strip sounds.
+/// Each call creates a short-lived [AudioPlayer] that auto-disposes on
+/// completion, avoiding state issues with reusing a single player instance
+/// across rapid successive plays.
 class BeepPlayer {
   BeepPlayer();
 
-  final AudioPlayer _tick = AudioPlayer();
-  final AudioPlayer _go = AudioPlayer();
-  final AudioPlayer _falseStart = AudioPlayer();
+  static const _tickSrc = 'sounds/beep.mp3';
+  static const _goSrc = 'sounds/beep_go.mp3';
+  static const _falseSrc = 'sounds/beep_false.mp3';
+
   bool _assetsReady = false;
+  final List<AudioPlayer> _active = [];
 
   Future<void> preload() async {
     try {
-      await _tick.setSource(AssetSource('sounds/beep.mp3'));
-      await _go.setSource(AssetSource('sounds/beep_go.mp3'));
-      await _falseStart.setSource(AssetSource('sounds/beep_false.mp3'));
-      await _tick.setReleaseMode(ReleaseMode.stop);
-      await _go.setReleaseMode(ReleaseMode.stop);
-      await _falseStart.setReleaseMode(ReleaseMode.stop);
+      final test = AudioPlayer();
+      await test.setSource(AssetSource(_tickSrc));
+      await test.dispose();
       _assetsReady = true;
     } catch (e) {
-      debugPrint('BeepPlayer.preload failed (assets invalid?): $e');
-      _assetsReady = false;
+      debugPrint('BeepPlayer.preload failed (assets missing?): $e');
     }
   }
 
-  Future<void> tick() async {
-    SystemSound.play(SystemSoundType.click);
+  void tick() {
     HapticFeedback.lightImpact();
-    await _tryAsset(_tick);
+    _fire(_tickSrc);
   }
 
-  Future<void> go() async {
-    SystemSound.play(SystemSoundType.alert);
+  void go() {
     HapticFeedback.mediumImpact();
-    await _tryAsset(_go);
+    _fire(_goSrc);
   }
 
-  Future<void> falseStart() async {
-    SystemSound.play(SystemSoundType.alert);
+  void falseStart() {
     HapticFeedback.heavyImpact();
-    await _tryAsset(_falseStart);
+    _fire(_falseSrc);
   }
 
-  Future<void> _tryAsset(AudioPlayer p) async {
+  void _fire(String src) {
     if (!_assetsReady) return;
-    try {
-      await p.stop();
-      await p.resume();
-    } catch (e) {
+    final p = AudioPlayer();
+    _active.add(p);
+    p.onPlayerComplete.listen((_) {
+      _active.remove(p);
+      p.dispose();
+    });
+    p.play(AssetSource(src)).catchError((Object e) {
       debugPrint('BeepPlayer playback failed: $e');
-    }
+      _active.remove(p);
+      p.dispose();
+    });
   }
 
   Future<void> dispose() async {
-    await _tick.dispose();
-    await _go.dispose();
-    await _falseStart.dispose();
+    final copy = List<AudioPlayer>.of(_active);
+    _active.clear();
+    for (final p in copy) {
+      await p.dispose();
+    }
   }
 }

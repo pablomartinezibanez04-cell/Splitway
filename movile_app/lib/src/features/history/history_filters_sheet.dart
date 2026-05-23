@@ -333,7 +333,10 @@ class _FiltersSheetBodyState extends State<_FiltersSheetBody> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 TextButton(
-                  onPressed: _resetDraft,
+                  onPressed: () => Navigator.pop(
+                    context,
+                    HistoryFilters(query: widget.initial.query),
+                  ),
                   child: Text(l.historyFiltersClear),
                 ),
                 FilledButton(

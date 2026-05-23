@@ -1,3 +1,13 @@
+enum SpeedMetricCategory {
+  drag,
+  stopwatch,
+  other;
+
+  List<SpeedMetric> get metrics => SpeedMetric.values
+      .where((m) => m.category == this)
+      .toList();
+}
+
 enum SpeedMetric {
   reactionTime,
   sixtyFoot,
@@ -18,6 +28,17 @@ enum SpeedMetric {
   }
 
   bool get isTimeBased => this != SpeedMetric.topSpeed;
+
+  SpeedMetricCategory get category => switch (this) {
+        SpeedMetric.sixtyFoot => SpeedMetricCategory.drag,
+        SpeedMetric.eighthMile => SpeedMetricCategory.drag,
+        SpeedMetric.quarterMile => SpeedMetricCategory.drag,
+        SpeedMetric.zeroTo50 => SpeedMetricCategory.stopwatch,
+        SpeedMetric.zeroTo100 => SpeedMetricCategory.stopwatch,
+        SpeedMetric.zeroTo200 => SpeedMetricCategory.stopwatch,
+        SpeedMetric.reactionTime => SpeedMetricCategory.other,
+        SpeedMetric.topSpeed => SpeedMetricCategory.other,
+      };
 
   String formatValue(double? value) {
     if (value == null) return '-';

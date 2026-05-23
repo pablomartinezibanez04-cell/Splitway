@@ -5,6 +5,7 @@ import '../../services/garage/garage_service.dart';
 import '../../services/garage/vehicle.dart';
 import '../../services/speed/speed_metric.dart';
 import '../../services/speed/speed_metric_labels.dart';
+import 'widgets/speed_category_header.dart';
 
 enum SpeedView { list, grid }
 
@@ -132,22 +133,27 @@ class _SpeedSetupScreenState extends State<SpeedSetupScreen> {
 
   Widget _metricChecks(AppLocalizations l) {
     return Column(
-      children: SpeedMetric.values.map((m) {
-        return CheckboxListTile(
-          contentPadding: EdgeInsets.zero,
-          title: Text(m.label(l)),
-          value: _metrics.contains(m),
-          onChanged: (v) {
-            setState(() {
-              if (v == true) {
-                _metrics.add(m);
-              } else {
-                _metrics.remove(m);
-              }
-            });
-          },
-        );
-      }).toList(),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final cat in SpeedMetricCategory.values) ...[
+          SpeedCategoryHeader(label: cat.label(l)),
+          for (final m in cat.metrics)
+            CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(m.label(l)),
+              value: _metrics.contains(m),
+              onChanged: (v) {
+                setState(() {
+                  if (v == true) {
+                    _metrics.add(m);
+                  } else {
+                    _metrics.remove(m);
+                  }
+                });
+              },
+            ),
+        ],
+      ],
     );
   }
 
