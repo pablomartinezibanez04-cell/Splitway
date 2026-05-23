@@ -18,6 +18,7 @@ import '../home/home_shell.dart';
 import 'route_detail_screen.dart';
 import 'route_editor_controller.dart';
 import 'widgets/difficulty_selector.dart';
+import 'widgets/location_search_bar.dart';
 import 'widgets/route_grid_tile.dart';
 import 'widgets/route_list_tile.dart';
 
@@ -385,6 +386,19 @@ class _DrawingViewState extends State<_DrawingView> {
                   onFreehandPoint: controller.addFreehandPoint,
                   onFreehandEnd: controller.endFreehandStroke,
                 ),
+                if (widget.config.hasMapbox)
+                  Positioned(
+                    top: 12,
+                    left: 12,
+                    right: 12,
+                    child: SafeArea(
+                      child: LocationSearchBar(
+                        accessToken: widget.config.mapboxToken!,
+                        onLocationSelected: (point) =>
+                            _flyToNotifier.flyTo(point),
+                      ),
+                    ),
+                  ),
                 Positioned(
                   right: 12,
                   bottom: 12,
