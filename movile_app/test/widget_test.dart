@@ -55,6 +55,8 @@ void main() {
     await initializeDateFormatting('es_ES');
   });
 
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+
   test('SplitwayLocalDatabase + DemoSeed populate the demo route', () async {
     final boot = await _bootRepo();
     final routes = await boot.repo.getAllRoutes();
