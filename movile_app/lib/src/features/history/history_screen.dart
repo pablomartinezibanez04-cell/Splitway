@@ -210,7 +210,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
               l.historyDeletedRoute,
           vehicleId: session.vehicleId,
           date: session.startedAt,
-          maxSpeedMps: session.maxSpeedMps,
           totalDistanceMeters: session.totalDistanceMeters,
         ),
       _FreeRideEntry(:final ride) => HistoryEntryFields(
@@ -218,7 +217,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
           displayName: ride.name ?? l.historyFreeRideLabel,
           vehicleId: ride.vehicleId,
           date: ride.startedAt,
-          maxSpeedMps: ride.maxSpeedMps,
           totalDistanceMeters: ride.totalDistanceMeters,
         ),
     };
@@ -229,7 +227,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
       displayName: s.name,
       vehicleId: s.vehicleId,
       date: s.startedAt,
-      topSpeedKmh: s.results[SpeedMetric.topSpeed],
     );
   }
 
@@ -323,23 +320,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
         label: Text(_dateRangeChipLabel(l, dateRange)),
         onDeleted: () =>
             _updateFilters(_filters.copyWith(dateRange: null)),
-      ));
-    }
-
-    // Min max speed chip.
-    final minSpeedMps = _filters.minMaxSpeedMps;
-    if (minSpeedMps != null) {
-      final speedDisplay = unit == UnitSystem.imperial
-          ? minSpeedMps * 2.23694
-          : minSpeedMps * 3.6;
-      final speedStr = speedDisplay.toStringAsFixed(1);
-      final speedWithUnit = unit == UnitSystem.imperial
-          ? '$speedStr mph'
-          : '$speedStr km/h';
-      chips.add(InputChip(
-        label: Text(l.historyFilterMinSpeedChip(speedWithUnit)),
-        onDeleted: () =>
-            _updateFilters(_filters.copyWith(minMaxSpeedMps: null)),
       ));
     }
 

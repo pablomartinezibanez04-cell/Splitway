@@ -1072,15 +1072,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get historyDateCustom => 'Personalizado…';
 
   @override
-  String get historyFilterMinMaxSpeedLabel => 'Velocidad máx. mínima';
-
-  @override
   String get historyFilterMinDistanceLabel => 'Distancia mínima';
-
-  @override
-  String historyFilterMinSpeedChip(String value) {
-    return '≥ $value';
-  }
 
   @override
   String historyFilterMinDistanceChip(String value) {
@@ -1330,13 +1322,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get mapStyleLayersTooltip => 'Estilo del mapa';
 
   @override
-  String get navSpeed => 'Velocidad';
+  String get navSpeed => 'Test de velocidad';
 
   @override
-  String get drawerSpeed => 'Velocidad';
+  String get drawerSpeed => 'Test de velocidad';
 
   @override
-  String get speedSetupTitle => 'Velocidad';
+  String get speedSetupTitle => 'Test de velocidad';
 
   @override
   String get speedSetupVehicleSection => 'Vehículo';
@@ -1440,7 +1432,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get speedMetricTopSpeed => 'Velocidad máxima';
 
   @override
-  String get speedHistoryTab => 'Velocidad';
+  String get speedHistoryTab => 'Test de velocidad';
 
   @override
   String get speedHistoryEmpty => 'Aún no hay sesiones de velocidad';

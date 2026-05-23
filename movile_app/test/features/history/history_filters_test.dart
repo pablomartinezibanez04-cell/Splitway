@@ -30,7 +30,6 @@ void main() {
           start: DateTime(2026, 1, 1),
           end: DateTime(2026, 2, 1),
         ),
-        minMaxSpeedMps: 10,
         minDistanceMeters: 1000,
       );
       expect(f.clear().isEmpty, isTrue);
@@ -44,12 +43,12 @@ void main() {
           start: DateTime(2026, 1, 1),
           end: DateTime(2026, 2, 1),
         ),
-        minMaxSpeedMps: 20,
+        minDistanceMeters: 5000,
       );
       final next = f.copyWith(dateRange: null, query: 'mugello');
-      expect(next.query, 'mugello');           // overridden
-      expect(next.minMaxSpeedMps, 20);         // preserved
-      expect(next.dateRange, isNull);          // explicitly cleared
+      expect(next.query, 'mugello');             // overridden
+      expect(next.minDistanceMeters, 5000);      // preserved
+      expect(next.dateRange, isNull);            // explicitly cleared
     });
   });
 
@@ -68,7 +67,6 @@ void main() {
       String name = 'Test ride',
       String? vehicleId,
       DateTime? date,
-      double maxSpeedMps = 25,
       double totalDistanceMeters = 5000,
     }) {
       return HistoryEntryFields(
@@ -76,7 +74,6 @@ void main() {
         displayName: name,
         vehicleId: vehicleId,
         date: date ?? DateTime(2026, 5, 15, 12),
-        maxSpeedMps: maxSpeedMps,
         totalDistanceMeters: totalDistanceMeters,
       );
     }
@@ -127,12 +124,6 @@ void main() {
           isFalse);
     });
 
-    test('minMaxSpeedMps is a lower bound (inclusive)', () {
-      const f = HistoryFilters(minMaxSpeedMps: 30);
-      expect(matchesHistoryFilters(f, make(maxSpeedMps: 29.99)), isFalse);
-      expect(matchesHistoryFilters(f, make(maxSpeedMps: 30)), isTrue);
-    });
-
     test('minDistanceMeters is a lower bound (inclusive)', () {
       const f = HistoryFilters(minDistanceMeters: 5000);
       expect(matchesHistoryFilters(f, make(totalDistanceMeters: 4999)),
@@ -142,11 +133,11 @@ void main() {
     });
 
     test('all groups AND together', () {
-      final f = HistoryFilters(
+      const f = HistoryFilters(
         query: 'monza',
-        kinds: const {HistoryEntryKind.session},
-        vehicleIds: const {'v1'},
-        minMaxSpeedMps: 20,
+        kinds: {HistoryEntryKind.session},
+        vehicleIds: {'v1'},
+        minDistanceMeters: 4000,
       );
       expect(
         matchesHistoryFilters(
@@ -154,7 +145,7 @@ void main() {
             make(
               name: 'Monza GP',
               vehicleId: 'v1',
-              maxSpeedMps: 25,
+              totalDistanceMeters: 5000,
             )),
         isTrue,
       );
@@ -162,7 +153,22 @@ void main() {
       expect(
         matchesHistoryFilters(
             f,
-            make(name: 'Monza GP', vehicleId: 'v2', maxSpeedMps: 25)),
+            make(
+              name: 'Monza GP',
+              vehicleId: 'v2',
+              totalDistanceMeters: 5000,
+            )),
+        isFalse,
+      );
+      // Distance below threshold:
+      expect(
+        matchesHistoryFilters(
+            f,
+            make(
+              name: 'Monza GP',
+              vehicleId: 'v1',
+              totalDistanceMeters: 1000,
+            )),
         isFalse,
       );
     });
@@ -173,13 +179,11 @@ void main() {
       String name = 'Speed run',
       String? vehicleId,
       DateTime? date,
-      double? topSpeedKmh = 120,
     }) {
       return SpeedSessionFields(
         displayName: name,
         vehicleId: vehicleId,
         date: date ?? DateTime(2026, 5, 15, 10),
-        topSpeedKmh: topSpeedKmh,
       );
     }
 
@@ -214,21 +218,6 @@ void main() {
     test('minDistanceMeters is IGNORED for speed sessions', () {
       const f = HistoryFilters(minDistanceMeters: 10000);
       expect(matchesSpeedFilters(f, make()), isTrue);
-    });
-
-    test('minMaxSpeed compares (km/h) against threshold in m/s', () {
-      // threshold = 30 m/s ≈ 108 km/h
-      const f = HistoryFilters(minMaxSpeedMps: 30);
-      expect(matchesSpeedFilters(f, make(topSpeedKmh: 100)), isFalse);
-      expect(matchesSpeedFilters(f, make(topSpeedKmh: 110)), isTrue);
-    });
-
-    test('null topSpeed fails minMaxSpeed but passes when filter is absent',
-        () {
-      const filtered = HistoryFilters(minMaxSpeedMps: 1);
-      expect(matchesSpeedFilters(filtered, make(topSpeedKmh: null)), isFalse);
-      expect(matchesSpeedFilters(const HistoryFilters(),
-          make(topSpeedKmh: null)), isTrue);
     });
   });
 }

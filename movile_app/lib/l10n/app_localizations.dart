@@ -1952,23 +1952,11 @@ abstract class AppLocalizations {
   /// **'Custom…'**
   String get historyDateCustom;
 
-  /// No description provided for @historyFilterMinMaxSpeedLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Min max speed'**
-  String get historyFilterMinMaxSpeedLabel;
-
   /// No description provided for @historyFilterMinDistanceLabel.
   ///
   /// In en, this message translates to:
   /// **'Min distance'**
   String get historyFilterMinDistanceLabel;
-
-  /// No description provided for @historyFilterMinSpeedChip.
-  ///
-  /// In en, this message translates to:
-  /// **'≥ {value}'**
-  String historyFilterMinSpeedChip(String value);
 
   /// No description provided for @historyFilterMinDistanceChip.
   ///
@@ -2405,19 +2393,19 @@ abstract class AppLocalizations {
   /// No description provided for @navSpeed.
   ///
   /// In en, this message translates to:
-  /// **'Speed'**
+  /// **'Speed test'**
   String get navSpeed;
 
   /// No description provided for @drawerSpeed.
   ///
   /// In en, this message translates to:
-  /// **'Speed'**
+  /// **'Speed test'**
   String get drawerSpeed;
 
   /// No description provided for @speedSetupTitle.
   ///
   /// In en, this message translates to:
-  /// **'Speed'**
+  /// **'Speed test'**
   String get speedSetupTitle;
 
   /// No description provided for @speedSetupVehicleSection.
@@ -2621,7 +2609,7 @@ abstract class AppLocalizations {
   /// No description provided for @speedHistoryTab.
   ///
   /// In en, this message translates to:
-  /// **'Speed'**
+  /// **'Speed test'**
   String get speedHistoryTab;
 
   /// No description provided for @speedHistoryEmpty.

@@ -19,7 +19,6 @@ class HistoryFilters {
     this.kinds = const <HistoryEntryKind>{},
     this.vehicleIds = const <String?>{},
     this.dateRange,
-    this.minMaxSpeedMps,
     this.minDistanceMeters,
   });
 
@@ -31,7 +30,6 @@ class HistoryFilters {
   final Set<String?> vehicleIds;
 
   final DateTimeRange? dateRange;
-  final double? minMaxSpeedMps;
   final double? minDistanceMeters;
 
   bool get isEmpty =>
@@ -39,7 +37,6 @@ class HistoryFilters {
       kinds.isEmpty &&
       vehicleIds.isEmpty &&
       dateRange == null &&
-      minMaxSpeedMps == null &&
       minDistanceMeters == null;
 
   /// Number of structured filter groups currently active. The query is
@@ -49,7 +46,6 @@ class HistoryFilters {
     if (kinds.isNotEmpty) n++;
     if (vehicleIds.isNotEmpty) n++;
     if (dateRange != null) n++;
-    if (minMaxSpeedMps != null) n++;
     if (minDistanceMeters != null) n++;
     return n;
   }
@@ -59,7 +55,6 @@ class HistoryFilters {
     Set<HistoryEntryKind>? kinds,
     Set<String?>? vehicleIds,
     Object? dateRange = _sentinel,
-    Object? minMaxSpeedMps = _sentinel,
     Object? minDistanceMeters = _sentinel,
   }) {
     return HistoryFilters(
@@ -69,9 +64,6 @@ class HistoryFilters {
       dateRange: identical(dateRange, _sentinel)
           ? this.dateRange
           : dateRange as DateTimeRange?,
-      minMaxSpeedMps: identical(minMaxSpeedMps, _sentinel)
-          ? this.minMaxSpeedMps
-          : minMaxSpeedMps as double?,
       minDistanceMeters: identical(minDistanceMeters, _sentinel)
           ? this.minDistanceMeters
           : minDistanceMeters as double?,
@@ -92,7 +84,6 @@ class HistoryEntryFields {
     required this.displayName,
     required this.vehicleId,
     required this.date,
-    required this.maxSpeedMps,
     required this.totalDistanceMeters,
   });
 
@@ -100,7 +91,6 @@ class HistoryEntryFields {
   final String displayName;
   final String? vehicleId;
   final DateTime date;
-  final double maxSpeedMps;
   final double totalDistanceMeters;
 }
 
@@ -110,13 +100,11 @@ class SpeedSessionFields {
     required this.displayName,
     required this.vehicleId,
     required this.date,
-    required this.topSpeedKmh,
   });
 
   final String displayName;
   final String? vehicleId;
   final DateTime date;
-  final double? topSpeedKmh;
 }
 
 /// Case- and diacritics-insensitive fold used by the free-text search.
@@ -179,9 +167,6 @@ bool matchesHistoryFilters(HistoryFilters f, HistoryEntryFields e) {
   if (f.kinds.isNotEmpty && !f.kinds.contains(e.kind)) return false;
   if (!_matchesVehicle(f.vehicleIds, e.vehicleId)) return false;
   if (!_matchesDate(f.dateRange, e.date)) return false;
-  if (f.minMaxSpeedMps != null && e.maxSpeedMps < f.minMaxSpeedMps!) {
-    return false;
-  }
   if (f.minDistanceMeters != null &&
       e.totalDistanceMeters < f.minDistanceMeters!) {
     return false;
@@ -197,11 +182,5 @@ bool matchesSpeedFilters(HistoryFilters f, SpeedSessionFields s) {
   if (!_matchesQuery(f.query, s.displayName)) return false;
   if (!_matchesVehicle(f.vehicleIds, s.vehicleId)) return false;
   if (!_matchesDate(f.dateRange, s.date)) return false;
-  if (f.minMaxSpeedMps != null) {
-    final top = s.topSpeedKmh;
-    if (top == null) return false;
-    final topMps = top / 3.6; // km/h → m/s
-    if (topMps < f.minMaxSpeedMps!) return false;
-  }
   return true;
 }

@@ -10,12 +10,6 @@ import 'history_filters.dart';
 // Unit-conversion helpers (internal — not exported).
 // ---------------------------------------------------------------------------
 
-double _mpsToDisplay(double mps, UnitSystem unit) =>
-    unit == UnitSystem.imperial ? mps * 2.23694 : mps * 3.6;
-
-double _displayToMps(double display, UnitSystem unit) =>
-    unit == UnitSystem.imperial ? display / 2.23694 : display / 3.6;
-
 double _metersToDisplay(double meters, UnitSystem unit) =>
     unit == UnitSystem.imperial ? meters / 1609.344 : meters / 1000.0;
 
@@ -75,8 +69,7 @@ class _FiltersSheetBody extends StatefulWidget {
 class _FiltersSheetBodyState extends State<_FiltersSheetBody> {
   late HistoryFilters _draft;
 
-  // Text controllers for speed and distance fields.
-  late final TextEditingController _speedCtrl;
+  // Text controller for the minimum-distance field.
   late final TextEditingController _distanceCtrl;
 
   @override
@@ -84,38 +77,26 @@ class _FiltersSheetBodyState extends State<_FiltersSheetBody> {
     super.initState();
     _draft = widget.initial;
 
-    final speedDisplay = _draft.minMaxSpeedMps == null
-        ? ''
-        : _mpsToDisplay(_draft.minMaxSpeedMps!, widget.unitSystem)
-            .toStringAsFixed(1);
     final distDisplay = _draft.minDistanceMeters == null
         ? ''
         : _metersToDisplay(_draft.minDistanceMeters!, widget.unitSystem)
             .toStringAsFixed(2);
 
-    _speedCtrl = TextEditingController(text: speedDisplay);
     _distanceCtrl = TextEditingController(text: distDisplay);
   }
 
   @override
   void dispose() {
-    _speedCtrl.dispose();
     _distanceCtrl.dispose();
     super.dispose();
   }
 
   // Parses the current text fields into the draft.
   HistoryFilters _draftWithTextFields() {
-    final speedText = _speedCtrl.text.trim();
     final distText = _distanceCtrl.text.trim();
-
-    final speedVal = double.tryParse(speedText);
     final distVal = double.tryParse(distText);
 
     return _draft.copyWith(
-      minMaxSpeedMps: speedVal == null
-          ? null
-          : _displayToMps(speedVal, widget.unitSystem),
       minDistanceMeters: distVal == null
           ? null
           : _displayToMeters(distVal, widget.unitSystem),
@@ -124,10 +105,8 @@ class _FiltersSheetBodyState extends State<_FiltersSheetBody> {
 
   void _resetDraft() {
     setState(() {
-      _draft = const HistoryFilters(query: '');
       // Preserve the live query so it isn't wiped by Clear.
       _draft = HistoryFilters(query: widget.initial.query);
-      _speedCtrl.clear();
       _distanceCtrl.clear();
     });
   }
@@ -150,8 +129,6 @@ class _FiltersSheetBodyState extends State<_FiltersSheetBody> {
     final theme = Theme.of(context);
     final now = DateTime.now();
 
-    final speedSuffix =
-        widget.unitSystem == UnitSystem.imperial ? 'mph' : 'km/h';
     final distSuffix = widget.unitSystem == UnitSystem.imperial ? 'mi' : 'km';
 
     return SingleChildScrollView(
@@ -324,25 +301,11 @@ class _FiltersSheetBodyState extends State<_FiltersSheetBody> {
                 ),
               ],
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 8),
             Text(
               _dateRangeText(l),
-              style: theme.textTheme.bodySmall,
-            ),
-
-            // ------- Min max speed -------
-            const SizedBox(height: 16),
-            Text(l.historyFilterMinMaxSpeedLabel,
-                style: theme.textTheme.labelLarge),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _speedCtrl,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(
-                isDense: true,
-                border: const OutlineInputBorder(),
-                suffixText: speedSuffix,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
               ),
             ),
 
