@@ -150,6 +150,23 @@ class _HistoryScreenState extends State<HistoryScreen> {
     setState(() => _filters = const HistoryFilters());
   }
 
+  /// Drops vehicle ids from the filter that no longer exist in the garage.
+  /// Uses addPostFrameCallback to avoid calling setState during build.
+  void _pruneStaleVehicleIds() {
+    final svc = widget.garageService;
+    if (svc == null) return;
+    if (_filters.vehicleIds.isEmpty) return;
+    final known = svc.vehicles.map((v) => v.id).toSet();
+    final pruned =
+        _filters.vehicleIds.where((id) => id == null || known.contains(id)).toSet();
+    if (pruned.length != _filters.vehicleIds.length) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        setState(() => _filters = _filters.copyWith(vehicleIds: pruned));
+      });
+    }
+  }
+
   // --- Filter mapping helpers ---
 
   HistoryEntryFields _toFilterFields(AppLocalizations l, _HistoryEntry e) {
@@ -180,6 +197,149 @@ class _HistoryScreenState extends State<HistoryScreen> {
       vehicleId: s.vehicleId,
       date: s.startedAt,
       topSpeedKmh: s.results[SpeedMetric.topSpeed],
+    );
+  }
+
+  // --- Active filter chips row ---
+
+  /// Returns a label for the date-range chip, checking for preset ranges first.
+  String _dateRangeChipLabel(AppLocalizations l, DateTimeRange range) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    // Helper: compare at day granularity.
+    bool sameDay(DateTime a, DateTime b) =>
+        a.year == b.year && a.month == b.month && a.day == b.day;
+
+    // Last 7 days preset.
+    final last7Start = today.subtract(const Duration(days: 7));
+    if (sameDay(range.start, last7Start) && sameDay(range.end, today)) {
+      return l.historyDateLast7Days;
+    }
+
+    // Last 30 days preset.
+    final last30Start = today.subtract(const Duration(days: 30));
+    if (sameDay(range.start, last30Start) && sameDay(range.end, today)) {
+      return l.historyDateLast30Days;
+    }
+
+    // This year preset.
+    final yearStart = DateTime(now.year, 1, 1);
+    if (sameDay(range.start, yearStart) && sameDay(range.end, today)) {
+      return l.historyDateThisYear;
+    }
+
+    // Custom range — use abbreviated month format.
+    final fmt = DateFormat.MMMd(l.localeName);
+    return '${fmt.format(range.start)} – ${fmt.format(range.end)}';
+  }
+
+  /// Builds the horizontally scrollable row of active filter chips.
+  Widget _buildActiveFilterChips(AppLocalizations l) {
+    if (_filters.activeCount == 0) return const SizedBox.shrink();
+
+    final unit = widget.settingsController.unitSystem;
+    final chips = <Widget>[];
+
+    // Kind chip (only when exactly one kind is selected).
+    if (_filters.kinds.length == 1) {
+      final kind = _filters.kinds.first;
+      final label = kind == HistoryEntryKind.session
+          ? l.historyFilterKindSession
+          : l.historyFilterKindFreeRide;
+      chips.add(InputChip(
+        label: Text(label),
+        onDeleted: () =>
+            setState(() => _filters = _filters.copyWith(kinds: const {})),
+      ));
+    }
+
+    // Vehicle chip.
+    if (_filters.vehicleIds.isNotEmpty) {
+      if (_filters.vehicleIds.length == 1) {
+        final id = _filters.vehicleIds.first;
+        final String label;
+        if (id == null) {
+          label = l.historyNoVehicle;
+        } else {
+          final vehicle = widget.garageService?.vehicles
+              .where((v) => v.id == id)
+              .firstOrNull;
+          label = vehicle?.name ?? '';
+        }
+        if (label.isNotEmpty) {
+          chips.add(InputChip(
+            label: Text(label),
+            onDeleted: () => setState(
+                () => _filters = _filters.copyWith(vehicleIds: const {})),
+          ));
+        }
+      } else {
+        chips.add(InputChip(
+          label: Text(l.historyFilterVehicleChipMany(_filters.vehicleIds.length)),
+          onDeleted: () => setState(
+              () => _filters = _filters.copyWith(vehicleIds: const {})),
+        ));
+      }
+    }
+
+    // Date range chip.
+    final dateRange = _filters.dateRange;
+    if (dateRange != null) {
+      chips.add(InputChip(
+        label: Text(_dateRangeChipLabel(l, dateRange)),
+        onDeleted: () =>
+            setState(() => _filters = _filters.copyWith(dateRange: null)),
+      ));
+    }
+
+    // Min max speed chip.
+    final minSpeedMps = _filters.minMaxSpeedMps;
+    if (minSpeedMps != null) {
+      final speedDisplay = unit == UnitSystem.imperial
+          ? minSpeedMps * 2.23694
+          : minSpeedMps * 3.6;
+      final speedStr = speedDisplay.toStringAsFixed(1);
+      final speedWithUnit = unit == UnitSystem.imperial
+          ? '$speedStr mph'
+          : '$speedStr km/h';
+      chips.add(InputChip(
+        label: Text(l.historyFilterMinSpeedChip(speedWithUnit)),
+        onDeleted: () => setState(
+            () => _filters = _filters.copyWith(minMaxSpeedMps: null)),
+      ));
+    }
+
+    // Min distance chip.
+    final minDistM = _filters.minDistanceMeters;
+    if (minDistM != null) {
+      final distDisplay = unit == UnitSystem.imperial
+          ? minDistM / 1609.344
+          : minDistM / 1000.0;
+      final distStr = distDisplay.toStringAsFixed(1);
+      final distWithUnit =
+          unit == UnitSystem.imperial ? '$distStr mi' : '$distStr km';
+      chips.add(InputChip(
+        label: Text(l.historyFilterMinDistanceChip(distWithUnit)),
+        onDeleted: () => setState(
+            () => _filters = _filters.copyWith(minDistanceMeters: null)),
+      ));
+    }
+
+    if (chips.isEmpty) return const SizedBox.shrink();
+
+    final children = <Widget>[];
+    for (var i = 0; i < chips.length; i++) {
+      children.add(chips[i]);
+      if (i < chips.length - 1) children.add(const SizedBox(width: 8));
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(children: children),
+      ),
     );
   }
 
@@ -254,6 +414,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    _pruneStaleVehicleIds();
     return ListenableBuilder(
       listenable: widget.settingsController,
       builder: (context, _) => Scaffold(
@@ -326,6 +487,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 ],
               ),
             ),
+            _buildActiveFilterChips(l),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: SegmentedButton<_HistoryFilter>(

@@ -286,6 +286,160 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
+  // Test 6: Vehicle chip appears with vehicle name after applying filter
+  // ---------------------------------------------------------------------------
+  testWidgets('vehicle chip appears with vehicle name after applying filter',
+      (tester) async {
+    late ({SplitwayLocalDatabase db, LocalDraftRepository repo}) boot;
+    late AppSettingsController settings;
+
+    const vehicleAId = 'vehicle-chip-a';
+
+    await tester.runAsync(() async {
+      boot = await _openRepo();
+      settings = await AppSettingsController.load();
+      final routeA = _makeRoute('route-chip-a', 'Ruta Chip A');
+      await boot.repo.saveRouteTemplate(routeA);
+      await boot.repo.saveSessionRun(
+        _makeSession('session-chip-a', 'route-chip-a', vehicleId: vehicleAId),
+      );
+    });
+
+    // ignore: invalid_use_of_visible_for_testing_member
+    final garageService = GarageService.withVehicles([
+      _makeVehicle(vehicleAId, 'Coche Chip A'),
+    ]);
+
+    await tester.pumpWidget(_harness(
+      child: HistoryScreen(
+        repository: boot.repo,
+        settingsController: settings,
+        garageService: garageService,
+      ),
+    ));
+
+    await _pumpUntilLoaded(tester);
+
+    // Open filters sheet.
+    await tester.tap(find.byIcon(Icons.tune));
+    await tester.pumpAndSettle();
+
+    // Select vehicle A.
+    await tester.tap(find.widgetWithText(FilterChip, 'Coche Chip A'));
+    await tester.pump();
+
+    // Apply.
+    await tester.ensureVisible(find.widgetWithText(FilledButton, 'Aplicar'));
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, 'Aplicar'));
+    await tester.pumpAndSettle();
+
+    // An InputChip with the vehicle name should now be visible in the chip row.
+    expect(
+      find.widgetWithText(InputChip, 'Coche Chip A'),
+      findsOneWidget,
+    );
+
+    await tester.runAsync(() => boot.repo.dispose());
+    await tester.runAsync(() => boot.db.close());
+  });
+
+  // ---------------------------------------------------------------------------
+  // Test 7: Tapping the chip's delete icon clears that filter
+  // ---------------------------------------------------------------------------
+  testWidgets('tapping vehicle chip delete icon clears the vehicle filter',
+      (tester) async {
+    late ({SplitwayLocalDatabase db, LocalDraftRepository repo}) boot;
+    late AppSettingsController settings;
+
+    const vehicleAId = 'vehicle-del-a';
+    const vehicleBId = 'vehicle-del-b';
+
+    await tester.runAsync(() async {
+      boot = await _openRepo();
+      settings = await AppSettingsController.load();
+      final routeA = _makeRoute('route-del-a', 'Ruta Del A');
+      final routeB = _makeRoute('route-del-b', 'Ruta Del B');
+      await boot.repo.saveRouteTemplate(routeA);
+      await boot.repo.saveRouteTemplate(routeB);
+      await boot.repo.saveSessionRun(
+        _makeSession('session-del-a', 'route-del-a', vehicleId: vehicleAId),
+      );
+      await boot.repo.saveSessionRun(
+        _makeSession('session-del-b', 'route-del-b', vehicleId: vehicleBId),
+      );
+    });
+
+    // ignore: invalid_use_of_visible_for_testing_member
+    final garageService = GarageService.withVehicles([
+      _makeVehicle(vehicleAId, 'Coche Del A'),
+      _makeVehicle(vehicleBId, 'Coche Del B'),
+    ]);
+
+    await tester.pumpWidget(_harness(
+      child: HistoryScreen(
+        repository: boot.repo,
+        settingsController: settings,
+        garageService: garageService,
+      ),
+    ));
+
+    await _pumpUntilLoaded(tester);
+
+    // Both routes visible initially.
+    expect(find.text('Ruta Del A'), findsOneWidget);
+    expect(find.text('Ruta Del B'), findsOneWidget);
+
+    // Apply vehicle A filter via sheet.
+    await tester.tap(find.byIcon(Icons.tune));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilterChip, 'Coche Del A'));
+    await tester.pump();
+    await tester.ensureVisible(find.widgetWithText(FilledButton, 'Aplicar'));
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, 'Aplicar'));
+    await tester.pumpAndSettle();
+
+    // Only Ruta Del A visible; Ruta Del B is hidden.
+    expect(find.text('Ruta Del A'), findsOneWidget);
+    expect(find.text('Ruta Del B'), findsNothing);
+
+    // Chip is shown.
+    expect(find.widgetWithText(InputChip, 'Coche Del A'), findsOneWidget);
+
+    // Tap the delete button on the InputChip (the chip internally wraps its
+    // delete icon in a Semantics node with deleteButtonTooltip).
+    final chipFinder = find.widgetWithText(InputChip, 'Coche Del A');
+    final chip = tester.widget<InputChip>(chipFinder);
+    // InputChip.onDeleted is set — call it directly via the chip's semantics.
+    // Use the tooltip-based finder as MaterialLocalizations provides the label.
+    final mLocalizations = MaterialLocalizations.of(
+      tester.element(find.byType(Scaffold).first),
+    );
+    final deleteButtonTooltip = mLocalizations.deleteButtonTooltip;
+    final deleteIcon = find.descendant(
+      of: chipFinder,
+      matching: find.byTooltip(deleteButtonTooltip),
+    );
+    // If no tooltip widget found, fall back to calling onDeleted directly.
+    if (deleteIcon.evaluate().isEmpty) {
+      chip.onDeleted?.call();
+    } else {
+      await tester.tap(deleteIcon);
+    }
+    await tester.pumpAndSettle();
+
+    // Both routes are visible again and chip is gone.
+    expect(find.text('Ruta Del A'), findsOneWidget);
+    expect(find.text('Ruta Del B'), findsOneWidget);
+    expect(find.widgetWithText(InputChip, 'Coche Del A'), findsNothing);
+
+    await tester.runAsync(() => boot.repo.dispose());
+    await tester.runAsync(() => boot.db.close());
+  });
+
+  // ---------------------------------------------------------------------------
   // Test 5: Vehicle filter via filters sheet narrows the list
   // ---------------------------------------------------------------------------
   testWidgets('vehicle filter via sheet reduces displayed entries',
