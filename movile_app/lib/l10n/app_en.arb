@@ -153,6 +153,7 @@
   "editorRouteSavedSnack": "Saved \"{name}\"",
   "@editorRouteSavedSnack": { "placeholders": { "name": { "type": "String" } } },
   "editorSnapFailedMessage": "Could not reach the server to snap the route to roads. Showing straight segments until the connection is restored.",
+  "editorDrawingModeTooltip": "Drawing mode",
   "editorRoutingProfileTooltip": "Routing mode",
   "editorRoutingProfileDriving": "Road",
   "editorRoutingProfileWalking": "Trail",
@@ -465,7 +466,7 @@
   "mapStyleLayersTooltip": "Map style",
 
   "editorSearchLocationHint": "Search location...",
-  "editorSearchNoResults": "No results found"
+  "editorSearchNoResults": "No results found",
   "navSpeed": "Speed test",
   "drawerSpeed": "Speed test",
   "speedSetupTitle": "Speed test",

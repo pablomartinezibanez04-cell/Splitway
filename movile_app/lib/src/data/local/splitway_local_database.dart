@@ -167,7 +167,7 @@ class SplitwayLocalDatabase {
     }
     if (from < 8 && to >= 8) {
       await db.execute('''
-        CREATE TABLE speed_sessions (
+        CREATE TABLE IF NOT EXISTS speed_sessions (
           id TEXT PRIMARY KEY NOT NULL,
           user_id TEXT,
           vehicle_id TEXT,
@@ -184,7 +184,7 @@ class SplitwayLocalDatabase {
         )
       ''');
       await db.execute(
-        'CREATE INDEX idx_speed_sessions_user_created ON speed_sessions(user_id, created_at DESC)',
+        'CREATE INDEX IF NOT EXISTS idx_speed_sessions_user_created ON speed_sessions(user_id, created_at DESC)',
       );
     }
   }

@@ -872,6 +872,12 @@ abstract class AppLocalizations {
   /// **'Could not reach the server to snap the route to roads. Showing straight segments until the connection is restored.'**
   String get editorSnapFailedMessage;
 
+  /// No description provided for @editorDrawingModeTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Drawing mode'**
+  String get editorDrawingModeTooltip;
+
   /// No description provided for @editorRoutingProfileTooltip.
   ///
   /// In en, this message translates to:
@@ -2401,6 +2407,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No results found'**
   String get editorSearchNoResults;
+
   /// No description provided for @navSpeed.
   ///
   /// In en, this message translates to:

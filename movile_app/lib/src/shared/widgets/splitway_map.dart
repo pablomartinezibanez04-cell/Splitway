@@ -120,7 +120,6 @@ class _SplitwayMapState extends State<SplitwayMap> {
   bool _isRendering = false;
   bool _renderPending = false;
   MapStyle _mapStyle = MapStyle.outdoors;
-  bool _styleMenuOpen = false;
 
   @override
   void initState() {
@@ -147,14 +146,8 @@ class _SplitwayMapState extends State<SplitwayMap> {
   }
 
   Future<void> _switchStyle(MapStyle style) async {
-    if (style == _mapStyle) {
-      setState(() => _styleMenuOpen = false);
-      return;
-    }
-    setState(() {
-      _mapStyle = style;
-      _styleMenuOpen = false;
-    });
+    if (style == _mapStyle) return;
+    setState(() => _mapStyle = style);
     SharedPreferences.getInstance().then((p) => p.setString(_kMapStyleKey, style.name));
     final map = _map;
     if (map == null) return;
@@ -223,108 +216,64 @@ class _SplitwayMapState extends State<SplitwayMap> {
               onPointerCancel: _onPointerCancel,
             ),
           ),
-        if (_styleMenuOpen)
-          Positioned.fill(
-            child: GestureDetector(
-              onTap: () => setState(() => _styleMenuOpen = false),
-              behavior: HitTestBehavior.opaque,
-              child: const SizedBox.expand(),
-            ),
-          ),
-        if (showStyleButton && _styleMenuOpen)
+        if (showStyleButton)
           Positioned(
             top: 8,
             right: 8,
-            child: SafeArea(child: _buildStyleMenu(context)),
-          ),
-        if (showStyleButton && !_styleMenuOpen)
-          Positioned(
-            top: 13,
-            right: 8,
-            child: SafeArea(child: _buildLayersButton(context)),
+            child: SafeArea(child: _buildStyleButton(context)),
           ),
       ],
     );
   }
 
-  Widget _buildLayersButton(BuildContext context) {
+  Widget _buildStyleButton(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return Material(
-      elevation: 4,
-      shape: const CircleBorder(),
-      color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: () => setState(() => _styleMenuOpen = true),
+    final theme = Theme.of(context);
+    return PopupMenuButton<MapStyle>(
+      onSelected: _switchStyle,
+      tooltip: l.mapStyleLayersTooltip,
+      position: PopupMenuPosition.under,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      itemBuilder: (_) => [
+        for (final style in MapStyle.values)
+          PopupMenuItem<MapStyle>(
+            value: style,
+            child: Row(
+              children: [
+                Icon(style.icon,
+                    size: 20,
+                    color: style == _mapStyle
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurfaceVariant),
+                const SizedBox(width: 10),
+                Text(
+                  style.label(l),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: style == _mapStyle
+                        ? FontWeight.w600
+                        : FontWeight.normal,
+                    color: style == _mapStyle
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                if (style == _mapStyle)
+                  Icon(Icons.check,
+                      size: 18, color: theme.colorScheme.primary),
+              ],
+            ),
+          ),
+      ],
+      child: Material(
+        elevation: 4,
+        shape: const CircleBorder(),
+        color: theme.colorScheme.surface.withValues(alpha: 0.9),
         child: Padding(
           padding: const EdgeInsets.all(8),
-          child: Tooltip(
-            message: l.mapStyleLayersTooltip,
-            child: Icon(
-              Icons.layers,
-              size: 22,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStyleMenu(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final colorScheme = Theme.of(context).colorScheme;
-    return Material(
-      elevation: 6,
-      borderRadius: BorderRadius.circular(12),
-      color: colorScheme.surface,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: IntrinsicWidth(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (final style in MapStyle.values)
-                _buildStyleOption(context, l, colorScheme, style),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStyleOption(
-    BuildContext context,
-    AppLocalizations l,
-    ColorScheme colorScheme,
-    MapStyle style,
-  ) {
-    final isSelected = style == _mapStyle;
-    return InkWell(
-      onTap: () => _switchStyle(style),
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(
-          children: [
-            Icon(
-              style.icon,
-              size: 20,
-              color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(width: 10),
-            Text(
-              style.label(l),
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                color: isSelected ? colorScheme.primary : colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(width: 16),
-            if (isSelected)
-              Icon(Icons.check, size: 18, color: colorScheme.primary),
-          ],
+          child: Icon(Icons.layers,
+              size: 22, color: theme.colorScheme.onSurface),
         ),
       ),
     );

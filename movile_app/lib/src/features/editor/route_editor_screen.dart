@@ -299,12 +299,6 @@ class _DrawingViewState extends State<_DrawingView> {
     }
   }
 
-  String _modeLabel(AppLocalizations l, DrawInputMode mode) => switch (mode) {
-        DrawInputMode.appendPath => l.editorModeAppendPath,
-        DrawInputMode.sectorPoint => l.editorModeSectorGate,
-        DrawInputMode.freehand => l.editorModeFreehand,
-      };
-
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -338,6 +332,12 @@ class _DrawingViewState extends State<_DrawingView> {
           },
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.undo),
+            tooltip: l.editorUndoPoint,
+            onPressed:
+                controller.canUndo ? controller.undoLastAction : null,
+          ),
           if (controller.snapping)
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 16),
@@ -356,7 +356,8 @@ class _DrawingViewState extends State<_DrawingView> {
                       if (saved != null) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text(l.editorRouteSavedSnack(saved.name)),
+                            content:
+                                Text(l.editorRouteSavedSnack(saved.name)),
                           ),
                         );
                       }
@@ -366,117 +367,82 @@ class _DrawingViewState extends State<_DrawingView> {
             ),
         ],
       ),
-      body: Column(
+      body: Stack(
         children: [
-          Expanded(
-            child: Stack(
-              children: [
-                SplitwayMap(
-                  useMapbox: widget.config.hasMapbox,
-                  initialCenter: widget.initialCenter,
-                  flyToNotifier: _flyToNotifier,
-                  draftPath: controller.draftPath,
-                  draftWaypoints: controller.rawWaypoints,
-                  draftSectorPoints: controller.draftSectorPoints,
-                  userLocation: _liveLocation,
-                  onTap: controller.handleMapTap,
-                  freehandMode: controller.inputMode == DrawInputMode.freehand,
-                  draftSegments: controller.segments,
-                  onFreehandStart: controller.startFreehandStroke,
-                  onFreehandPoint: controller.addFreehandPoint,
-                  onFreehandEnd: controller.endFreehandStroke,
-                ),
-                if (widget.config.hasMapbox)
-                  Positioned(
-                    top: 8,
-                    left: 12,
-                    right: 56,
-                    child: SafeArea(
-                      child: LocationSearchBar(
-                        accessToken: widget.config.mapboxToken!,
-                        onLocationSelected: (point) =>
-                            _flyToNotifier.flyTo(point),
-                      ),
-                    ),
-                  ),
-                Positioned(
-                  right: 12,
-                  bottom: 12,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _RoutingProfileFab(
-                        profile: controller.routingProfile,
-                        onChanged: (p) => controller.routingProfile = p,
-                      ),
-                      const SizedBox(width: 12),
-                      FloatingActionButton.small(
-                        heroTag: 'center_on_user',
-                        onPressed: _centerOnUser,
-                        child: const Icon(Icons.my_location),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+          SplitwayMap(
+            useMapbox: widget.config.hasMapbox,
+            initialCenter: widget.initialCenter,
+            flyToNotifier: _flyToNotifier,
+            draftPath: controller.draftPath,
+            draftWaypoints: controller.rawWaypoints,
+            draftSectorPoints: controller.draftSectorPoints,
+            userLocation: _liveLocation,
+            onTap: controller.handleMapTap,
+            freehandMode:
+                controller.inputMode == DrawInputMode.freehand,
+            draftSegments: controller.segments,
+            onFreehandStart: controller.startFreehandStroke,
+            onFreehandPoint: controller.addFreehandPoint,
+            onFreehandEnd: controller.endFreehandStroke,
           ),
+          if (widget.config.hasMapbox)
+            Positioned(
+              top: 8,
+              left: 12,
+              right: 56,
+              child: SafeArea(
+                child: LocationSearchBar(
+                  accessToken: widget.config.mapboxToken!,
+                  onLocationSelected: (point) =>
+                      _flyToNotifier.flyTo(point),
+                ),
+              ),
+            ),
           if (!widget.config.hasMapbox)
-            _InfoBanner(
-              color: theme.colorScheme.tertiaryContainer,
-              icon: Icons.map_outlined,
-              message: l.editorNoMapboxToken,
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 64,
+              child: _InfoBanner(
+                color: theme.colorScheme.tertiaryContainer,
+                icon: Icons.map_outlined,
+                message: l.editorNoMapboxToken,
+              ),
             )
           else if (controller.snapFailed)
-            _InfoBanner(
-              color: theme.colorScheme.errorContainer,
-              icon: Icons.wifi_off_outlined,
-              iconColor: theme.colorScheme.onErrorContainer,
-              message: l.editorSnapFailedMessage,
-              textColor: theme.colorScheme.onErrorContainer,
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 64,
+              child: _InfoBanner(
+                color: theme.colorScheme.errorContainer,
+                icon: Icons.wifi_off_outlined,
+                iconColor: theme.colorScheme.onErrorContainer,
+                message: l.editorSnapFailedMessage,
+                textColor: theme.colorScheme.onErrorContainer,
+              ),
             ),
-          Container(
-            color: theme.colorScheme.surfaceContainerHighest,
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+          Positioned(
+            right: 12,
+            bottom: 12,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(_modeLabel(l, controller.inputMode),
-                    style: theme.textTheme.bodyMedium),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    ChoiceChip(
-                      label: Text(l.editorSegmentPath),
-                      selected: controller.inputMode == DrawInputMode.appendPath,
-                      onSelected: (_) =>
-                          controller.setInputMode(DrawInputMode.appendPath),
-                    ),
-                    ChoiceChip(
-                      label: Text(l.editorSegmentAddSector),
-                      selected: controller.inputMode == DrawInputMode.sectorPoint,
-                      onSelected: (_) =>
-                          controller.setInputMode(DrawInputMode.sectorPoint),
-                    ),
-                    ChoiceChip(
-                      label: Text(l.editorSegmentFreehand),
-                      selected: controller.inputMode == DrawInputMode.freehand,
-                      onSelected: (_) =>
-                          controller.setInputMode(DrawInputMode.freehand),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: controller.canUndo
-                          ? controller.undoLastAction
-                          : null,
-                      icon: const Icon(Icons.undo, size: 18),
-                      label: Text(l.editorUndoPoint),
-                    ),
-                  ],
+                _DrawingModeFab(
+                  mode: controller.inputMode,
+                  onChanged: controller.setInputMode,
                 ),
-                const SizedBox(height: 8),
-                _DraftStatus(controller: controller),
+                const SizedBox(width: 12),
+                _RoutingProfileFab(
+                  profile: controller.routingProfile,
+                  onChanged: (p) => controller.routingProfile = p,
+                ),
+                const SizedBox(width: 12),
+                FloatingActionButton.small(
+                  heroTag: 'center_on_user',
+                  onPressed: _centerOnUser,
+                  child: const Icon(Icons.my_location),
+                ),
               ],
             ),
           ),
@@ -486,57 +452,66 @@ class _DrawingViewState extends State<_DrawingView> {
   }
 }
 
-class _DraftStatus extends StatelessWidget {
-  const _DraftStatus({required this.controller});
+class _DrawingModeFab extends StatelessWidget {
+  const _DrawingModeFab({
+    required this.mode,
+    required this.onChanged,
+  });
 
-  final RouteEditorController controller;
+  final DrawInputMode mode;
+  final ValueChanged<DrawInputMode> onChanged;
+
+  static const _modes = [
+    (DrawInputMode.appendPath, Icons.timeline),
+    (DrawInputMode.sectorPoint, Icons.flag),
+    (DrawInputMode.freehand, Icons.gesture),
+  ];
+
+  IconData get _activeIcon =>
+      _modes.firstWhere((m) => m.$1 == mode).$2;
+
+  String _label(AppLocalizations l, DrawInputMode m) => switch (m) {
+        DrawInputMode.appendPath => l.editorSegmentPath,
+        DrawInputMode.sectorPoint => l.editorSegmentAddSector,
+        DrawInputMode.freehand => l.editorSegmentFreehand,
+      };
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return Row(
-      children: [
-        _StatusChip(
-          icon: Icons.timeline,
-          label: l.editorPathPoints(controller.draftPath.length),
-          ok: controller.draftPath.length >= 2,
-        ),
-        const SizedBox(width: 8),
-        _StatusChip(
-          icon: Icons.flag_outlined,
-          label: l.editorSectorsCount(controller.draftSectorPoints.length),
-          ok: true,
-          neutral: true,
-        ),
+    final theme = Theme.of(context);
+    return PopupMenuButton<DrawInputMode>(
+      onSelected: onChanged,
+      tooltip: l.editorDrawingModeTooltip,
+      position: PopupMenuPosition.over,
+      offset: const Offset(0, -160),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      itemBuilder: (_) => [
+        for (final (key, icon) in _modes)
+          PopupMenuItem<DrawInputMode>(
+            value: key,
+            child: Row(
+              children: [
+                Icon(icon,
+                    color: key == mode
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurfaceVariant),
+                const SizedBox(width: 12),
+                Expanded(child: Text(_label(l, key))),
+                if (key == mode)
+                  Icon(Icons.check,
+                      size: 18, color: theme.colorScheme.primary),
+              ],
+            ),
+          ),
       ],
-    );
-  }
-}
-
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({
-    required this.icon,
-    required this.label,
-    required this.ok,
-    this.neutral = false,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool ok;
-  final bool neutral;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = neutral
-        ? Colors.blueGrey
-        : (ok ? Colors.green : Colors.orange);
-    return Chip(
-      avatar: Icon(icon, size: 16, color: color.shade800),
-      label: Text(label),
-      visualDensity: VisualDensity.compact,
-      backgroundColor: color.withValues(alpha: 0.15),
-      side: BorderSide(color: color.withValues(alpha: 0.5)),
+      child: FloatingActionButton.small(
+        heroTag: 'drawing_mode',
+        onPressed: null,
+        backgroundColor: theme.colorScheme.primaryContainer,
+        child:
+            Icon(_activeIcon, color: theme.colorScheme.onPrimaryContainer),
+      ),
     );
   }
 }

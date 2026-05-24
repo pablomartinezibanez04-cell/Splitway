@@ -459,6 +459,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Could not reach the server to snap the route to roads. Showing straight segments until the connection is restored.';
 
   @override
+  String get editorDrawingModeTooltip => 'Drawing mode';
+
+  @override
   String get editorRoutingProfileTooltip => 'Routing mode';
 
   @override
@@ -1323,6 +1326,8 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get editorSearchNoResults => 'No results found';
+
+  @override
   String get navSpeed => 'Speed test';
 
   @override

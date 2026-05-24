@@ -153,6 +153,7 @@
   "editorRouteSavedSnack": "Guardada \"{name}\"",
   "@editorRouteSavedSnack": { "placeholders": { "name": { "type": "String" } } },
   "editorSnapFailedMessage": "No se pudo conectar con el servidor para ajustar la ruta a las carreteras. Se muestran segmentos rectos hasta que la conexión se restablezca.",
+  "editorDrawingModeTooltip": "Modo de dibujo",
   "editorRoutingProfileTooltip": "Modo de ruta",
   "editorRoutingProfileDriving": "Carretera",
   "editorRoutingProfileWalking": "Sendero",
@@ -465,7 +466,7 @@
   "mapStyleLayersTooltip": "Estilo del mapa",
 
   "editorSearchLocationHint": "Buscar ubicación...",
-  "editorSearchNoResults": "Sin resultados"
+  "editorSearchNoResults": "Sin resultados",
   "navSpeed": "Test de velocidad",
   "drawerSpeed": "Test de velocidad",
   "speedSetupTitle": "Test de velocidad",

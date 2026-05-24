@@ -461,6 +461,9 @@ class AppLocalizationsEs extends AppLocalizations {
       'No se pudo conectar con el servidor para ajustar la ruta a las carreteras. Se muestran segmentos rectos hasta que la conexión se restablezca.';
 
   @override
+  String get editorDrawingModeTooltip => 'Modo de dibujo';
+
+  @override
   String get editorRoutingProfileTooltip => 'Modo de ruta';
 
   @override
@@ -1326,6 +1329,8 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get editorSearchNoResults => 'Sin resultados';
+
+  @override
   String get navSpeed => 'Test de velocidad';
 
   @override
