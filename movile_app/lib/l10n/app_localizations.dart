@@ -2396,6 +2396,24 @@ abstract class AppLocalizations {
   /// **'Map style'**
   String get mapStyleLayersTooltip;
 
+  /// No description provided for @heatmapToggleOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Show speed heatmap'**
+  String get heatmapToggleOn;
+
+  /// No description provided for @heatmapToggleOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide speed heatmap'**
+  String get heatmapToggleOff;
+
+  /// No description provided for @heatmapLegendTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed'**
+  String get heatmapLegendTitle;
+
   /// No description provided for @editorSearchLocationHint.
   ///
   /// In en, this message translates to:

@@ -465,6 +465,10 @@
   "mapStyleDark": "Dark",
   "mapStyleLayersTooltip": "Map style",
 
+  "heatmapToggleOn": "Show speed heatmap",
+  "heatmapToggleOff": "Hide speed heatmap",
+  "heatmapLegendTitle": "Speed",
+
   "editorSearchLocationHint": "Search location...",
   "editorSearchNoResults": "No results found",
   "navSpeed": "Speed test",

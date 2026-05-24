@@ -1322,6 +1322,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapStyleLayersTooltip => 'Map style';
 
   @override
+  String get heatmapToggleOn => 'Show speed heatmap';
+
+  @override
+  String get heatmapToggleOff => 'Hide speed heatmap';
+
+  @override
+  String get heatmapLegendTitle => 'Speed';
+
+  @override
   String get editorSearchLocationHint => 'Search location...';
 
   @override

@@ -1325,6 +1325,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get mapStyleLayersTooltip => 'Estilo del mapa';
 
   @override
+  String get heatmapToggleOn => 'Mostrar mapa de calor';
+
+  @override
+  String get heatmapToggleOff => 'Ocultar mapa de calor';
+
+  @override
+  String get heatmapLegendTitle => 'Velocidad';
+
+  @override
   String get editorSearchLocationHint => 'Buscar ubicación...';
 
   @override

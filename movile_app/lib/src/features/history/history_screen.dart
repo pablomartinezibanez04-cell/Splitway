@@ -19,7 +19,7 @@ import '../../services/speed/speed_metric.dart';
 import '../../services/speed/speed_session.dart';
 import '../../shared/formatters.dart';
 import '../../shared/widgets/empty_state.dart';
-import '../../shared/widgets/splitway_map.dart';
+import '../../shared/widgets/speed_heatmap_map_card.dart';
 import '../garage/vehicle_detail_screen.dart';
 import '../home/home_shell.dart';
 import 'history_filters.dart';
@@ -1121,16 +1121,11 @@ class _FreeRideDetailScreenState extends State<FreeRideDetailScreen> {
                   padding: const EdgeInsets.all(16),
                   children: [
                     if (_ride!.points.isNotEmpty)
-                      Card(
-                        clipBehavior: Clip.antiAlias,
-                        child: AspectRatio(
-                          aspectRatio: 4 / 3,
-                          child: SplitwayMap(
-                            useMapbox: widget.config.hasMapbox,
-                            telemetry: _ride!.points,
-                            interactive: false,
-                          ),
-                        ),
+                      SpeedHeatmapMapCard(
+                        config: widget.config,
+                        telemetry: _ride!.points,
+                        unitSystem: widget.settingsController?.unitSystem ??
+                            UnitSystem.metric,
                       ),
                     const SizedBox(height: 16),
                     Text(
@@ -1353,17 +1348,12 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               : ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    Card(
-                      clipBehavior: Clip.antiAlias,
-                      child: AspectRatio(
-                        aspectRatio: 4 / 3,
-                        child: SplitwayMap(
-                          useMapbox: widget.config.hasMapbox,
-                          route: _route!,
-                          telemetry: _session!.points,
-                          interactive: false,
-                        ),
-                      ),
+                    SpeedHeatmapMapCard(
+                      config: widget.config,
+                      route: _route!,
+                      telemetry: _session!.points,
+                      unitSystem: widget.settingsController?.unitSystem ??
+                          UnitSystem.metric,
                     ),
                     const SizedBox(height: 16),
                     Text(

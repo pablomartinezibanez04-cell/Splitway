@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart' hide Image;
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mbx;
@@ -6,6 +8,8 @@ import 'package:splitway_core/splitway_core.dart';
 import 'package:splitway_mobile/l10n/app_localizations.dart';
 
 import '../../features/editor/draft_segment.dart';
+import '../../services/settings/app_settings_controller.dart';
+import '../speed_palette.dart';
 import 'route_map_painter.dart';
 import 'sector_segments.dart';
 
@@ -77,6 +81,8 @@ class SplitwayMap extends StatefulWidget {
     this.onFreehandStart,
     this.onFreehandPoint,
     this.onFreehandEnd,
+    this.showSpeedHeatmap = false,
+    this.speedHeatmapUnit = UnitSystem.metric,
   });
 
   final bool useMapbox;
@@ -106,10 +112,19 @@ class SplitwayMap extends StatefulWidget {
   final VoidCallback? onFreehandStart;
   final ValueChanged<GeoPoint>? onFreehandPoint;
   final VoidCallback? onFreehandEnd;
+  /// When true, the telemetry line is rendered with a continuous speed
+  /// heatmap (and the planned-route line is hidden). Requires telemetry
+  /// points with `speedMps`.
+  final bool showSpeedHeatmap;
+  /// Unit used to compute the heatmap legend's "nice" max bucket.
+  final UnitSystem speedHeatmapUnit;
 
   @override
   State<SplitwayMap> createState() => _SplitwayMapState();
 }
+
+const String _kHeatmapSourceId = 'splitway-speed-src';
+const String _kHeatmapLayerId = 'splitway-speed-layer';
 
 class _SplitwayMapState extends State<SplitwayMap> {
   mbx.MapboxMap? _map;
@@ -302,7 +317,9 @@ class _SplitwayMapState extends State<SplitwayMap> {
         oldWidget.highlightSectorId != widget.highlightSectorId ||
         oldWidget.showSectors != widget.showSectors ||
         oldWidget.draftSegments.length != widget.draftSegments.length ||
-        oldWidget.freehandMode != widget.freehandMode;
+        oldWidget.freehandMode != widget.freehandMode ||
+        oldWidget.showSpeedHeatmap != widget.showSpeedHeatmap ||
+        oldWidget.speedHeatmapUnit != widget.speedHeatmapUnit;
 
     if (annotationsChanged) _renderAnnotations();
 
@@ -530,8 +547,17 @@ class _SplitwayMapState extends State<SplitwayMap> {
     }
     if (!mounted) return;
 
+    // Speed heatmap takes over the route+telemetry rendering when active.
+    final useHeatmap =
+        widget.showSpeedHeatmap && _hasUsableSpeedTelemetry(widget.telemetry);
+    if (useHeatmap) {
+      await _applyHeatmapLayer(widget.telemetry, widget.speedHeatmapUnit);
+    } else {
+      await _removeHeatmapLayer();
+    }
+
     final r = widget.route;
-    if (r != null && r.path.isNotEmpty) {
+    if (!useHeatmap && r != null && r.path.isNotEmpty) {
       if (widget.showSectors && r.sectors.isNotEmpty) {
         // Draw each sector segment in a different color.
         final segments = computeSectorSegments(r.path, r.sectors);
@@ -582,7 +608,7 @@ class _SplitwayMapState extends State<SplitwayMap> {
     }
 
     if (!mounted) return;
-    if (widget.telemetry.length >= 2) {
+    if (!useHeatmap && widget.telemetry.length >= 2) {
       try {
         await lineMgr.create(mbx.PolylineAnnotationOptions(
           geometry: _toLineString(
@@ -683,6 +709,111 @@ class _SplitwayMapState extends State<SplitwayMap> {
       coordinates:
           points.map((p) => mbx.Position(p.longitude, p.latitude)).toList(),
     );
+  }
+
+  bool _hasUsableSpeedTelemetry(List<TelemetryPoint> tel) {
+    if (tel.length < 2) return false;
+    var withSpeed = 0;
+    for (final p in tel) {
+      if (p.speedMps != null) {
+        withSpeed += 1;
+        if (withSpeed >= 2) return true;
+      }
+    }
+    return false;
+  }
+
+  /// Builds (or rebuilds) the heatmap GeoJSON source and LineLayer with a
+  /// `line-gradient` expression so the line is colored continuously by speed.
+  Future<void> _applyHeatmapLayer(
+      List<TelemetryPoint> tel, UnitSystem unit) async {
+    final map = _map;
+    if (map == null || !mounted) return;
+
+    // Compute the rounded "nice" max so the gradient consumes the full
+    // palette range (legend uses the same niceMaxMps).
+    var rawMax = 0.0;
+    for (final p in tel) {
+      final s = p.speedMps;
+      if (s != null && s > rawMax) rawMax = s;
+    }
+    final maxMps = niceMaxMps(rawMax, unit);
+    final stops = buildSpeedHeatmapStops(telemetry: tel, maxMps: maxMps);
+    if (stops.isEmpty) {
+      await _removeHeatmapLayer();
+      return;
+    }
+
+    // Build the GeoJSON LineString from ALL telemetry points (geometry stays
+    // dense and continuous; only the gradient stop list is decimated).
+    final coords = <List<double>>[];
+    for (final p in tel) {
+      coords.add([p.location.longitude, p.location.latitude]);
+    }
+    final geoJson = jsonEncode({
+      'type': 'Feature',
+      'geometry': {'type': 'LineString', 'coordinates': coords},
+      'properties': <String, dynamic>{},
+    });
+
+    // Mapbox interpolate expression along line-progress.
+    final expr = <Object>[
+      'interpolate',
+      <Object>['linear'],
+      <Object>['line-progress'],
+    ];
+    for (final stop in stops) {
+      final c = stop.color;
+      expr.add(stop.progress);
+      expr.add(<Object>[
+        'rgba',
+        c.red,
+        c.green,
+        c.blue,
+        c.alpha / 255.0,
+      ]);
+    }
+
+    try {
+      if (await map.style.styleLayerExists(_kHeatmapLayerId)) {
+        await map.style.removeStyleLayer(_kHeatmapLayerId);
+      }
+      if (await map.style.styleSourceExists(_kHeatmapSourceId)) {
+        await map.style.removeStyleSource(_kHeatmapSourceId);
+      }
+      if (!mounted) return;
+      await map.style.addSource(mbx.GeoJsonSource(
+        id: _kHeatmapSourceId,
+        data: geoJson,
+        lineMetrics: true,
+      ));
+      if (!mounted) return;
+      await map.style.addLayer(mbx.LineLayer(
+        id: _kHeatmapLayerId,
+        sourceId: _kHeatmapSourceId,
+        lineCap: mbx.LineCap.ROUND,
+        lineJoin: mbx.LineJoin.ROUND,
+        lineWidth: 4,
+        lineGradientExpression: expr,
+      ));
+    } on PlatformException {
+      // Map channel torn down; ignore.
+    }
+  }
+
+  Future<void> _removeHeatmapLayer() async {
+    final map = _map;
+    if (map == null) return;
+    try {
+      if (await map.style.styleLayerExists(_kHeatmapLayerId)) {
+        await map.style.removeStyleLayer(_kHeatmapLayerId);
+      }
+      if (await map.style.styleSourceExists(_kHeatmapSourceId)) {
+        await map.style.removeStyleSource(_kHeatmapSourceId);
+      }
+    } on PlatformException {
+      // Map channel torn down; ignore.
+    }
   }
 
   void _onPointerDown(PointerDownEvent event) {
