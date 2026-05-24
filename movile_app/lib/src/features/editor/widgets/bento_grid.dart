@@ -7,6 +7,7 @@ class BentoTile extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.value,
+    this.iconWidget,
     this.iconColor,
     this.onTap,
   });
@@ -14,6 +15,7 @@ class BentoTile extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
+  final Widget? iconWidget;
   final Color? iconColor;
   final VoidCallback? onTap;
 
@@ -30,7 +32,7 @@ class BentoTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 20, color: iconColor ?? theme.colorScheme.primary),
+            iconWidget ?? Icon(icon, size: 20, color: iconColor ?? theme.colorScheme.primary),
             const SizedBox(height: 8),
             Text(label, style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,

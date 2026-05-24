@@ -32,7 +32,7 @@ class SpeedHeatmapToggleButton extends StatelessWidget {
           message: tooltip,
           child: Padding(
             padding: const EdgeInsets.all(8),
-            child: Icon(Icons.gradient, size: 22, color: iconColor),
+            child: Icon(Icons.show_chart, size: 22, color: iconColor),
           ),
         ),
       ),

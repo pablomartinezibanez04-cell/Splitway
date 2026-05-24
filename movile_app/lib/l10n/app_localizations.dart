@@ -998,11 +998,23 @@ abstract class AppLocalizations {
   /// **'Laps'**
   String get historyLapsLabel;
 
+  /// No description provided for @historyLapsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No laps recorded in this session'**
+  String get historyLapsEmpty;
+
   /// No description provided for @historySectorsLabel.
   ///
   /// In en, this message translates to:
   /// **'Sectors'**
   String get historySectorsLabel;
+
+  /// No description provided for @historySectorsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No sectors recorded in this session'**
+  String get historySectorsEmpty;
 
   /// No description provided for @historySectorSubtitle.
   ///
@@ -1955,7 +1967,7 @@ abstract class AppLocalizations {
   /// No description provided for @historyDateCustom.
   ///
   /// In en, this message translates to:
-  /// **'Custom…'**
+  /// **'Custom'**
   String get historyDateCustom;
 
   /// No description provided for @historyFilterMinDistanceLabel.

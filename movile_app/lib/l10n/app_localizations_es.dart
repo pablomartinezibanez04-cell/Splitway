@@ -533,7 +533,14 @@ class AppLocalizationsEs extends AppLocalizations {
   String get historyLapsLabel => 'Vueltas';
 
   @override
+  String get historyLapsEmpty => 'No hay vueltas registradas en esta sesión';
+
+  @override
   String get historySectorsLabel => 'Sectores';
+
+  @override
+  String get historySectorsEmpty =>
+      'No hay sectores registrados en esta sesión';
 
   @override
   String historySectorSubtitle(int lapNum, String speed) {
@@ -1072,7 +1079,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get historyDateThisYear => 'Este año';
 
   @override
-  String get historyDateCustom => 'Personalizado…';
+  String get historyDateCustom => 'Personalizado';
 
   @override
   String get historyFilterMinDistanceLabel => 'Distancia mínima';

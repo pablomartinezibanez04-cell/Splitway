@@ -486,14 +486,21 @@ class LocalDraftRepository {
     // Kept as non-throwing to allow callers that reference it to compile.
   }
 
+  /// The ID of the only active seeded demo route. All other rows — including
+  /// legacy demo routes (e.g. 'demo-oval', 'demo-jarama') and user routes —
+  /// are removed by [clearUserData].
+  static const _activeDemoId = 'demo-espana';
+
   /// Deletes all user-owned data (routes, sessions, free rides and their
-  /// telemetry) from the local database. Demo rows (owner_id IS NULL) are
-  /// kept. Called on login/logout to avoid stale data from a different account.
+  /// telemetry) from the local database. Only the active seeded demo route
+  /// is kept; everything else — including legacy rows where owner_id is NULL
+  /// because they pre-date the owner_id column — is removed.
+  /// Called on login/logout to avoid stale data from a different account.
   Future<void> clearUserData() async {
     await _db.transaction((txn) async {
-      await txn.delete('route_templates', where: 'owner_id IS NOT NULL');
-      await txn.delete('session_runs', where: 'owner_id IS NOT NULL');
-      await txn.delete('free_rides', where: 'owner_id IS NOT NULL');
+      await txn.delete('route_templates', where: 'id != ?', whereArgs: [_activeDemoId]);
+      await txn.delete('session_runs', where: '1=1');
+      await txn.delete('free_rides', where: '1=1');
     });
     _changes.add(null);
   }

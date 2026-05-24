@@ -174,6 +174,20 @@ class _SplitwayMapState extends State<SplitwayMap> {
   Future<void> _recreateManagers() async {
     final map = _map;
     if (map == null) return;
+    // Remove old managers so their annotations don't persist as static
+    // duplicates after a style change.
+    final oldLine = _lineManager;
+    final oldCircle = _circleManager;
+    if (oldLine != null) {
+      try {
+        await map.annotations.removeAnnotationManager(oldLine);
+      } on PlatformException catch (_) {}
+    }
+    if (oldCircle != null) {
+      try {
+        await map.annotations.removeAnnotationManager(oldCircle);
+      } on PlatformException catch (_) {}
+    }
     _lineManager = await map.annotations.createPolylineAnnotationManager();
     _circleManager = await map.annotations.createCircleAnnotationManager();
   }
@@ -596,7 +610,7 @@ class _SplitwayMapState extends State<SplitwayMap> {
               geometry: mbx.Point(
                   coordinates: mbx.Position(center.longitude, center.latitude)),
               circleColor: kSectorColors[(i + 1) % kSectorColors.length].value,
-              circleRadius: 8,
+              circleRadius: 6,
               circleStrokeColor: 0xFFFFFFFF,
               circleStrokeWidth: 2,
             ));
@@ -676,7 +690,7 @@ class _SplitwayMapState extends State<SplitwayMap> {
         await circleMgr.create(mbx.CircleAnnotationOptions(
           geometry: mbx.Point(coordinates: mbx.Position(p.longitude, p.latitude)),
           circleColor: kSectorColors[i % kSectorColors.length].value,
-          circleRadius: 8,
+          circleRadius: 6,
           circleStrokeColor: 0xFFFFFFFF,
           circleStrokeWidth: 2,
         ));
@@ -862,6 +876,7 @@ class _SplitwayMapState extends State<SplitwayMap> {
       widget.onFreehandPoint?.call(GeoPoint(
         latitude: coords.lat.toDouble(),
         longitude: coords.lng.toDouble(),
+        altitudeMeters: coords.alt?.toDouble(),
       ));
     } catch (_) {
       // Conversion failed — skip this point.
@@ -873,6 +888,7 @@ class _SplitwayMapState extends State<SplitwayMap> {
     widget.onTap?.call(GeoPoint(
       latitude: coords.lat.toDouble(),
       longitude: coords.lng.toDouble(),
+      altitudeMeters: coords.alt?.toDouble(),
     ));
   }
 
@@ -881,6 +897,7 @@ class _SplitwayMapState extends State<SplitwayMap> {
     widget.onLongPress?.call(GeoPoint(
       latitude: coords.lat.toDouble(),
       longitude: coords.lng.toDouble(),
+      altitudeMeters: coords.alt?.toDouble(),
     ));
   }
 }

@@ -44,7 +44,7 @@ double niceMaxMps(double rawMaxMps, UnitSystem unit) {
   // Absorb floating-point drift so that values that are an exact step
   // (e.g. exactly 120 km/h round-tripped through m/s) don't jump up.
   final adjusted = displayValue - 1e-6;
-  final step = adjusted <= 120 ? 10.0 : 20.0;
+  final step = adjusted <= 10 ? 2.0 : adjusted <= 30 ? 5.0 : adjusted <= 120 ? 10.0 : 20.0;
   final rounded = (adjusted / step).ceil() * step;
   return rounded / factor;
 }

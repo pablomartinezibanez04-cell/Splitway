@@ -35,8 +35,22 @@ void main() {
     double mpsToKmh(double mps) => mps * 3.6;
     double mpsToMph(double mps) => mps * 2.23694;
 
-    test('rounds up to next 10 km/h below 120', () {
-      // 47 km/h → 50 km/h. 47 km/h = 13.0556 m/s.
+    test('rounds up to next 2 km/h at or below 10', () {
+      // 5 km/h → 6 km/h (walking pace).
+      expect(mpsToKmh(niceMaxMps(5 / 3.6, UnitSystem.metric)),
+          closeTo(6, 1e-9));
+      expect(mpsToKmh(niceMaxMps(9 / 3.6, UnitSystem.metric)),
+          closeTo(10, 1e-9));
+    });
+
+    test('rounds up to next 5 km/h between 10 and 30', () {
+      expect(mpsToKmh(niceMaxMps(12 / 3.6, UnitSystem.metric)),
+          closeTo(15, 1e-9));
+      expect(mpsToKmh(niceMaxMps(27 / 3.6, UnitSystem.metric)),
+          closeTo(30, 1e-9));
+    });
+
+    test('rounds up to next 10 km/h between 30 and 120', () {
       expect(mpsToKmh(niceMaxMps(47 / 3.6, UnitSystem.metric)),
           closeTo(50, 1e-9));
       expect(mpsToKmh(niceMaxMps(87 / 3.6, UnitSystem.metric)),

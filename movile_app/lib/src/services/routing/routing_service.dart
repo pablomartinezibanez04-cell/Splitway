@@ -68,7 +68,6 @@ class RoutingService {
           .map((c) => GeoPoint(
                 latitude: (c[1] as num).toDouble(),
                 longitude: (c[0] as num).toDouble(),
-                altitudeMeters: c.length > 2 ? (c[2] as num?)?.toDouble() : null,
               ))
           .toList();
     } catch (e) {

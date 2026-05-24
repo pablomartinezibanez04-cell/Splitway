@@ -25,6 +25,7 @@ import '../services/garage/garage_service.dart';
 import '../services/locale/locale_controller.dart';
 import '../services/settings/app_settings_controller.dart';
 import '../services/geocoding/reverse_geocoding_service.dart';
+import '../services/routing/elevation_service.dart';
 import '../services/routing/routing_service.dart';
 import '../features/profile/profile_screen.dart';
 import '../services/profile/profile_service.dart';
@@ -49,6 +50,7 @@ class AppRouter {
           geocodingService: config.hasMapbox
               ? ReverseGeocodingService(accessToken: config.mapboxToken!)
               : null,
+          elevationService: ElevationService(),
           defaultRoutingProfile: settingsController.defaultRoutingProfile,
           onRouteDeleted: settingsController.dismissDemoRoute,
         ),

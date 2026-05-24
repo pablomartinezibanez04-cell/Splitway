@@ -5,6 +5,7 @@ import 'package:splitway_core/splitway_core.dart';
 
 import '../../data/repositories/local_draft_repository.dart';
 import '../../services/geocoding/reverse_geocoding_service.dart';
+import '../../services/routing/elevation_service.dart';
 import '../../services/routing/routing_service.dart';
 import '../../services/sync/sync_service.dart';
 import 'draft_segment.dart';
@@ -32,6 +33,7 @@ class RouteEditorController extends ChangeNotifier {
     this._repo, {
     this.routingService,
     this.geocodingService,
+    this.elevationService,
     String defaultRoutingProfile = 'driving',
     this.onRouteDeleted,
   }) : _defaultRoutingProfile = defaultRoutingProfile {
@@ -52,6 +54,10 @@ class RouteEditorController extends ChangeNotifier {
   /// Optional: when present, reverse geocoding is called on save to populate
   /// the route's locationLabel field.
   final ReverseGeocodingService? geocodingService;
+
+  /// Optional: when present, elevation data is fetched on save so the route
+  /// gets a valid elevationRangeMeters value.
+  final ElevationService? elevationService;
 
   /// Optional: when present, deletions are propagated to the remote backend
   /// so sync cannot re-download routes the user has deleted.
@@ -523,6 +529,13 @@ class RouteEditorController extends ChangeNotifier {
     String? locationLabel;
     if (geocodingService != null && finalPath.isNotEmpty) {
       locationLabel = await geocodingService!.reverseGeocode(finalPath.first);
+    }
+
+    if (elevationService != null) {
+      final enriched = await elevationService!.enrich(finalPath);
+      finalPath
+        ..clear()
+        ..addAll(enriched);
     }
 
     final startFinishGate = _perpendicularGate(finalPath[0], finalPath[1]);

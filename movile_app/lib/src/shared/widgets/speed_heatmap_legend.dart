@@ -24,48 +24,57 @@ class SpeedHeatmapLegend extends StatelessWidget {
     return unit == UnitSystem.imperial ? l.unitMph(v) : l.unitKmh(v);
   }
 
+  static const _labelStyle = TextStyle(
+    fontSize: 10,
+    fontWeight: FontWeight.w700,
+    color: Colors.white,
+    shadows: [
+      Shadow(offset: Offset(0, 0), blurRadius: 3, color: Colors.black),
+      Shadow(offset: Offset(0, 0), blurRadius: 6, color: Colors.black),
+    ],
+  );
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final theme = Theme.of(context);
 
     final colors = kSpeedPaletteStops.map((s) => s.$2).toList();
     final stops = kSpeedPaletteStops.map((s) => s.$1).toList();
 
-    return Material(
-      elevation: 4,
-      borderRadius: BorderRadius.circular(10),
-      color: theme.colorScheme.surface.withValues(alpha: 0.9),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              height: 10,
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(3),
-                  gradient: LinearGradient(
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                    colors: colors,
-                    stops: stops,
-                  ),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(_label(l, 0), style: _labelStyle),
+              Text(_label(l, maxMps / 2), style: _labelStyle),
+              Text(_label(l, maxMps), style: _labelStyle),
+            ],
+          ),
+          const SizedBox(height: 2),
+          SizedBox(
+            height: 6,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(3),
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: colors,
+                  stops: stops,
                 ),
               ),
             ),
-            const SizedBox(height: 3),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(_label(l, 0), style: theme.textTheme.labelSmall),
-                Text(_label(l, maxMps / 2), style: theme.textTheme.labelSmall),
-                Text(_label(l, maxMps), style: theme.textTheme.labelSmall),
-              ],
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

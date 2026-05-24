@@ -3,7 +3,7 @@ import 'package:splitway_core/splitway_core.dart';
 
 /// ARGB color palette for sector segments, used by both map renderers.
 const kSectorColors = [
-  Color(0xFF1565C0),
+  Color(0xFFD32F2F),
   Color(0xFF6A1B9A),
   Color(0xFF00838F),
   Color(0xFFF57F17),
