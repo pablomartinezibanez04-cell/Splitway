@@ -20,6 +20,7 @@ import '../../services/speed/speed_session.dart';
 import '../../shared/formatters.dart';
 import '../../shared/widgets/empty_state.dart';
 import '../../shared/widgets/speed_heatmap_map_card.dart';
+import '../../shared/widgets/speed_heatmap_toggle_button.dart';
 import '../garage/vehicle_detail_screen.dart';
 import '../home/home_shell.dart';
 import 'history_filters.dart';
@@ -1008,6 +1009,7 @@ class FreeRideDetailScreen extends StatefulWidget {
 class _FreeRideDetailScreenState extends State<FreeRideDetailScreen> {
   FreeRideRun? _ride;
   bool _loading = true;
+  bool _heatmap = false;
 
   @override
   void initState() {
@@ -1124,13 +1126,27 @@ class _FreeRideDetailScreenState extends State<FreeRideDetailScreen> {
                       SpeedHeatmapMapCard(
                         config: widget.config,
                         telemetry: _ride!.points,
+                        showHeatmap: _heatmap,
                         unitSystem: widget.settingsController?.unitSystem ??
                             UnitSystem.metric,
                       ),
                     const SizedBox(height: 16),
-                    Text(
-                      Formatters.dateTime(_ride!.startedAt),
-                      style: Theme.of(context).textTheme.bodyMedium,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            Formatters.dateTime(_ride!.startedAt),
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ),
+                        if (hasUsableSpeedTelemetry(_ride!.points))
+                          SpeedHeatmapToggleButton(
+                            active: _heatmap,
+                            onPressed: () =>
+                                setState(() => _heatmap = !_heatmap),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 12),
                     _FreeRideSummaryRow(
@@ -1232,6 +1248,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   SessionRun? _session;
   RouteTemplate? _route;
   bool _loading = true;
+  bool _heatmap = false;
 
   @override
   void initState() {
@@ -1352,13 +1369,27 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                       config: widget.config,
                       route: _route!,
                       telemetry: _session!.points,
+                      showHeatmap: _heatmap,
                       unitSystem: widget.settingsController?.unitSystem ??
                           UnitSystem.metric,
                     ),
                     const SizedBox(height: 16),
-                    Text(
-                      Formatters.dateTime(_session!.startedAt),
-                      style: Theme.of(context).textTheme.bodyMedium,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            Formatters.dateTime(_session!.startedAt),
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ),
+                        if (hasUsableSpeedTelemetry(_session!.points))
+                          SpeedHeatmapToggleButton(
+                            active: _heatmap,
+                            onPressed: () =>
+                                setState(() => _heatmap = !_heatmap),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 12),
                     _SummaryRow(

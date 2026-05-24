@@ -5,17 +5,40 @@ import '../../config/app_config.dart';
 import '../../services/settings/app_settings_controller.dart';
 import '../speed_palette.dart';
 import 'speed_heatmap_legend.dart';
-import 'speed_heatmap_toggle_button.dart';
 import 'splitway_map.dart';
 
-/// Renders the read-only history map for a finished session/free-ride and,
-/// when the user toggles it on, overlays a speed heatmap legend on the
-/// right and asks [SplitwayMap] to draw the telemetry as a gradient line.
-class SpeedHeatmapMapCard extends StatefulWidget {
+/// Returns true if [telemetry] has at least two points with non-null speed.
+bool hasUsableSpeedTelemetry(List<TelemetryPoint> telemetry) {
+  if (telemetry.length < 2) return false;
+  var withSpeed = 0;
+  for (final p in telemetry) {
+    if (p.speedMps != null) {
+      withSpeed += 1;
+      if (withSpeed >= 2) return true;
+    }
+  }
+  return false;
+}
+
+/// Computes the nice-rounded max speed (in m/s) for a telemetry sample,
+/// to drive both the gradient normalization and the legend max.
+double niceMaxMpsFor(List<TelemetryPoint> telemetry, UnitSystem unit) {
+  var raw = 0.0;
+  for (final p in telemetry) {
+    final s = p.speedMps;
+    if (s != null && s > raw) raw = s;
+  }
+  return niceMaxMps(raw, unit);
+}
+
+/// Read-only history map card with an optional speed-heatmap overlay.
+/// The toggle button is owned by the parent and passed in via [showHeatmap].
+class SpeedHeatmapMapCard extends StatelessWidget {
   const SpeedHeatmapMapCard({
     super.key,
     required this.config,
     required this.telemetry,
+    required this.showHeatmap,
     this.route,
     this.unitSystem = UnitSystem.metric,
     this.aspectRatio = 4 / 3,
@@ -23,71 +46,37 @@ class SpeedHeatmapMapCard extends StatefulWidget {
 
   final AppConfig config;
   final List<TelemetryPoint> telemetry;
+  final bool showHeatmap;
   final RouteTemplate? route;
   final UnitSystem unitSystem;
   final double aspectRatio;
 
   @override
-  State<SpeedHeatmapMapCard> createState() => _SpeedHeatmapMapCardState();
-}
-
-class _SpeedHeatmapMapCardState extends State<SpeedHeatmapMapCard> {
-  bool _heatmap = false;
-
-  bool get _canHeatmap {
-    if (widget.telemetry.length < 2) return false;
-    var withSpeed = 0;
-    for (final p in widget.telemetry) {
-      if (p.speedMps != null) {
-        withSpeed += 1;
-        if (withSpeed >= 2) return true;
-      }
-    }
-    return false;
-  }
-
-  double get _niceMaxMps {
-    var raw = 0.0;
-    for (final p in widget.telemetry) {
-      final s = p.speedMps;
-      if (s != null && s > raw) raw = s;
-    }
-    return niceMaxMps(raw, widget.unitSystem);
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final canHeatmap = hasUsableSpeedTelemetry(telemetry);
+    final showLegend = showHeatmap && canHeatmap;
     return Card(
       clipBehavior: Clip.antiAlias,
       child: AspectRatio(
-        aspectRatio: widget.aspectRatio,
+        aspectRatio: aspectRatio,
         child: Stack(
           children: [
             SplitwayMap(
-              useMapbox: widget.config.hasMapbox,
-              route: widget.route,
-              telemetry: widget.telemetry,
+              useMapbox: config.hasMapbox,
+              route: route,
+              telemetry: telemetry,
               interactive: false,
-              showSpeedHeatmap: _heatmap,
-              speedHeatmapUnit: widget.unitSystem,
+              showSpeedHeatmap: showHeatmap,
+              speedHeatmapUnit: unitSystem,
             ),
-            if (_canHeatmap)
+            if (showLegend)
               Positioned(
-                top: 8,
-                left: 8,
-                child: SpeedHeatmapToggleButton(
-                  active: _heatmap,
-                  onPressed: () => setState(() => _heatmap = !_heatmap),
-                ),
-              ),
-            if (_heatmap && _canHeatmap)
-              Positioned(
-                top: 56,
+                left: 12,
                 right: 12,
-                bottom: 16,
+                bottom: 10,
                 child: SpeedHeatmapLegend(
-                  maxMps: _niceMaxMps,
-                  unit: widget.unitSystem,
+                  maxMps: niceMaxMpsFor(telemetry, unitSystem),
+                  unit: unitSystem,
                 ),
               ),
           ],

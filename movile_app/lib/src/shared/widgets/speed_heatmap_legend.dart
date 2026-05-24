@@ -5,8 +5,8 @@ import '../../services/settings/app_settings_controller.dart';
 import '../formatters.dart';
 import '../speed_palette.dart';
 
-/// Vertical color-bar legend shown next to the map when the speed heatmap
-/// mode is active. Always labels in km/h or mph (never m/s).
+/// Horizontal color-bar legend overlaid on the bottom of the map when the
+/// speed heatmap mode is active. Always labels in km/h or mph, never m/s.
 class SpeedHeatmapLegend extends StatelessWidget {
   const SpeedHeatmapLegend({
     super.key,
@@ -14,7 +14,7 @@ class SpeedHeatmapLegend extends StatelessWidget {
     required this.unit,
   });
 
-  /// Maximum speed represented at the top of the bar, in m/s.
+  /// Maximum speed represented at the right end of the bar, in m/s.
   /// Caller should pass a `niceMaxMps(...)` value.
   final double maxMps;
   final UnitSystem unit;
@@ -29,44 +29,39 @@ class SpeedHeatmapLegend extends StatelessWidget {
     final l = AppLocalizations.of(context);
     final theme = Theme.of(context);
 
-    // Build the gradient stops from the palette, top = max, bottom = 0.
-    final colors = kSpeedPaletteStops.reversed.map((s) => s.$2).toList();
-    final stops = kSpeedPaletteStops.reversed.map((s) => 1.0 - s.$1).toList();
+    final colors = kSpeedPaletteStops.map((s) => s.$2).toList();
+    final stops = kSpeedPaletteStops.map((s) => s.$1).toList();
 
     return Material(
       elevation: 4,
       borderRadius: BorderRadius.circular(10),
       color: theme.colorScheme.surface.withValues(alpha: 0.9),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        child: Row(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             SizedBox(
-              width: 14,
+              height: 10,
               child: Container(
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(3),
                   gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
                     colors: colors,
                     stops: stops,
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 6),
-            Column(
+            const SizedBox(height: 3),
+            Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(_label(l, maxMps),
-                    style: theme.textTheme.labelSmall),
-                Text(_label(l, maxMps / 2),
-                    style: theme.textTheme.labelSmall),
-                Text(_label(l, 0),
-                    style: theme.textTheme.labelSmall),
+                Text(_label(l, 0), style: theme.textTheme.labelSmall),
+                Text(_label(l, maxMps / 2), style: theme.textTheme.labelSmall),
+                Text(_label(l, maxMps), style: theme.textTheme.labelSmall),
               ],
             ),
           ],
