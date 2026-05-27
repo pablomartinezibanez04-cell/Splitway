@@ -149,7 +149,18 @@ class FreeRideController extends ChangeNotifier {
     final e = _engine;
     if (e == null) return null;
     final raw = e.finish();
-    final run = raw.copyWith(vehicleId: _selectedVehicleId);
+
+    // Reverse-geocode the start point so the free ride has a location label.
+    String? locationLabel;
+    if (geocodingService != null && raw.points.isNotEmpty) {
+      locationLabel =
+          await geocodingService!.reverseGeocode(raw.points.first.location);
+    }
+
+    final run = raw.copyWith(
+      vehicleId: _selectedVehicleId,
+      locationLabel: locationLabel,
+    );
     await _repo.saveFreeRideRun(run);
     _result = run;
     _stage = FreeRideStage.finished;
@@ -231,12 +242,7 @@ class FreeRideController extends ChangeNotifier {
     );
     await _repo.saveSessionRun(session);
 
-    await _repo.updateFreeRideMetadata(
-      run.id,
-      name: name,
-      description: description,
-      locationLabel: resolvedLocation,
-    );
+    await _repo.deleteFreeRide(run.id);
 
     return route;
   }

@@ -10,6 +10,7 @@ import 'src/data/demo/demo_seed.dart';
 import 'src/data/local/splitway_local_database.dart';
 import 'src/data/repositories/local_draft_repository.dart';
 import 'src/services/locale/locale_controller.dart';
+import 'src/services/routing/elevation_service.dart';
 import 'src/services/settings/app_settings_controller.dart';
 import 'src/services/tracking/background_tracking_service.dart';
 
@@ -37,7 +38,11 @@ Future<void> main() async {
   final database = await SplitwayLocalDatabase.open();
   final settingsController = await AppSettingsController.load();
   final seedRepo = LocalDraftRepository(database);
-  await DemoSeed.ensureSeeded(seedRepo, settingsController);
+  await DemoSeed.ensureSeeded(
+    seedRepo,
+    settingsController,
+    elevationService: ElevationService(),
+  );
   await seedRepo.dispose();
 
   final deviceLocale =

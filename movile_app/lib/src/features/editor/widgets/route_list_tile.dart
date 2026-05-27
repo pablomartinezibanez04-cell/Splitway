@@ -110,9 +110,6 @@ class RouteListTile extends StatelessWidget {
   String _subtitle(AppLocalizations l) {
     final parts = <String>[];
     parts.add(_distanceLabel(l, route.totalDistanceMeters, settingsController));
-    if (route.elevationRangeMeters != null) {
-      parts.add(_elevationLabel(l, route.elevationRangeMeters!, settingsController));
-    }
     if (route.locationLabel != null) {
       parts.add(route.locationLabel!);
     }

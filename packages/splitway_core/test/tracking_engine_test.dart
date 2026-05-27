@@ -412,6 +412,28 @@ void main() {
     });
   });
 
+  test('finish() right after lap close does not save phantom lap', () async {
+    final route = _buildTestRoute();
+    final base = DateTime.parse('2026-04-29T10:00:00Z');
+    final engine =
+        TrackingEngine(route: route, sessionId: 'sess-phantom', clock: () => base);
+
+    engine.start();
+    engine.ingest(_p(-0.0005, 0, base));
+    engine.ingest(_p(0.0005, 0.0008, base.add(const Duration(seconds: 1))));
+    engine.ingest(_p(0.0015, 0.0008, base.add(const Duration(seconds: 4))));
+    engine.ingest(_p(0.001, 0.0025, base.add(const Duration(seconds: 7))));
+    // Cross start gate again to close lap 1 — engine opens lap 2 internally.
+    engine.ingest(_p(-0.0005, 0, base.add(const Duration(seconds: 10))));
+    // Finish immediately — lap 2 has ~0 m distance.
+    final session = engine.finish();
+
+    expect(session.laps.length, 1);
+    expect(session.laps.first.completed, isTrue);
+    expect(session.laps.first.lapNumber, 1);
+    await engine.dispose();
+  });
+
   test('gate cooldown: crossing after 3+ s is accepted and closes lap', () async {
     final gate = GateDefinition(
       left: GeoPoint(latitude: 0.0, longitude: -0.0001),

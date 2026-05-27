@@ -6,6 +6,7 @@ import '../../config/app_config.dart';
 import '../../data/repositories/local_draft_repository.dart';
 import '../../services/settings/app_settings_controller.dart';
 import '../../shared/formatters.dart';
+import '../../shared/widgets/altitude_icon.dart';
 import '../../shared/widgets/splitway_map.dart';
 import '../history/history_screen.dart';
 import 'route_editor_controller.dart';
@@ -163,7 +164,8 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
               SizedBox(
                 width: _halfWidth(context),
                 child: BentoTile(
-                  icon: Icons.terrain,
+                  icon: Icons.height,
+                  iconWidget: const AltitudeIcon(size: 20),
                   label: l.elevationRangeLabel,
                   value: _elevationLabel(l, route.elevationRangeMeters, widget.settingsController),
                 ),
@@ -174,14 +176,6 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
                   icon: route.isClosed ? Icons.loop : Icons.linear_scale,
                   label: 'Circuito',
                   value: route.isClosed ? 'Cerrado' : 'Abierto',
-                ),
-              ),
-              SizedBox(
-                width: _halfWidth(context),
-                child: BentoTile(
-                  icon: Icons.location_on_outlined,
-                  label: 'Localización',
-                  value: route.locationLabel ?? '—',
                 ),
               ),
               SizedBox(
@@ -198,6 +192,14 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
                   icon: Icons.bolt_outlined,
                   label: 'Dificultad',
                   value: _difficultyLabel(l, route.difficulty),
+                ),
+              ),
+              SizedBox(
+                width: double.infinity,
+                child: BentoTile(
+                  icon: Icons.location_on_outlined,
+                  label: 'Localización',
+                  value: route.locationLabel ?? '—',
                 ),
               ),
               SizedBox(

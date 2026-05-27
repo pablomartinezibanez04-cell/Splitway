@@ -998,11 +998,23 @@ abstract class AppLocalizations {
   /// **'Laps'**
   String get historyLapsLabel;
 
+  /// No description provided for @historyLapsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No laps recorded in this session'**
+  String get historyLapsEmpty;
+
   /// No description provided for @historySectorsLabel.
   ///
   /// In en, this message translates to:
   /// **'Sectors'**
   String get historySectorsLabel;
+
+  /// No description provided for @historySectorsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No sectors recorded in this session'**
+  String get historySectorsEmpty;
 
   /// No description provided for @historySectorSubtitle.
   ///
@@ -1955,7 +1967,7 @@ abstract class AppLocalizations {
   /// No description provided for @historyDateCustom.
   ///
   /// In en, this message translates to:
-  /// **'Custom…'**
+  /// **'Custom'**
   String get historyDateCustom;
 
   /// No description provided for @historyFilterMinDistanceLabel.
@@ -2395,6 +2407,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Map style'**
   String get mapStyleLayersTooltip;
+
+  /// No description provided for @heatmapToggleOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Show speed heatmap'**
+  String get heatmapToggleOn;
+
+  /// No description provided for @heatmapToggleOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide speed heatmap'**
+  String get heatmapToggleOff;
+
+  /// No description provided for @heatmapLegendTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed'**
+  String get heatmapLegendTitle;
 
   /// No description provided for @editorSearchLocationHint.
   ///

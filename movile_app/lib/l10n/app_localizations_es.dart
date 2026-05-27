@@ -533,7 +533,14 @@ class AppLocalizationsEs extends AppLocalizations {
   String get historyLapsLabel => 'Vueltas';
 
   @override
+  String get historyLapsEmpty => 'No hay vueltas registradas en esta sesión';
+
+  @override
   String get historySectorsLabel => 'Sectores';
+
+  @override
+  String get historySectorsEmpty =>
+      'No hay sectores registrados en esta sesión';
 
   @override
   String historySectorSubtitle(int lapNum, String speed) {
@@ -1072,7 +1079,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get historyDateThisYear => 'Este año';
 
   @override
-  String get historyDateCustom => 'Personalizado…';
+  String get historyDateCustom => 'Personalizado';
 
   @override
   String get historyFilterMinDistanceLabel => 'Distancia mínima';
@@ -1323,6 +1330,15 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get mapStyleLayersTooltip => 'Estilo del mapa';
+
+  @override
+  String get heatmapToggleOn => 'Mostrar mapa de calor';
+
+  @override
+  String get heatmapToggleOff => 'Ocultar mapa de calor';
+
+  @override
+  String get heatmapLegendTitle => 'Velocidad';
 
   @override
   String get editorSearchLocationHint => 'Buscar ubicación...';

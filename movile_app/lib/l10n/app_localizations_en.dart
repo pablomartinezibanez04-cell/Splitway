@@ -531,7 +531,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get historyLapsLabel => 'Laps';
 
   @override
+  String get historyLapsEmpty => 'No laps recorded in this session';
+
+  @override
   String get historySectorsLabel => 'Sectors';
+
+  @override
+  String get historySectorsEmpty => 'No sectors recorded in this session';
 
   @override
   String historySectorSubtitle(int lapNum, String speed) {
@@ -1069,7 +1075,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get historyDateThisYear => 'This year';
 
   @override
-  String get historyDateCustom => 'Custom…';
+  String get historyDateCustom => 'Custom';
 
   @override
   String get historyFilterMinDistanceLabel => 'Min distance';
@@ -1320,6 +1326,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mapStyleLayersTooltip => 'Map style';
+
+  @override
+  String get heatmapToggleOn => 'Show speed heatmap';
+
+  @override
+  String get heatmapToggleOff => 'Hide speed heatmap';
+
+  @override
+  String get heatmapLegendTitle => 'Speed';
 
   @override
   String get editorSearchLocationHint => 'Search location...';
