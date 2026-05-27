@@ -283,6 +283,26 @@ class SettingsScreen extends StatelessWidget {
               ),
               onTap: () => _confirmClearCache(context, l),
             ),
+
+            // ── Diagnostics ─────────────────────────────────────────────
+            const _SectionHeader('Diagnóstico'),
+            ListTile(
+              leading: const Icon(Icons.bug_report_outlined),
+              title: const Text('Ver logs'),
+              subtitle: const Text(
+                'Errores y advertencias de Mapbox, Supabase y la app',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push('/settings/logs'),
+            ),
+            SwitchListTile(
+              title: const Text('Subir logs al servidor'),
+              subtitle: const Text(
+                'Permite revisar los logs desde el dashboard de Supabase',
+              ),
+              value: settingsController.remoteLogsEnabled,
+              onChanged: settingsController.setRemoteLogsEnabled,
+            ),
           ],
         ),
       ),

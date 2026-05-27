@@ -19,8 +19,10 @@ import '../features/free_ride/free_ride_screen.dart';
 import '../features/session/live_session_controller.dart';
 import '../features/session/live_session_screen.dart';
 import '../features/garage/garage_screen.dart';
+import '../features/logs/logs_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/stats/stats_screen.dart';
+import '../services/logging/app_logger.dart';
 import '../services/auth/auth_service.dart';
 import '../services/garage/garage_service.dart';
 import '../services/locale/locale_controller.dart';
@@ -115,6 +117,20 @@ class AppRouter {
           repository: repository,
           garageService: garageService,
         ),
+      ),
+
+      GoRoute(
+        path: '/settings/logs',
+        builder: (_, __) {
+          final sink = AppLogger.localSink;
+          final uploader = AppLogger.uploader;
+          if (sink == null || uploader == null) {
+            return const Scaffold(
+              body: Center(child: Text('Logger not initialized')),
+            );
+          }
+          return LogsScreen(sink: sink, uploader: uploader);
+        },
       ),
 
       GoRoute(
