@@ -537,5 +537,6 @@
   "statsActivitiesCount": "{count, plural, =0{Sin actividades} =1{1 actividad} other{{count} actividades}}",
   "@statsActivitiesCount": { "placeholders": { "count": { "type": "int" } } },
   "statsBestQuarterMileShort": "Mejor 1/4 mi",
-  "statsNoSpeedSessionsForVehicle": "Sin tests"
+  "statsNoSpeedSessionsForVehicle": "Sin tests",
+  "statsUnknownVehicle": "Vehículo desconocido"
 }

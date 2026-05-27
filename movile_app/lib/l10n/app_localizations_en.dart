@@ -1538,4 +1538,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get statsNoSpeedSessionsForVehicle => 'No speed tests';
+
+  @override
+  String get statsUnknownVehicle => 'Unknown vehicle';
 }

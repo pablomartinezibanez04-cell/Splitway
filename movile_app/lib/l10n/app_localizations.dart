@@ -2803,6 +2803,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No speed tests'**
   String get statsNoSpeedSessionsForVehicle;
+
+  /// No description provided for @statsUnknownVehicle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown vehicle'**
+  String get statsUnknownVehicle;
 }
 
 class _AppLocalizationsDelegate

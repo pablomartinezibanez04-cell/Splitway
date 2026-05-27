@@ -1542,4 +1542,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get statsNoSpeedSessionsForVehicle => 'Sin tests';
+
+  @override
+  String get statsUnknownVehicle => 'Vehículo desconocido';
 }

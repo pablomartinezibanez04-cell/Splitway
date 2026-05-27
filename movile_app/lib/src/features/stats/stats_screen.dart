@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:splitway_core/splitway_core.dart';
 import 'package:splitway_mobile/l10n/app_localizations.dart';
 
@@ -126,7 +127,10 @@ class _StatsScreenState extends State<StatsScreen> {
                   vehicleCount: widget.garageService?.vehicles.length ?? 0,
                   unit: widget.settingsController.unitSystem,
                 ),
-                _PersonalBestsSection(speedSessions: _speedSessions),
+                _PersonalBestsSection(
+                  speedSessions: _speedSessions,
+                  vehicles: widget.garageService?.vehicles ?? const [],
+                ),
                 _RecordsSection(
                   sessions: _sessions,
                   freeRides: _freeRides,
@@ -258,29 +262,35 @@ class _OverviewSection extends StatelessWidget {
 // =============================================================================
 
 class _PersonalBestsSection extends StatelessWidget {
-  const _PersonalBestsSection({required this.speedSessions});
+  const _PersonalBestsSection({
+    required this.speedSessions,
+    required this.vehicles,
+  });
 
   final List<SpeedSession> speedSessions;
+  final List<Vehicle> vehicles;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
 
-    final bests = <SpeedMetric, double>{};
+    // Track best value + vehicleId of the speed session that achieved it.
+    final bests = <SpeedMetric, ({double value, String? vehicleId})>{};
     for (final s in speedSessions) {
       for (final entry in s.results.entries) {
         final v = entry.value;
         if (v == null) continue;
         final current = bests[entry.key];
-        if (entry.key.isTimeBased) {
-          // Best = lowest time
-          if (current == null || v < current) bests[entry.key] = v;
-        } else {
-          // Top speed: best = highest value
-          if (current == null || v > current) bests[entry.key] = v;
+        final isBetter = entry.key.isTimeBased
+            ? (current == null || v < current.value) // lower is better
+            : (current == null || v > current.value); // higher is better
+        if (isBetter) {
+          bests[entry.key] = (value: v, vehicleId: s.vehicleId);
         }
       }
     }
+
+    final vehiclesById = {for (final v in vehicles) v.id: v};
 
     return _Section(
       title: l.statsPersonalBestsSection,
@@ -292,8 +302,16 @@ class _PersonalBestsSection extends StatelessWidget {
               _MetricRow(
                 label: _metricLabel(l, metric),
                 value: bests.containsKey(metric)
-                    ? metric.formatValue(bests[metric])
+                    ? metric.formatValue(bests[metric]!.value)
                     : l.statsNoBestYet,
+                subtitle: _vehicleSubtitle(
+                  l: l,
+                  vehicleId: bests[metric]?.vehicleId,
+                  vehicle: bests[metric]?.vehicleId == null
+                      ? null
+                      : vehiclesById[bests[metric]!.vehicleId],
+                  hasBest: bests.containsKey(metric),
+                ),
               ),
           ],
         ),
@@ -433,13 +451,23 @@ class _ActivityChartSection extends StatelessWidget {
 
     final maxCount = counts.fold<int>(0, (m, v) => v > m ? v : m);
 
+    // Compute the start date of each week bucket. Today is the last day of the
+    // most recent bucket, so the start of that bucket is today - 6 days; each
+    // older bucket starts 7 more days back.
+    final today = DateTime(now.year, now.month, now.day);
+    final weekStarts = <DateTime>[
+      for (var i = 0; i < _weeksCount; i++)
+        today.subtract(Duration(days: 6 + (_weeksCount - 1 - i) * 7)),
+    ];
+    final labelFmt = DateFormat.Md(l.localeName);
+
     return _Section(
       title: l.statsActivitySection,
       subtitle: l.statsActivityWeekly,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
         child: SizedBox(
-          height: 120,
+          height: 140,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -448,6 +476,7 @@ class _ActivityChartSection extends StatelessWidget {
                   child: _BarColumn(
                     count: counts[i],
                     maxCount: maxCount == 0 ? 1 : maxCount,
+                    weekLabel: labelFmt.format(weekStarts[i]),
                   ),
                 ),
                 if (i < counts.length - 1) const SizedBox(width: 6),
@@ -461,10 +490,17 @@ class _ActivityChartSection extends StatelessWidget {
 }
 
 class _BarColumn extends StatelessWidget {
-  const _BarColumn({required this.count, required this.maxCount});
+  const _BarColumn({
+    required this.count,
+    required this.maxCount,
+    required this.weekLabel,
+  });
 
   final int count;
   final int maxCount;
+
+  /// Short label shown under the bar (start date of the week, e.g. "5/27").
+  final String weekLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -480,12 +516,23 @@ class _BarColumn extends StatelessWidget {
         ),
         const SizedBox(height: 2),
         Container(
-          height: 90 * ratio + (count > 0 ? 4 : 1),
+          height: 80 * ratio + (count > 0 ? 4 : 1),
           decoration: BoxDecoration(
             color: count > 0
                 ? theme.colorScheme.primary
                 : theme.colorScheme.outlineVariant,
             borderRadius: BorderRadius.circular(3),
+          ),
+        ),
+        const SizedBox(height: 4),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            weekLabel,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.outline,
+              fontSize: 10,
+            ),
           ),
         ),
       ],
@@ -755,10 +802,17 @@ class _StatCard extends StatelessWidget {
 }
 
 class _MetricRow extends StatelessWidget {
-  const _MetricRow({required this.label, required this.value});
+  const _MetricRow({
+    required this.label,
+    required this.value,
+    this.subtitle,
+  });
 
   final String label;
   final String value;
+
+  /// Optional small caption shown below the label (e.g., vehicle name).
+  final String? subtitle;
 
   @override
   Widget build(BuildContext context) {
@@ -773,9 +827,36 @@ class _MetricRow extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Text(
-              label,
-              style: theme.textTheme.bodyMedium,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: theme.textTheme.bodyMedium,
+                ),
+                if (subtitle != null && subtitle!.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Row(
+                      children: [
+                        Icon(Icons.directions_car_outlined,
+                            size: 12,
+                            color: theme.colorScheme.outline),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            subtitle!,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.outline,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
             ),
           ),
           Text(
@@ -787,6 +868,23 @@ class _MetricRow extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Returns the subtitle to display under a personal-best row:
+/// - The vehicle name when the session had a vehicle and we still know it.
+/// - A localized "unknown vehicle" string when the session had a vehicleId but
+///   the vehicle is no longer in the garage.
+/// - `null` (no subtitle) when there's no best yet or the session had no
+///   associated vehicle.
+String? _vehicleSubtitle({
+  required AppLocalizations l,
+  required String? vehicleId,
+  required Vehicle? vehicle,
+  required bool hasBest,
+}) {
+  if (!hasBest) return null;
+  if (vehicleId == null) return null;
+  return vehicle?.name ?? l.statsUnknownVehicle;
 }
 
 String _metricLabel(AppLocalizations l, SpeedMetric m) {
