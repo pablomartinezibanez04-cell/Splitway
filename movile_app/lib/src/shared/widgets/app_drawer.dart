@@ -198,7 +198,7 @@ class _LoggedInContent extends StatelessWidget {
                 label: l.drawerStats,
                 onTap: () {
                   Navigator.pop(context);
-                  // TODO: navigate to stats
+                  context.push('/stats');
                 },
               ),
               _MenuItem(

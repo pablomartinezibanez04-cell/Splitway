@@ -509,5 +509,27 @@
   "speedHistoryDeleteTooltip": "Delete",
   "speedHistoryDeleteTitle": "Delete session",
   "speedHistoryDeleteConfirm": "Delete \"{name}\"? This cannot be undone.",
-  "@speedHistoryDeleteConfirm": { "placeholders": { "name": { "type": "String" } } }
+  "@speedHistoryDeleteConfirm": { "placeholders": { "name": { "type": "String" } } },
+
+  "statsTitle": "Statistics",
+  "statsEmptyTitle": "No data yet",
+  "statsEmptyMessage": "Record a session, free ride, or speed test to see your statistics here.",
+  "statsOverviewSection": "Overview",
+  "statsTotalSessions": "Total activities",
+  "statsTotalDistance": "Total distance",
+  "statsTotalTime": "Total time",
+  "statsVehiclesOwned": "Vehicles",
+  "statsPersonalBestsSection": "Personal bests",
+  "statsRecordsSection": "Records",
+  "statsTopSpeedRecord": "Top speed",
+  "statsLongestRide": "Longest ride",
+  "statsLongestSession": "Longest session",
+  "statsActivitySection": "Last 8 weeks",
+  "statsActivityWeekly": "Activities per week",
+  "statsByVehicleSection": "By vehicle",
+  "statsNoBestYet": "—",
+  "statsActivitiesCount": "{count, plural, =0{No activities} =1{1 activity} other{{count} activities}}",
+  "@statsActivitiesCount": { "placeholders": { "count": { "type": "int" } } },
+  "statsBestQuarterMileShort": "Best 1/4 mi",
+  "statsNoSpeedSessionsForVehicle": "No speed tests"
 }

@@ -1453,4 +1453,74 @@ class AppLocalizationsEn extends AppLocalizations {
   String speedHistoryDeleteConfirm(String name) {
     return 'Delete \"$name\"? This cannot be undone.';
   }
+
+  @override
+  String get statsTitle => 'Statistics';
+
+  @override
+  String get statsEmptyTitle => 'No data yet';
+
+  @override
+  String get statsEmptyMessage =>
+      'Record a session, free ride, or speed test to see your statistics here.';
+
+  @override
+  String get statsOverviewSection => 'Overview';
+
+  @override
+  String get statsTotalSessions => 'Total activities';
+
+  @override
+  String get statsTotalDistance => 'Total distance';
+
+  @override
+  String get statsTotalTime => 'Total time';
+
+  @override
+  String get statsVehiclesOwned => 'Vehicles';
+
+  @override
+  String get statsPersonalBestsSection => 'Personal bests';
+
+  @override
+  String get statsRecordsSection => 'Records';
+
+  @override
+  String get statsTopSpeedRecord => 'Top speed';
+
+  @override
+  String get statsLongestRide => 'Longest ride';
+
+  @override
+  String get statsLongestSession => 'Longest session';
+
+  @override
+  String get statsActivitySection => 'Last 8 weeks';
+
+  @override
+  String get statsActivityWeekly => 'Activities per week';
+
+  @override
+  String get statsByVehicleSection => 'By vehicle';
+
+  @override
+  String get statsNoBestYet => '—';
+
+  @override
+  String statsActivitiesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count activities',
+      one: '1 activity',
+      zero: 'No activities',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get statsBestQuarterMileShort => 'Best 1/4 mi';
+
+  @override
+  String get statsNoSpeedSessionsForVehicle => 'No speed tests';
 }

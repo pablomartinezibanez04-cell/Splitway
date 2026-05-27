@@ -2653,6 +2653,126 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Delete \"{name}\"? This cannot be undone.'**
   String speedHistoryDeleteConfirm(String name);
+
+  /// No description provided for @statsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Statistics'**
+  String get statsTitle;
+
+  /// No description provided for @statsEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No data yet'**
+  String get statsEmptyTitle;
+
+  /// No description provided for @statsEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Record a session, free ride, or speed test to see your statistics here.'**
+  String get statsEmptyMessage;
+
+  /// No description provided for @statsOverviewSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Overview'**
+  String get statsOverviewSection;
+
+  /// No description provided for @statsTotalSessions.
+  ///
+  /// In en, this message translates to:
+  /// **'Total activities'**
+  String get statsTotalSessions;
+
+  /// No description provided for @statsTotalDistance.
+  ///
+  /// In en, this message translates to:
+  /// **'Total distance'**
+  String get statsTotalDistance;
+
+  /// No description provided for @statsTotalTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Total time'**
+  String get statsTotalTime;
+
+  /// No description provided for @statsVehiclesOwned.
+  ///
+  /// In en, this message translates to:
+  /// **'Vehicles'**
+  String get statsVehiclesOwned;
+
+  /// No description provided for @statsPersonalBestsSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Personal bests'**
+  String get statsPersonalBestsSection;
+
+  /// No description provided for @statsRecordsSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Records'**
+  String get statsRecordsSection;
+
+  /// No description provided for @statsTopSpeedRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Top speed'**
+  String get statsTopSpeedRecord;
+
+  /// No description provided for @statsLongestRide.
+  ///
+  /// In en, this message translates to:
+  /// **'Longest ride'**
+  String get statsLongestRide;
+
+  /// No description provided for @statsLongestSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Longest session'**
+  String get statsLongestSession;
+
+  /// No description provided for @statsActivitySection.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 8 weeks'**
+  String get statsActivitySection;
+
+  /// No description provided for @statsActivityWeekly.
+  ///
+  /// In en, this message translates to:
+  /// **'Activities per week'**
+  String get statsActivityWeekly;
+
+  /// No description provided for @statsByVehicleSection.
+  ///
+  /// In en, this message translates to:
+  /// **'By vehicle'**
+  String get statsByVehicleSection;
+
+  /// No description provided for @statsNoBestYet.
+  ///
+  /// In en, this message translates to:
+  /// **'—'**
+  String get statsNoBestYet;
+
+  /// No description provided for @statsActivitiesCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No activities} =1{1 activity} other{{count} activities}}'**
+  String statsActivitiesCount(int count);
+
+  /// No description provided for @statsBestQuarterMileShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Best 1/4 mi'**
+  String get statsBestQuarterMileShort;
+
+  /// No description provided for @statsNoSpeedSessionsForVehicle.
+  ///
+  /// In en, this message translates to:
+  /// **'No speed tests'**
+  String get statsNoSpeedSessionsForVehicle;
 }
 
 class _AppLocalizationsDelegate

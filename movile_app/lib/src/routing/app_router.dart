@@ -20,6 +20,7 @@ import '../features/session/live_session_controller.dart';
 import '../features/session/live_session_screen.dart';
 import '../features/garage/garage_screen.dart';
 import '../features/settings/settings_screen.dart';
+import '../features/stats/stats_screen.dart';
 import '../services/auth/auth_service.dart';
 import '../services/garage/garage_service.dart';
 import '../services/locale/locale_controller.dart';
@@ -129,6 +130,17 @@ class AppRouter {
           config: config,
           authService: authService,
           profileService: profileService,
+        ),
+      ),
+
+      GoRoute(
+        path: '/stats',
+        builder: (_, __) => StatsScreen(
+          repository: repository,
+          settingsController: settingsController,
+          speedRepository: speedRepository,
+          garageService: garageService,
+          authService: authService,
         ),
       ),
 

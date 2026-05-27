@@ -509,5 +509,27 @@
   "speedHistoryDeleteTooltip": "Eliminar",
   "speedHistoryDeleteTitle": "Eliminar sesión",
   "speedHistoryDeleteConfirm": "¿Eliminar \"{name}\"? Esta acción no se puede deshacer.",
-  "@speedHistoryDeleteConfirm": { "placeholders": { "name": { "type": "String" } } }
+  "@speedHistoryDeleteConfirm": { "placeholders": { "name": { "type": "String" } } },
+
+  "statsTitle": "Estadísticas",
+  "statsEmptyTitle": "Aún no hay datos",
+  "statsEmptyMessage": "Registra una sesión, un free ride o un test de velocidad para ver tus estadísticas aquí.",
+  "statsOverviewSection": "Resumen",
+  "statsTotalSessions": "Actividades totales",
+  "statsTotalDistance": "Distancia total",
+  "statsTotalTime": "Tiempo total",
+  "statsVehiclesOwned": "Vehículos",
+  "statsPersonalBestsSection": "Récords personales",
+  "statsRecordsSection": "Récords",
+  "statsTopSpeedRecord": "Velocidad máxima",
+  "statsLongestRide": "Ride más largo",
+  "statsLongestSession": "Sesión más larga",
+  "statsActivitySection": "Últimas 8 semanas",
+  "statsActivityWeekly": "Actividades por semana",
+  "statsByVehicleSection": "Por vehículo",
+  "statsNoBestYet": "—",
+  "statsActivitiesCount": "{count, plural, =0{Sin actividades} =1{1 actividad} other{{count} actividades}}",
+  "@statsActivitiesCount": { "placeholders": { "count": { "type": "int" } } },
+  "statsBestQuarterMileShort": "Mejor 1/4 mi",
+  "statsNoSpeedSessionsForVehicle": "Sin tests"
 }
