@@ -4,6 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:splitway_core/splitway_core.dart';
 
+import '../logging/app_logger.dart';
+import '../logging/http_logging.dart';
+
 /// Calls the Mapbox Directions API to convert a list of user-tapped
 /// waypoints into a road-following path.
 ///
@@ -48,7 +51,11 @@ class RoutingService {
     );
 
     try {
-      final response = await http.get(uri).timeout(const Duration(seconds: 10));
+      final response = await logHttp(
+        'mapbox',
+        uri,
+        () => http.get(uri).timeout(const Duration(seconds: 10)),
+      );
 
       if (response.statusCode != 200) {
         debugPrint(
@@ -70,8 +77,15 @@ class RoutingService {
                 longitude: (c[0] as num).toDouble(),
               ))
           .toList();
-    } catch (e) {
+    } catch (e, st) {
       debugPrint('RoutingService error: $e');
+      AppLogger.maybeInstance?.warning(
+        'mapbox',
+        'RoutingService.snapToRoads failed',
+        error: e,
+        stackTrace: st,
+        context: {'url': uri.toString()},
+      );
       return null;
     }
   }

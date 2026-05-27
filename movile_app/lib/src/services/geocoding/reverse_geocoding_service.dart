@@ -3,6 +3,9 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:splitway_core/splitway_core.dart';
 
+import '../logging/app_logger.dart';
+import '../logging/http_logging.dart';
+
 /// Calls the Mapbox Reverse Geocoding API v6 to convert a [GeoPoint] into a
 /// human-readable place name (e.g. "Madrid, Spain").
 class ReverseGeocodingService {
@@ -25,7 +28,11 @@ class ReverseGeocodingService {
 
     try {
       final client = _client ?? http.Client();
-      final response = await client.get(url).timeout(const Duration(seconds: 5));
+      final response = await logHttp(
+        'mapbox',
+        url,
+        () => client.get(url).timeout(const Duration(seconds: 5)),
+      );
       if (_client == null) client.close();
 
       if (response.statusCode != 200) return null;
@@ -41,7 +48,14 @@ class ReverseGeocodingService {
       final placeName = properties['full_address'] as String? ??
           properties['name'] as String?;
       return placeName;
-    } catch (_) {
+    } catch (e, st) {
+      AppLogger.maybeInstance?.warning(
+        'mapbox',
+        'reverseGeocode failed',
+        error: e,
+        stackTrace: st,
+        context: {'url': url.toString()},
+      );
       return null;
     }
   }

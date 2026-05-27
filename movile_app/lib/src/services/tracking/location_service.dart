@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:geolocator/geolocator.dart';
 import 'package:splitway_core/splitway_core.dart';
 
+import '../logging/app_logger.dart';
+
 enum LocationPermissionStatus {
   granted,
   denied,
@@ -19,11 +21,25 @@ class LocationService {
   /// can show the right hint.
   static Future<LocationPermissionStatus> ensurePermission() async {
     final servicesOn = await Geolocator.isLocationServiceEnabled();
-    if (!servicesOn) return LocationPermissionStatus.servicesDisabled;
+    if (!servicesOn) {
+      AppLogger.maybeInstance?.warning(
+        'location',
+        'Location services disabled',
+      );
+      return LocationPermissionStatus.servicesDisabled;
+    }
 
     var permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      AppLogger.maybeInstance?.warning(
+        'location',
+        'GPS permission denied',
+        context: {'permission': permission.name},
+      );
     }
     return switch (permission) {
       LocationPermission.always ||
@@ -77,7 +93,15 @@ class LocationService {
         distanceFilter: distanceFilterMeters,
       );
     }
-    return Geolocator.getPositionStream(locationSettings: settings).map(
+    return Geolocator.getPositionStream(locationSettings: settings)
+        .handleError((Object e, StackTrace st) {
+      AppLogger.maybeInstance?.warning(
+        'location',
+        'Position stream error',
+        error: e,
+        stackTrace: st,
+      );
+    }).map(
       (p) => TelemetryPoint(
         timestamp: p.timestamp,
         location: GeoPoint(

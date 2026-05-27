@@ -5,6 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:splitway_core/splitway_core.dart';
 
+import '../logging/app_logger.dart';
+import '../logging/http_logging.dart';
+
 class ElevationService {
   ElevationService({
     String baseUrl = 'https://api.open-meteo.com/v1/elevation',
@@ -58,7 +61,11 @@ class ElevationService {
     final uri = Uri.parse('$_base?latitude=$lats&longitude=$lngs');
 
     try {
-      final response = await http.get(uri).timeout(const Duration(seconds: 10));
+      final response = await logHttp(
+        'elevation',
+        uri,
+        () => http.get(uri).timeout(const Duration(seconds: 10)),
+      );
       if (response.statusCode != 200) {
         debugPrint('ElevationService: error ${response.statusCode}');
         return null;
@@ -66,8 +73,15 @@ class ElevationService {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       final raw = data['elevation'] as List<dynamic>;
       return raw.map((e) => (e as num).toDouble()).toList();
-    } catch (e) {
+    } catch (e, st) {
       debugPrint('ElevationService error: $e');
+      AppLogger.maybeInstance?.warning(
+        'elevation',
+        'ElevationService.fetch failed',
+        error: e,
+        stackTrace: st,
+        context: {'url': uri.toString()},
+      );
       return null;
     }
   }
