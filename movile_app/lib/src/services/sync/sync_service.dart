@@ -141,7 +141,22 @@ class SyncService extends ChangeNotifier {
     final routesWithNewThumbnails = <RouteTemplate>[];
     final pushedRouteIds = <String>{};
     for (final route in localRoutes) {
-      if (route.id == 'demo-espana') continue; // never push demo route
+      if (route.id == 'demo-espana') {
+        // Never push demo route data, but generate its thumbnail if missing.
+        if (route.thumbnailUrl == null &&
+            remote.thumbnailService != null &&
+            userId != null) {
+          try {
+            final url =
+                await remote.thumbnailService!.generate(route, userId!);
+            await local.saveRouteTemplate(route.copyWith(thumbnailUrl: url));
+            transferred++;
+          } catch (e) {
+            debugPrint('SyncService: demo thumbnail generation failed: $e');
+          }
+        }
+        continue;
+      }
       final remoteUpdated = remoteRouteTs[route.id];
       final needsPush = remoteUpdated == null ||
           route.createdAt.isAfter(remoteUpdated);

@@ -80,6 +80,8 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
+      isDismissible: false,
+      enableDrag: false,
       builder: (_) => VehicleFormSheet(vehicle: _vehicle),
     );
     if (result == null) return;
