@@ -7,6 +7,7 @@ import 'package:splitway_core/splitway_core.dart';
 import '../../data/repositories/local_draft_repository.dart';
 import '../../data/repositories/speed_repository.dart';
 import '../../data/repositories/supabase_repository.dart';
+import '../logging/app_logger.dart';
 
 /// Bidirectional sync between [LocalDraftRepository] (SQLite) and
 /// [SupabaseRepository] (Postgres + RLS).
@@ -72,8 +73,15 @@ class SyncService extends ChangeNotifier {
     await local.deleteRoute(id);
     try {
       await remote.deleteRoute(id);
-    } catch (e) {
+    } catch (e, st) {
       debugPrint('SyncService: failed to delete route $id from remote: $e');
+      AppLogger.maybeInstance?.warning(
+        'sync',
+        'deleteRoute remote failed',
+        error: e,
+        stackTrace: st,
+        context: {'id': id},
+      );
     }
   }
 
@@ -117,6 +125,12 @@ class SyncService extends ChangeNotifier {
       return transferred;
     } catch (e, st) {
       debugPrint('SyncService error: $e\n$st');
+      AppLogger.maybeInstance?.warning(
+        'sync',
+        'full sync failed',
+        error: e,
+        stackTrace: st,
+      );
       _status = SyncStatus.error;
       _lastError = e.toString();
       notifyListeners();
@@ -151,8 +165,14 @@ class SyncService extends ChangeNotifier {
                 await remote.thumbnailService!.generate(route, userId!);
             await local.saveRouteTemplate(route.copyWith(thumbnailUrl: url));
             transferred++;
-          } catch (e) {
+          } catch (e, st) {
             debugPrint('SyncService: demo thumbnail generation failed: $e');
+            AppLogger.maybeInstance?.warning(
+              'sync',
+              'demo thumbnail generation failed',
+              error: e,
+              stackTrace: st,
+            );
           }
         }
         continue;

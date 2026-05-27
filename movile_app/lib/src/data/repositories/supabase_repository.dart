@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:splitway_core/splitway_core.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../services/logging/app_logger.dart';
+import '../../services/logging/http_logging.dart';
 import '../services/route_thumbnail_service.dart';
 
 /// Remote repository backed by Supabase Postgres + RLS.
@@ -32,13 +34,19 @@ class SupabaseRepository {
       try {
         final url = await thumbnailService!.generate(route, _uid);
         route = route.copyWith(thumbnailUrl: url);
-      } catch (e) {
+      } catch (e, st) {
         // Log but continue — route sync must not fail because of thumbnail
         debugPrint('Thumbnail generation failed: $e');
+        AppLogger.maybeInstance?.warning(
+          'supabase',
+          'Thumbnail generation failed',
+          error: e,
+          stackTrace: st,
+        );
       }
     }
 
-    await _client.from('route_templates').upsert({
+    await logSupabase('upsertRoute', () => _client.from('route_templates').upsert({
       'id': route.id,
       'owner_id': _uid,
       'name': route.name,
@@ -51,12 +59,13 @@ class SupabaseRepository {
       'updated_at': DateTime.now().toUtc().toIso8601String(),
       'thumbnail_url': route.thumbnailUrl,
       'elevation_range_m': route.elevationRangeMeters,
-    });
+    }));
 
     // Delete old sectors and re-insert
-    await _client.from('sectors').delete().eq('route_id', route.id);
+    await logSupabase('upsertRoute.deleteSectors',
+        () => _client.from('sectors').delete().eq('route_id', route.id));
     if (route.sectors.isNotEmpty) {
-      await _client.from('sectors').insert(
+      await logSupabase('upsertRoute.insertSectors', () => _client.from('sectors').insert(
         route.sectors.map((s) => {
           'id': s.id,
           'route_id': route.id,
@@ -64,7 +73,7 @@ class SupabaseRepository {
           'label': s.label,
           'gate_json': s.gate.toJson(),
         }).toList(),
-      );
+      ));
     }
 
     return route;
@@ -72,18 +81,24 @@ class SupabaseRepository {
 
   /// Fetches all routes belonging to the current user.
   Future<List<RouteTemplate>> fetchAllRoutes() async {
-    final rows = await _client
-        .from('route_templates')
-        .select()
-        .order('created_at', ascending: false);
+    final rows = await logSupabase(
+      'fetchAllRoutes',
+      () => _client
+          .from('route_templates')
+          .select()
+          .order('created_at', ascending: false),
+    );
 
     final routes = <RouteTemplate>[];
     for (final row in rows) {
-      final sectorRows = await _client
-          .from('sectors')
-          .select()
-          .eq('route_id', row['id'] as String)
-          .order('order_index');
+      final sectorRows = await logSupabase(
+        'fetchAllRoutes.sectors',
+        () => _client
+            .from('sectors')
+            .select()
+            .eq('route_id', row['id'] as String)
+            .order('order_index'),
+      );
       routes.add(_parseRoute(row, sectorRows));
     }
     return routes;
@@ -95,15 +110,23 @@ class SupabaseRepository {
       await _client.storage
           .from('route-thumbnails')
           .remove(['$_uid/$id.png']);
-    } catch (_) {}
-    await _client.from('route_templates').delete().eq('id', id);
+    } catch (e, st) {
+      AppLogger.maybeInstance?.warning(
+        'supabase',
+        'deleteRoute.thumbnail failed',
+        error: e,
+        stackTrace: st,
+      );
+    }
+    await logSupabase('deleteRoute',
+        () => _client.from('route_templates').delete().eq('id', id));
   }
 
   // ---------- Sessions ----------
 
   /// Upserts a session run (metadata + telemetry) to Supabase atomically.
   Future<void> upsertSession(SessionRun session) async {
-    await _client.rpc('upsert_session_with_telemetry', params: {
+    await logSupabase('upsertSession', () => _client.rpc('upsert_session_with_telemetry', params: {
       'p_id': session.id,
       'p_route_id': session.routeTemplateId,
       'p_started_at': session.startedAt.toUtc().toIso8601String(),
@@ -128,26 +151,32 @@ class SupabaseRepository {
               })
           .toList(),
       'p_vehicle_id': session.vehicleId,
-    });
+    }));
   }
 
   /// Fetches all sessions belonging to the current user.
   Future<List<SessionRun>> fetchAllSessions(
       {bool includePoints = false}) async {
-    final rows = await _client
-        .from('session_runs')
-        .select()
-        .order('started_at', ascending: false);
+    final rows = await logSupabase(
+      'fetchAllSessions',
+      () => _client
+          .from('session_runs')
+          .select()
+          .order('started_at', ascending: false),
+    );
 
     final sessions = <SessionRun>[];
     for (final row in rows) {
       List<TelemetryPoint> points = const [];
       if (includePoints) {
-        final tRows = await _client
-            .from('telemetry_points')
-            .select()
-            .eq('session_id', row['id'] as String)
-            .order('ts');
+        final tRows = await logSupabase(
+          'fetchAllSessions.telemetry',
+          () => _client
+              .from('telemetry_points')
+              .select()
+              .eq('session_id', row['id'] as String)
+              .order('ts'),
+        );
         points = tRows.map(_parseTelemetryPoint).toList();
       }
       sessions.add(_parseSession(row, points));
@@ -160,19 +189,25 @@ class SupabaseRepository {
     String id, {
     bool includePoints = false,
   }) async {
-    final rows = await _client
-        .from('session_runs')
-        .select()
-        .eq('id', id)
-        .limit(1);
+    final rows = await logSupabase(
+      'fetchSession',
+      () => _client
+          .from('session_runs')
+          .select()
+          .eq('id', id)
+          .limit(1),
+    );
     if (rows.isEmpty) return null;
     List<TelemetryPoint> points = const [];
     if (includePoints) {
-      final tRows = await _client
-          .from('telemetry_points')
-          .select()
-          .eq('session_id', id)
-          .order('ts');
+      final tRows = await logSupabase(
+        'fetchSession.telemetry',
+        () => _client
+            .from('telemetry_points')
+            .select()
+            .eq('session_id', id)
+            .order('ts'),
+      );
       points = tRows.map(_parseTelemetryPoint).toList();
     }
     return _parseSession(rows.first, points);
@@ -180,14 +215,15 @@ class SupabaseRepository {
 
   /// Deletes a session from the cloud.
   Future<void> deleteSession(String id) async {
-    await _client.from('session_runs').delete().eq('id', id);
+    await logSupabase('deleteSession',
+        () => _client.from('session_runs').delete().eq('id', id));
   }
 
   // ---------- Free rides ----------
 
   /// Upserts a free ride run (metadata + telemetry) to Supabase atomically.
   Future<void> upsertFreeRide(FreeRideRun ride) async {
-    await _client.rpc('upsert_free_ride_with_telemetry', params: {
+    await logSupabase('upsertFreeRide', () => _client.rpc('upsert_free_ride_with_telemetry', params: {
       'p_id': ride.id,
       'p_started_at': ride.startedAt.toUtc().toIso8601String(),
       'p_ended_at': ride.endedAt?.toUtc().toIso8601String(),
@@ -211,15 +247,18 @@ class SupabaseRepository {
                 'altitude_m': p.altitudeMeters,
               })
           .toList(),
-    });
+    }));
   }
 
   /// Fetches all free rides belonging to the current user (without telemetry).
   Future<List<FreeRideRun>> fetchAllFreeRides() async {
-    final rows = await _client
-        .from('free_rides')
-        .select()
-        .order('started_at', ascending: false);
+    final rows = await logSupabase(
+      'fetchAllFreeRides',
+      () => _client
+          .from('free_rides')
+          .select()
+          .order('started_at', ascending: false),
+    );
     return rows.map((r) => _parseFreeRide(r, const [])).toList();
   }
 
@@ -228,19 +267,25 @@ class SupabaseRepository {
     String id, {
     bool includePoints = false,
   }) async {
-    final rows = await _client
-        .from('free_rides')
-        .select()
-        .eq('id', id)
-        .limit(1);
+    final rows = await logSupabase(
+      'fetchFreeRide',
+      () => _client
+          .from('free_rides')
+          .select()
+          .eq('id', id)
+          .limit(1),
+    );
     if (rows.isEmpty) return null;
     List<TelemetryPoint> points = const [];
     if (includePoints) {
-      final tRows = await _client
-          .from('free_ride_telemetry')
-          .select()
-          .eq('free_ride_id', id)
-          .order('ts');
+      final tRows = await logSupabase(
+        'fetchFreeRide.telemetry',
+        () => _client
+            .from('free_ride_telemetry')
+            .select()
+            .eq('free_ride_id', id)
+            .order('ts'),
+      );
       points = tRows.map(_parseTelemetryPoint).toList();
     }
     return _parseFreeRide(rows.first, points);
@@ -248,9 +293,10 @@ class SupabaseRepository {
 
   /// Returns remote free ride IDs with their `updated_at` timestamps.
   Future<Map<String, DateTime>> fetchFreeRideTimestamps() async {
-    final rows = await _client
-        .from('free_rides')
-        .select('id, updated_at');
+    final rows = await logSupabase(
+      'fetchFreeRideTimestamps',
+      () => _client.from('free_rides').select('id, updated_at'),
+    );
     return {
       for (final r in rows)
         r['id'] as String: DateTime.parse(r['updated_at'] as String),
@@ -262,9 +308,10 @@ class SupabaseRepository {
   /// Returns remote route IDs with their `updated_at` timestamps for
   /// diffing against local state.
   Future<Map<String, DateTime>> fetchRouteTimestamps() async {
-    final rows = await _client
-        .from('route_templates')
-        .select('id, updated_at');
+    final rows = await logSupabase(
+      'fetchRouteTimestamps',
+      () => _client.from('route_templates').select('id, updated_at'),
+    );
     return {
       for (final r in rows)
         r['id'] as String: DateTime.parse(r['updated_at'] as String),
@@ -273,9 +320,10 @@ class SupabaseRepository {
 
   /// Returns remote session IDs with their `updated_at` timestamps.
   Future<Map<String, DateTime>> fetchSessionTimestamps() async {
-    final rows = await _client
-        .from('session_runs')
-        .select('id, updated_at');
+    final rows = await logSupabase(
+      'fetchSessionTimestamps',
+      () => _client.from('session_runs').select('id, updated_at'),
+    );
     return {
       for (final r in rows)
         r['id'] as String: DateTime.parse(r['updated_at'] as String),

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../logging/app_logger.dart';
 import 'auth_error_code.dart';
 
 /// Wraps [SupabaseAuth] and exposes a simple API for sign-in / sign-out.
@@ -89,8 +90,15 @@ class AuthService extends ChangeNotifier {
       _loading = false;
       notifyListeners();
       return true;
-    } catch (e) {
+    } catch (e, st) {
       debugPrint('signInWithGoogle error: $e');
+      AppLogger.maybeInstance?.warning(
+        'auth',
+        'signInWithGoogle failed',
+        error: e,
+        stackTrace: st,
+        context: {'method': 'signInWithGoogle'},
+      );
       _errorCode = _mapGenericError(e);
       _loading = false;
       notifyListeners();
@@ -115,12 +123,26 @@ class AuthService extends ChangeNotifier {
       _loading = false;
       notifyListeners();
       return true;
-    } on AuthException catch (e) {
+    } on AuthException catch (e, st) {
+      AppLogger.maybeInstance?.warning(
+        'auth',
+        'signInWithEmail failed',
+        error: e,
+        stackTrace: st,
+        context: {'method': 'signInWithEmail', 'code': e.code},
+      );
       _errorCode = _mapAuthError(e);
       _loading = false;
       notifyListeners();
       return false;
-    } catch (e) {
+    } catch (e, st) {
+      AppLogger.maybeInstance?.warning(
+        'auth',
+        'signInWithEmail unexpected error',
+        error: e,
+        stackTrace: st,
+        context: {'method': 'signInWithEmail'},
+      );
       _errorCode = _mapGenericError(e);
       _loading = false;
       notifyListeners();
@@ -169,12 +191,26 @@ class AuthService extends ChangeNotifier {
       _loading = false;
       notifyListeners();
       return true;
-    } on AuthException catch (e) {
+    } on AuthException catch (e, st) {
+      AppLogger.maybeInstance?.warning(
+        'auth',
+        'signUpWithEmail failed',
+        error: e,
+        stackTrace: st,
+        context: {'method': 'signUpWithEmail', 'code': e.code},
+      );
       _errorCode = _mapAuthError(e);
       _loading = false;
       notifyListeners();
       return false;
-    } catch (e) {
+    } catch (e, st) {
+      AppLogger.maybeInstance?.warning(
+        'auth',
+        'signUpWithEmail unexpected error',
+        error: e,
+        stackTrace: st,
+        context: {'method': 'signUpWithEmail'},
+      );
       _errorCode = _mapGenericError(e);
       _loading = false;
       notifyListeners();
@@ -196,12 +232,26 @@ class AuthService extends ChangeNotifier {
       _loading = false;
       notifyListeners();
       return true;
-    } on AuthException catch (e) {
+    } on AuthException catch (e, st) {
+      AppLogger.maybeInstance?.warning(
+        'auth',
+        'resetPasswordForEmail failed',
+        error: e,
+        stackTrace: st,
+        context: {'method': 'resetPasswordForEmail', 'code': e.code},
+      );
       _errorCode = _mapAuthError(e);
       _loading = false;
       notifyListeners();
       return false;
-    } catch (e) {
+    } catch (e, st) {
+      AppLogger.maybeInstance?.warning(
+        'auth',
+        'resetPasswordForEmail unexpected error',
+        error: e,
+        stackTrace: st,
+        context: {'method': 'resetPasswordForEmail'},
+      );
       _errorCode = _mapGenericError(e);
       _loading = false;
       notifyListeners();
@@ -216,8 +266,14 @@ class AuthService extends ChangeNotifier {
   Future<void> signOut() async {
     try {
       await _client.auth.signOut();
-    } catch (e) {
+    } catch (e, st) {
       debugPrint('signOut error: $e');
+      AppLogger.maybeInstance?.warning(
+        'auth',
+        'signOut failed',
+        error: e,
+        stackTrace: st,
+      );
     }
     notifyListeners();
   }
