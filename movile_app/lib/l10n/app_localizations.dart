@@ -2809,6 +2809,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unknown vehicle'**
   String get statsUnknownVehicle;
+
+  /// No description provided for @statsMetricSelectorLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Metric:'**
+  String get statsMetricSelectorLabel;
 }
 
 class _AppLocalizationsDelegate

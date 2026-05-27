@@ -1541,4 +1541,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get statsUnknownVehicle => 'Unknown vehicle';
+
+  @override
+  String get statsMetricSelectorLabel => 'Metric:';
 }

@@ -538,5 +538,6 @@
   "@statsActivitiesCount": { "placeholders": { "count": { "type": "int" } } },
   "statsBestQuarterMileShort": "Mejor 1/4 mi",
   "statsNoSpeedSessionsForVehicle": "Sin tests",
-  "statsUnknownVehicle": "Vehículo desconocido"
+  "statsUnknownVehicle": "Vehículo desconocido",
+  "statsMetricSelectorLabel": "Métrica:"
 }

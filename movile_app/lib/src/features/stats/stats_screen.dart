@@ -544,7 +544,7 @@ class _BarColumn extends StatelessWidget {
 // Per-vehicle breakdown
 // =============================================================================
 
-class _VehicleBreakdownSection extends StatelessWidget {
+class _VehicleBreakdownSection extends StatefulWidget {
   const _VehicleBreakdownSection({
     required this.vehicles,
     required this.sessions,
@@ -560,58 +560,120 @@ class _VehicleBreakdownSection extends StatelessWidget {
   final UnitSystem unit;
 
   @override
+  State<_VehicleBreakdownSection> createState() =>
+      _VehicleBreakdownSectionState();
+}
+
+class _VehicleBreakdownSectionState extends State<_VehicleBreakdownSection> {
+  SpeedMetric _selectedMetric = SpeedMetric.quarterMile;
+
+  @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
 
-    // Count activities per vehicle
+    // Count activities per vehicle (independent of selected metric).
     final activityCount = <String, int>{};
     void inc(String? id) {
       if (id == null) return;
       activityCount[id] = (activityCount[id] ?? 0) + 1;
     }
 
-    for (final s in sessions) {
+    for (final s in widget.sessions) {
       inc(s.vehicleId);
     }
-    for (final r in freeRides) {
+    for (final r in widget.freeRides) {
       inc(r.vehicleId);
     }
-    for (final s in speedSessions) {
+    for (final s in widget.speedSessions) {
       inc(s.vehicleId);
     }
 
-    // Best 1/4 mile per vehicle (lowest)
-    final bestQuarterMile = <String, double>{};
-    for (final s in speedSessions) {
+    // Best value of the selected metric per vehicle.
+    // Time-based metrics: best = lowest. Top speed: best = highest.
+    final bestPerVehicle = <String, double>{};
+    for (final s in widget.speedSessions) {
       final id = s.vehicleId;
       if (id == null) continue;
-      final v = s.results[SpeedMetric.quarterMile];
+      final v = s.results[_selectedMetric];
       if (v == null) continue;
-      final current = bestQuarterMile[id];
-      if (current == null || v < current) bestQuarterMile[id] = v;
+      final current = bestPerVehicle[id];
+      final isBetter = _selectedMetric.isTimeBased
+          ? (current == null || v < current)
+          : (current == null || v > current);
+      if (isBetter) bestPerVehicle[id] = v;
     }
 
-    // Sort vehicles by activity count desc
-    final sorted = [...vehicles]..sort((a, b) {
+    // Sort vehicles by activity count desc.
+    final sorted = [...widget.vehicles]..sort((a, b) {
         final ca = activityCount[a.id] ?? 0;
         final cb = activityCount[b.id] ?? 0;
         return cb.compareTo(ca);
       });
 
+    final theme = Theme.of(context);
+
     return _Section(
       title: l.statsByVehicleSection,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Column(
-          children: [
-            for (final v in sorted)
-              _VehicleRow(
-                vehicle: v,
-                activities: activityCount[v.id] ?? 0,
-                bestQuarterMile: bestQuarterMile[v.id],
-              ),
-          ],
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Metric selector row.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+            child: Row(
+              children: [
+                Text(
+                  l.statsMetricSelectorLabel,
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: theme.colorScheme.outline),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHighest
+                          .withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<SpeedMetric>(
+                        value: _selectedMetric,
+                        isExpanded: true,
+                        isDense: true,
+                        style: theme.textTheme.bodyMedium,
+                        items: [
+                          for (final m in SpeedMetric.values)
+                            DropdownMenuItem<SpeedMetric>(
+                              value: m,
+                              child: Text(_metricLabel(l, m)),
+                            ),
+                        ],
+                        onChanged: (m) {
+                          if (m != null) setState(() => _selectedMetric = m);
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Column(
+              children: [
+                for (final v in sorted)
+                  _VehicleRow(
+                    vehicle: v,
+                    activities: activityCount[v.id] ?? 0,
+                    metric: _selectedMetric,
+                    bestValue: bestPerVehicle[v.id],
+                  ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -621,18 +683,20 @@ class _VehicleRow extends StatelessWidget {
   const _VehicleRow({
     required this.vehicle,
     required this.activities,
-    required this.bestQuarterMile,
+    required this.metric,
+    required this.bestValue,
   });
 
   final Vehicle vehicle;
   final int activities;
-  final double? bestQuarterMile;
+  final SpeedMetric metric;
+  final double? bestValue;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    final best = bestQuarterMile;
+    final best = bestValue;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
@@ -669,13 +733,13 @@ class _VehicleRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                l.statsBestQuarterMileShort,
+                _metricLabel(l, metric),
                 style: theme.textTheme.labelSmall
                     ?.copyWith(color: theme.colorScheme.outline),
               ),
               Text(
                 best != null
-                    ? SpeedMetric.quarterMile.formatValue(best)
+                    ? metric.formatValue(best)
                     : l.statsNoSpeedSessionsForVehicle,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w600,
