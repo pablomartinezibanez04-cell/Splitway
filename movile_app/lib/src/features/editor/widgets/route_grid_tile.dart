@@ -75,15 +75,6 @@ class RouteGridTile extends StatelessWidget {
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              if (route.elevationRangeMeters != null) ...[
-                const SizedBox(height: 2),
-                Text(
-                  '↕ ${_elevationLabel(l, route.elevationRangeMeters!, settingsController)}',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
               const SizedBox(height: 4),
               if (route.locationLabel != null)
                 Text(

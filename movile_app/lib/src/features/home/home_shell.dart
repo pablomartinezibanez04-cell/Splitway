@@ -134,7 +134,7 @@ class _HomeShellState extends State<HomeShell> {
           ),
           NavigationDestination(
             icon: const Icon(Icons.history),
-            selectedIcon: const Icon(Icons.history_toggle_off),
+            selectedIcon: const Icon(Icons.history),
             label: AppLocalizations.of(context).navHistory,
           ),
         ],
@@ -154,8 +154,7 @@ class _HomeShellState extends State<HomeShell> {
 
 /// Builds the leading widget for an inner screen's AppBar.
 ///
-/// Shows a circular avatar with initials when logged in, or a hamburger
-/// icon when not. Tapping opens the HomeShell's drawer.
+/// Always shows a hamburger icon that opens the HomeShell's drawer.
 ///
 /// **Important**: [context] must be the State's build context (above the
 /// inner Scaffold), not a context from within the AppBar.
@@ -166,40 +165,9 @@ Widget? buildDrawerLeading(
 ) {
   if (authService == null) return null;
 
-  final user = authService.currentUser;
-  final isLoggedIn = user != null;
-  final avatarUrl = profileService?.profile?.avatarUrl;
-
   return IconButton(
     tooltip: AppLocalizations.of(context).drawerMenu,
-    icon: isLoggedIn
-        ? CircleAvatar(
-            radius: 14,
-            backgroundColor: const Color(0xFF1565C0),
-            backgroundImage:
-                avatarUrl != null ? NetworkImage(avatarUrl) : null,
-            child: avatarUrl == null
-                ? Text(
-                    _userInitials(user),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  )
-                : null,
-          )
-        : const Icon(Icons.menu),
+    icon: const Icon(Icons.menu),
     onPressed: () => Scaffold.of(context).openDrawer(),
   );
-}
-
-String _userInitials(dynamic user) {
-  final name =
-      (user.userMetadata?['full_name'] as String?) ?? user.email ?? '?';
-  final parts = name.trim().split(RegExp(r'\s+'));
-  if (parts.length >= 2) {
-    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-  }
-  return name.substring(0, name.length >= 2 ? 2 : 1).toUpperCase();
 }

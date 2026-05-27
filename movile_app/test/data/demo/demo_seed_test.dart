@@ -27,15 +27,15 @@ void main() {
 
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  test('seeds Jarama route into empty DB', () async {
+  test('seeds España route into empty DB', () async {
     final repo = await _makeRepo();
     final settings = await AppSettingsController.load();
 
     await DemoSeed.ensureSeeded(repo, settings);
 
-    final route = await repo.getRouteTemplate('demo-jarama');
+    final route = await repo.getRouteTemplate('demo-espana');
     expect(route, isNotNull);
-    expect(route!.name, 'Circuito del Jarama');
+    expect(route!.name, 'Demo España');
     expect(route.sectors, hasLength(2));
   });
 
@@ -47,17 +47,17 @@ void main() {
     await DemoSeed.ensureSeeded(repo, settings);
 
     final routes = await repo.getAllRoutes();
-    expect(routes.where((r) => r.id == 'demo-jarama'), hasLength(1));
+    expect(routes.where((r) => r.id == 'demo-espana'), hasLength(1));
   });
 
   test('does not seed when route is dismissed', () async {
     final repo = await _makeRepo();
     final settings = await AppSettingsController.load();
-    await settings.dismissDemoRoute('demo-jarama');
+    await settings.dismissDemoRoute('demo-espana');
 
     await DemoSeed.ensureSeeded(repo, settings);
 
-    final route = await repo.getRouteTemplate('demo-jarama');
+    final route = await repo.getRouteTemplate('demo-espana');
     expect(route, isNull);
   });
 
@@ -66,12 +66,12 @@ void main() {
     final settings = await AppSettingsController.load();
 
     await DemoSeed.ensureSeeded(repo, settings);
-    await settings.dismissDemoRoute('demo-jarama');
-    await repo.deleteRoute('demo-jarama');
+    await settings.dismissDemoRoute('demo-espana');
+    await repo.deleteRoute('demo-espana');
 
     await DemoSeed.ensureSeeded(repo, settings);
 
-    final route = await repo.getRouteTemplate('demo-jarama');
+    final route = await repo.getRouteTemplate('demo-espana');
     expect(route, isNull);
   });
 }

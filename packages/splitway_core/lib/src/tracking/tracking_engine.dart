@@ -89,6 +89,11 @@ class TrackingEngine {
   /// an automatic finish on open (non-closed) routes.
   static const _finishProximityMeters = 20.0;
 
+  /// Minimum distance (in meters) an incomplete lap must cover to be saved.
+  /// Prevents recording a phantom lap when the session ends right after
+  /// crossing the start/finish gate.
+  static const _minIncompleteLapMeters = 50.0;
+
   static const _gapThreshold = Duration(seconds: 5);
   static const _recoveryDuration = Duration(seconds: 3);
   DateTime? _recoveringUntil;
@@ -184,10 +189,13 @@ class TrackingEngine {
       return _buildSession(endedAt: _finishedAt);
     }
     final endedAt = _clock();
-    // Only record an incomplete lap for closed routes (open routes have no laps).
+    // Only record an incomplete lap for closed routes if enough distance
+    // was covered. This avoids saving a phantom lap when the session ends
+    // right after crossing the start/finish gate.
     if (_route.isClosed &&
         _status == TrackingStatus.inLap &&
-        _lapStartedAt != null) {
+        _lapStartedAt != null &&
+        _lapDistanceAccumulator >= _minIncompleteLapMeters) {
       _laps.add(_buildLap(
         endedAt: endedAt,
         completed: false,

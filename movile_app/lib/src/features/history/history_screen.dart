@@ -19,7 +19,8 @@ import '../../services/speed/speed_metric.dart';
 import '../../services/speed/speed_session.dart';
 import '../../shared/formatters.dart';
 import '../../shared/widgets/empty_state.dart';
-import '../../shared/widgets/splitway_map.dart';
+import '../../shared/widgets/speed_heatmap_map_card.dart';
+import '../../shared/widgets/speed_heatmap_toggle_button.dart';
 import '../garage/vehicle_detail_screen.dart';
 import '../home/home_shell.dart';
 import 'history_filters.dart';
@@ -290,7 +291,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         final id = _filters.vehicleIds.first;
         final String label;
         if (id == null) {
-          label = l.historyNoVehicle;
+          label = l.vehiclePickerOnFoot;
         } else {
           final vehicle = widget.garageService?.vehicles
               .where((v) => v.id == id)
@@ -880,8 +881,36 @@ class _SessionTile extends StatelessWidget {
                           color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
+                      const SizedBox(width: 6),
+                      Icon(Icons.play_circle,
+                          size: 14,
+                          color: Theme.of(context).colorScheme.primary),
                     ],
                   ),
+                ),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.directions_walk,
+                        size: 14,
+                        color: Theme.of(context).colorScheme.primary),
+                    const SizedBox(width: 4),
+                    Text(
+                      l.vehiclePickerOnFoot,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Icon(Icons.play_circle,
+                        size: 14,
+                        color: Theme.of(context).colorScheme.primary),
+                  ],
                 ),
               ),
           ],
@@ -932,7 +961,6 @@ class _FreeRideTile extends StatelessWidget {
     final vehicle = _vehicle;
     return Card(
       child: ListTile(
-        leading: const Icon(Icons.explore, color: Colors.teal),
         title: Text(ride.name ?? l.historyFreeRideLabel),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -967,8 +995,34 @@ class _FreeRideTile extends StatelessWidget {
                           color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
+                      const SizedBox(width: 6),
+                      Icon(Icons.explore, size: 14,
+                          color: Theme.of(context).colorScheme.primary),
                     ],
                   ),
+                ),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.directions_walk,
+                        size: 14,
+                        color: Theme.of(context).colorScheme.primary),
+                    const SizedBox(width: 4),
+                    Text(
+                      l.vehiclePickerOnFoot,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Icon(Icons.explore, size: 14,
+                        color: Theme.of(context).colorScheme.primary),
+                  ],
                 ),
               ),
           ],
@@ -1008,6 +1062,7 @@ class FreeRideDetailScreen extends StatefulWidget {
 class _FreeRideDetailScreenState extends State<FreeRideDetailScreen> {
   FreeRideRun? _ride;
   bool _loading = true;
+  bool _heatmap = false;
 
   @override
   void initState() {
@@ -1121,21 +1176,30 @@ class _FreeRideDetailScreenState extends State<FreeRideDetailScreen> {
                   padding: const EdgeInsets.all(16),
                   children: [
                     if (_ride!.points.isNotEmpty)
-                      Card(
-                        clipBehavior: Clip.antiAlias,
-                        child: AspectRatio(
-                          aspectRatio: 4 / 3,
-                          child: SplitwayMap(
-                            useMapbox: widget.config.hasMapbox,
-                            telemetry: _ride!.points,
-                            interactive: false,
-                          ),
-                        ),
+                      SpeedHeatmapMapCard(
+                        config: widget.config,
+                        telemetry: _ride!.points,
+                        showHeatmap: _heatmap,
+                        unitSystem: widget.settingsController?.unitSystem ??
+                            UnitSystem.metric,
                       ),
                     const SizedBox(height: 16),
-                    Text(
-                      Formatters.dateTime(_ride!.startedAt),
-                      style: Theme.of(context).textTheme.bodyMedium,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            Formatters.dateTime(_ride!.startedAt),
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ),
+                        if (hasUsableSpeedTelemetry(_ride!.points))
+                          SpeedHeatmapToggleButton(
+                            active: _heatmap,
+                            onPressed: () =>
+                                setState(() => _heatmap = !_heatmap),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 12),
                     _FreeRideSummaryRow(
@@ -1237,6 +1301,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   SessionRun? _session;
   RouteTemplate? _route;
   bool _loading = true;
+  bool _heatmap = false;
 
   @override
   void initState() {
@@ -1353,22 +1418,31 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               : ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    Card(
-                      clipBehavior: Clip.antiAlias,
-                      child: AspectRatio(
-                        aspectRatio: 4 / 3,
-                        child: SplitwayMap(
-                          useMapbox: widget.config.hasMapbox,
-                          route: _route!,
-                          telemetry: _session!.points,
-                          interactive: false,
-                        ),
-                      ),
+                    SpeedHeatmapMapCard(
+                      config: widget.config,
+                      route: _route!,
+                      telemetry: _session!.points,
+                      showHeatmap: _heatmap,
+                      unitSystem: widget.settingsController?.unitSystem ??
+                          UnitSystem.metric,
                     ),
                     const SizedBox(height: 16),
-                    Text(
-                      Formatters.dateTime(_session!.startedAt),
-                      style: Theme.of(context).textTheme.bodyMedium,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            Formatters.dateTime(_session!.startedAt),
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ),
+                        if (hasUsableSpeedTelemetry(_session!.points))
+                          SpeedHeatmapToggleButton(
+                            active: _heatmap,
+                            onPressed: () =>
+                                setState(() => _heatmap = !_heatmap),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 12),
                     _SummaryRow(
@@ -1378,62 +1452,84 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                     const SizedBox(height: 16),
                     Text(l.historyLapsLabel,
                         style: Theme.of(context).textTheme.titleMedium),
-                    for (final lap in _session!.laps)
-                      ListTile(
-                        leading: CircleAvatar(child: Text('${lap.lapNumber}')),
-                        title: Text(Formatters.duration(
-                          lap.duration,
-                          dotSeparator: widget.settingsController?.timeFormatDot ?? true,
-                        )),
-                        subtitle: Text(() {
-                            final dist = _distanceLabel(
-                              l,
-                              lap.distanceMeters,
-                              widget.settingsController,
-                            );
-                            final speed = _speedLabel(
-                              l,
-                              lap.avgSpeedMps,
-                              widget.settingsController,
-                            );
-                            return '$dist · $speed';
-                          }()),
-                        trailing: lap.completed
-                            ? const Icon(Icons.check_circle, color: Colors.green)
-                            : const Icon(Icons.timer_off, color: Colors.orange),
-                      ),
+                    if (_session!.laps.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        child: Text(
+                          l.historyLapsEmpty,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      )
+                    else
+                      for (final lap in _session!.laps)
+                        ListTile(
+                          leading: CircleAvatar(child: Text('${lap.lapNumber}')),
+                          title: Text(Formatters.duration(
+                            lap.duration,
+                            dotSeparator: widget.settingsController?.timeFormatDot ?? true,
+                          )),
+                          subtitle: Text(() {
+                              final dist = _distanceLabel(
+                                l,
+                                lap.distanceMeters,
+                                widget.settingsController,
+                              );
+                              final speed = _speedLabel(
+                                l,
+                                lap.avgSpeedMps,
+                                widget.settingsController,
+                              );
+                              return '$dist · $speed';
+                            }()),
+                          trailing: lap.completed
+                              ? const Icon(Icons.check_circle, color: Colors.green)
+                              : const Icon(Icons.timer_off, color: Colors.orange),
+                        ),
                     const SizedBox(height: 16),
                     Text(l.historySectorsLabel,
                         style: Theme.of(context).textTheme.titleMedium),
-                    for (final sec in _session!.sectorSummaries)
-                      ListTile(
-                        leading: const Icon(Icons.flag_outlined),
-                        title: Text(_route!.sectors
-                            .firstWhere(
-                              (s) => s.id == sec.sectorId,
-                              orElse: () => SectorDefinition(
-                                id: sec.sectorId,
-                                order: 0,
-                                label: sec.sectorId,
-                                gate: _route!.startFinishGate,
-                              ),
-                            )
-                            .label),
-                        subtitle: Text(
-                          l.historySectorSubtitle(
-                            sec.lapNumber,
-                            _speedLabel(
-                              l,
-                              sec.avgSpeedMps,
-                              widget.settingsController,
-                            ),
+                    if (_session!.sectorSummaries.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        child: Text(
+                          l.historySectorsEmpty,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ),
-                        trailing: Text(Formatters.duration(
-                          sec.duration,
-                          dotSeparator: widget.settingsController?.timeFormatDot ?? true,
-                        )),
-                      ),
+                      )
+                    else
+                      for (final sec in _session!.sectorSummaries)
+                        ListTile(
+                          leading: const Icon(Icons.flag_outlined),
+                          title: Text(_route!.sectors
+                              .firstWhere(
+                                (s) => s.id == sec.sectorId,
+                                orElse: () => SectorDefinition(
+                                  id: sec.sectorId,
+                                  order: 0,
+                                  label: sec.sectorId,
+                                  gate: _route!.startFinishGate,
+                                ),
+                              )
+                              .label),
+                          subtitle: Text(
+                            l.historySectorSubtitle(
+                              sec.lapNumber,
+                              _speedLabel(
+                                l,
+                                sec.avgSpeedMps,
+                                widget.settingsController,
+                              ),
+                            ),
+                          ),
+                          trailing: Text(Formatters.duration(
+                            sec.duration,
+                            dotSeparator: widget.settingsController?.timeFormatDot ?? true,
+                          )),
+                        ),
                   ],
                 ),
     );

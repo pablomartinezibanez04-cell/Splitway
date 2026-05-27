@@ -36,6 +36,7 @@ dependencies:
   share_plus: ^10.0.0
   audioplayers: ^6.1.0
   sensors_plus: ^6.1.0
+  flutter_svg: ^2.3.0
 
 dev_dependencies:
   flutter_test:
@@ -54,3 +55,4 @@ flutter:
   assets:
     - env/local.json
     - assets/sounds/
+    - assets/icon/

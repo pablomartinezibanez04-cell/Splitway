@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/painting.dart';
 
 import '../../data/repositories/profile_repository.dart';
 import 'user_profile.dart';
@@ -117,9 +118,13 @@ class ProfileService extends ChangeNotifier {
   }
 
   void clear() {
+    final oldUrl = _profile?.avatarUrl;
     _profile = null;
     _error = null;
     _loading = false;
+    if (oldUrl != null) {
+      PaintingBinding.instance.imageCache.evict(NetworkImage(oldUrl));
+    }
     notifyListeners();
   }
 }

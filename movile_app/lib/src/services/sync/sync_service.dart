@@ -136,15 +136,34 @@ class SyncService extends ChangeNotifier {
     // Collect routes with new thumbnails to batch-save locally afterwards,
     // so the controller's 300ms reload debouncer collapses all saves into
     // a single UI rebuild (avoids one flicker per thumbnail loaded).
+    // Track which IDs are pushed so the reconciliation step below can
+    // distinguish "new local route" from "route deleted in remote".
     final routesWithNewThumbnails = <RouteTemplate>[];
+    final pushedRouteIds = <String>{};
     for (final route in localRoutes) {
-      if (route.id == 'demo-jarama') continue; // never push demo route
+      if (route.id == 'demo-espana') {
+        // Never push demo route data, but generate its thumbnail if missing.
+        if (route.thumbnailUrl == null &&
+            remote.thumbnailService != null &&
+            userId != null) {
+          try {
+            final url =
+                await remote.thumbnailService!.generate(route, userId!);
+            await local.saveRouteTemplate(route.copyWith(thumbnailUrl: url));
+            transferred++;
+          } catch (e) {
+            debugPrint('SyncService: demo thumbnail generation failed: $e');
+          }
+        }
+        continue;
+      }
       final remoteUpdated = remoteRouteTs[route.id];
       final needsPush = remoteUpdated == null ||
           route.createdAt.isAfter(remoteUpdated);
       final needsThumbnail = route.thumbnailUrl == null;
       if (needsPush || needsThumbnail) {
         final updated = await remote.upsertRoute(route);
+        pushedRouteIds.add(route.id);
         if (updated.thumbnailUrl != null &&
             updated.thumbnailUrl != route.thumbnailUrl) {
           routesWithNewThumbnails.add(updated);
@@ -156,6 +175,17 @@ class SyncService extends ChangeNotifier {
     // so the 300ms debouncer collapses them into one reload.
     for (final route in routesWithNewThumbnails) {
       await local.saveRouteTemplate(route);
+    }
+
+    // Reconcile: remove local non-demo routes that no longer exist in
+    // Supabase and were not pushed in this cycle (which would mean they
+    // are newly created, not remotely deleted).
+    for (final route in localRoutes) {
+      if (route.id == 'demo-espana') continue;
+      if (pushedRouteIds.contains(route.id)) continue;
+      if (!remoteRouteTs.containsKey(route.id)) {
+        await local.deleteRoute(route.id);
+      }
     }
 
     // Pull remote → local (anything in Supabase not on this device).
