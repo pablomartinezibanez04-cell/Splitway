@@ -16,6 +16,7 @@ export type AuditAction =
   | "promote_admin"
   | "demote_admin"
   | "change_own_password"
+  | "complete_profile"
   // Reserved for later phases (kept here so the union is stable):
   | "ban_user"
   | "unban_user"
