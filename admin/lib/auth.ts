@@ -32,11 +32,16 @@ export async function requireAdmin(): Promise<AdminProfile> {
     redirect("/login");
   }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("id, nickname, role")
+    .select("nickname, role")
     .eq("id", user.id)
     .maybeSingle();
+
+  if (profileError) {
+    console.error("[requireAdmin] profiles query failed", profileError.message);
+    redirect("/login");
+  }
 
   const role = profile?.role;
   if (role !== "admin" && role !== "superadmin") {
@@ -45,6 +50,9 @@ export async function requireAdmin(): Promise<AdminProfile> {
 
   return {
     id: user.id,
+    // email is always present for email/password admins; the fallback only
+    // applies to phone-only or anonymous Supabase users, which this panel
+    // does not create.
     email: user.email ?? "",
     nickname: profile?.nickname ?? "",
     role,
