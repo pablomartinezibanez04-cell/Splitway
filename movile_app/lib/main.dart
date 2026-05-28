@@ -16,6 +16,7 @@ import 'src/services/locale/locale_controller.dart';
 import 'src/services/logging/app_logger.dart';
 import 'src/services/logging/device_metadata.dart';
 import 'src/services/logging/log_uploader.dart';
+import 'src/services/logging/network_error.dart';
 import 'src/services/logging/sinks/console_sink.dart';
 import 'src/services/logging/sinks/local_sink.dart';
 import 'src/services/logging/sinks/log_sink.dart';
@@ -127,10 +128,18 @@ Future<void> main() async {
     ));
   }, (error, stack) {
     final logger = AppLogger.maybeInstance;
-    if (logger != null) {
-      logger.error('zone', error.toString(), error: error, stackTrace: stack);
-    } else {
+    if (logger == null) {
       debugPrint('Uncaught zone error before logger init: $error\n$stack');
+      return;
+    }
+    // Transport failures (DNS, socket, retryable auth refresh) bubble here on
+    // every background timer tick when offline. Downgrade them to a warning
+    // under a dedicated `network` tag so they don't flood the error stream.
+    if (isTransportError(error)) {
+      logger.warning('network', error.toString(),
+          error: error, stackTrace: stack);
+    } else {
+      logger.error('zone', error.toString(), error: error, stackTrace: stack);
     }
   });
 }

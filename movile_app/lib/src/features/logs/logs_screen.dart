@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:splitway_mobile/l10n/app_localizations.dart';
 
 import '../../services/logging/log_entry.dart';
 import '../../services/logging/log_level.dart';
@@ -59,8 +60,11 @@ class _LogsScreenState extends State<LogsScreen> {
     await widget.uploader.drain();
     await _reload();
     if (!mounted) return;
+    final l = AppLocalizations.of(context);
+    final count = await widget.sink.countPending();
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Pendientes: ${await widget.sink.countPending()}')),
+      SnackBar(content: Text(l.logsPending(count))),
     );
   }
 
@@ -73,19 +77,20 @@ class _LogsScreenState extends State<LogsScreen> {
   }
 
   Future<void> _clearAll() async {
+    final l = AppLocalizations.of(context);
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('¿Borrar todos los logs?'),
-        content: const Text('Esta acción no se puede deshacer.'),
+        title: Text(l.logsClearConfirmTitle),
+        content: Text(l.logsClearConfirmBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            child: Text(l.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Borrar'),
+            child: Text(l.logsClearConfirmButton),
           ),
         ],
       ),
@@ -102,22 +107,23 @@ class _LogsScreenState extends State<LogsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Diagnóstico'),
+        title: Text(l.logsScreenTitle),
         actions: [
           IconButton(
-            tooltip: 'Subir ahora',
+            tooltip: l.logsUploadTooltip,
             icon: const Icon(Icons.cloud_upload),
             onPressed: _uploadNow,
           ),
           IconButton(
-            tooltip: 'Compartir todo',
+            tooltip: l.logsShareTooltip,
             icon: const Icon(Icons.share),
             onPressed: _shareAll,
           ),
           IconButton(
-            tooltip: 'Borrar todo',
+            tooltip: l.logsClearTooltip,
             icon: const Icon(Icons.delete_forever),
             onPressed: _clearAll,
           ),
@@ -127,7 +133,7 @@ class _LogsScreenState extends State<LogsScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.all(8),
-            child: Chip(label: Text('$_pending pendientes de subir')),
+            child: Chip(label: Text(l.logsPending(_pending))),
           ),
           LogFilterBar(
             level: _level,
@@ -148,7 +154,7 @@ class _LogsScreenState extends State<LogsScreen> {
           const Divider(height: 1),
           Expanded(
             child: _entries.isEmpty
-                ? const Center(child: Text('No hay logs todavía'))
+                ? Center(child: Text(l.logsEmpty))
                 : ListView.separated(
                     itemCount: _entries.length,
                     separatorBuilder: (_, __) => const Divider(height: 1),

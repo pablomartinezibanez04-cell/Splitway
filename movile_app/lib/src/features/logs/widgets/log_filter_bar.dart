@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:splitway_mobile/l10n/app_localizations.dart';
 
 import '../../../services/logging/log_level.dart';
 
@@ -46,7 +47,7 @@ class LogFilterBar extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(right: 6),
                     child: ChoiceChip(
-                      label: Text(l.shortCode),
+                      label: Text(l.label),
                       selected: l == level,
                       onSelected: (_) => onLevelChanged(l),
                     ),
@@ -78,10 +79,10 @@ class LogFilterBar extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           TextField(
-            decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.search),
-              hintText: 'Buscar…',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.search),
+              hintText: AppLocalizations.of(context).logsSearchHint,
+              border: const OutlineInputBorder(),
               isDense: true,
             ),
             onChanged: onSearchChanged,

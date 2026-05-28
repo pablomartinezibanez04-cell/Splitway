@@ -285,21 +285,17 @@ class SettingsScreen extends StatelessWidget {
             ),
 
             // ── Diagnostics ─────────────────────────────────────────────
-            const _SectionHeader('Diagnóstico'),
+            _SectionHeader(l.settingsDiagnosticsSection),
             ListTile(
               leading: const Icon(Icons.bug_report_outlined),
-              title: const Text('Ver logs'),
-              subtitle: const Text(
-                'Errores y advertencias de Mapbox, Supabase y la app',
-              ),
+              title: Text(l.settingsDiagnosticsLogsLabel),
+              subtitle: Text(l.settingsDiagnosticsLogsDesc),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => context.push('/settings/logs'),
             ),
             SwitchListTile(
-              title: const Text('Subir logs al servidor'),
-              subtitle: const Text(
-                'Permite revisar los logs desde el dashboard de Supabase',
-              ),
+              title: Text(l.settingsDiagnosticsRemoteLogsLabel),
+              subtitle: Text(l.settingsDiagnosticsRemoteLogsDesc),
               value: settingsController.remoteLogsEnabled,
               onChanged: settingsController.setRemoteLogsEnabled,
             ),

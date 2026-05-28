@@ -22,4 +22,12 @@ enum LogLevel {
         LogLevel.warning => 'W',
         LogLevel.error => 'E',
       };
+
+  /// Full English label shown in the UI.
+  String get label => switch (this) {
+        LogLevel.debug => 'Debug',
+        LogLevel.info => 'Info',
+        LogLevel.warning => 'Warning',
+        LogLevel.error => 'Error',
+      };
 }

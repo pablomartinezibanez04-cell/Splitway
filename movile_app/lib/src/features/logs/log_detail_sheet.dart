@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:splitway_mobile/l10n/app_localizations.dart';
 
 import '../../services/logging/log_entry.dart';
 
@@ -43,6 +44,7 @@ class LogDetailSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final text = _format();
     return SafeArea(
       child: Container(
@@ -55,19 +57,19 @@ class LogDetailSheet extends StatelessWidget {
               children: [
                 IconButton(
                   icon: const Icon(Icons.copy),
-                  tooltip: 'Copiar',
+                  tooltip: l.logsCopiedToClipboard,
                   onPressed: () async {
                     await Clipboard.setData(ClipboardData(text: text));
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Copiado al portapapeles')),
+                        SnackBar(content: Text(l.logsCopiedToClipboard)),
                       );
                     }
                   },
                 ),
                 IconButton(
                   icon: const Icon(Icons.share),
-                  tooltip: 'Compartir',
+                  tooltip: l.logsShareTooltip,
                   onPressed: () => Share.share(text),
                 ),
                 const Spacer(),

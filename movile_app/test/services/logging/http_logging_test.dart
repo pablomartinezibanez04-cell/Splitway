@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:splitway_mobile/src/services/logging/app_logger.dart';
@@ -78,5 +80,28 @@ void main() {
     final r = http.Response('ok', 200);
     await logHttp('mapbox', Uri.parse('https://x'), () async => r);
     expect(sink.entries, isEmpty);
+  });
+
+  test('logSupabase downgrades transport errors to WARNING', () async {
+    Future<int> body() async =>
+        throw const SocketException('Failed host lookup');
+    await expectLater(
+      logSupabase('fetchRouteTimestamps', body),
+      throwsA(isA<SocketException>()),
+    );
+    expect(sink.entries, hasLength(1));
+    expect(sink.entries.first.level, LogLevel.warning);
+    expect(sink.entries.first.tag, 'supabase');
+  });
+
+  test('logHttp downgrades transport errors to WARNING', () async {
+    Future<http.Response> body() async =>
+        throw http.ClientException('no connection');
+    await expectLater(
+      logHttp('mapbox', Uri.parse('https://x'), body),
+      throwsA(isA<http.ClientException>()),
+    );
+    expect(sink.entries, hasLength(1));
+    expect(sink.entries.first.level, LogLevel.warning);
   });
 }

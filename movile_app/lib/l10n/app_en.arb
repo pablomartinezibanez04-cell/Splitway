@@ -313,6 +313,25 @@
   "settingsClearCacheDone": "Local data cleared",
   "settingsExportSharing": "Exporting…",
 
+  "settingsDiagnosticsSection": "Diagnostics",
+  "settingsDiagnosticsLogsLabel": "View logs",
+  "settingsDiagnosticsLogsDesc": "Errors and warnings from Mapbox, Supabase and the app",
+  "settingsDiagnosticsRemoteLogsLabel": "Upload logs to server",
+  "settingsDiagnosticsRemoteLogsDesc": "Allows reviewing logs from the Supabase dashboard",
+
+  "logsScreenTitle": "Diagnostics",
+  "logsUploadTooltip": "Upload now",
+  "logsShareTooltip": "Share all",
+  "logsClearTooltip": "Clear all",
+  "logsClearConfirmTitle": "Delete all logs?",
+  "logsClearConfirmBody": "This action cannot be undone.",
+  "logsClearConfirmButton": "Delete",
+  "logsPending": "{count} pending upload",
+  "@logsPending": { "placeholders": { "count": { "type": "int" } } },
+  "logsEmpty": "No logs yet",
+  "logsSearchHint": "Search…",
+  "logsCopiedToClipboard": "Copied to clipboard",
+
   "mapNoRoute": "No route",
 
   "historyBestLapSuffix": " · best {duration}",

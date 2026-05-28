@@ -2,9 +2,13 @@ import 'package:http/http.dart' as http;
 
 import 'app_logger.dart';
 import 'log_level.dart';
+import 'network_error.dart';
 
 /// Wraps a Supabase call. Logs and rethrows on failure with the operation
 /// name and elapsed milliseconds. No-op on success.
+///
+/// Transport failures (DNS, socket, retryable auth) are logged at WARNING
+/// instead of ERROR — those mean "device is offline", not "code is broken".
 Future<T> logSupabase<T>(String op, Future<T> Function() body) async {
   final sw = Stopwatch()..start();
   try {
@@ -12,7 +16,9 @@ Future<T> logSupabase<T>(String op, Future<T> Function() body) async {
   } catch (e, st) {
     final logger = AppLogger.maybeInstance;
     if (logger != null) {
-      await logger.error(
+      final level = isTransportError(e) ? LogLevel.warning : LogLevel.error;
+      await logger.log(
+        level,
         'supabase',
         '$op failed',
         error: e,
@@ -27,7 +33,8 @@ Future<T> logSupabase<T>(String op, Future<T> Function() body) async {
   }
 }
 
-/// Wraps an HTTP call. Logs at WARNING for status >= 400, at ERROR on throw.
+/// Wraps an HTTP call. Logs at WARNING for status >= 400, at ERROR on throw
+/// (downgraded to WARNING for transport failures like DNS/socket errors).
 /// Returns the response unchanged.
 Future<http.Response> logHttp(
   String tag,
@@ -56,7 +63,9 @@ Future<http.Response> logHttp(
   } catch (e, st) {
     final logger = AppLogger.maybeInstance;
     if (logger != null) {
-      await logger.error(
+      final level = isTransportError(e) ? LogLevel.warning : LogLevel.error;
+      await logger.log(
+        level,
         tag,
         'HTTP request threw on ${url.path}',
         error: e,

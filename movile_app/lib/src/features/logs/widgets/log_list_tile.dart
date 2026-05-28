@@ -34,7 +34,7 @@ class LogListTile extends StatelessWidget {
           children: [
             Row(
               children: [
-                Text(entry.level.shortCode,
+                Text(entry.level.label,
                     style: TextStyle(color: color, fontWeight: FontWeight.bold)),
                 const SizedBox(width: 8),
                 Text(entry.tag,
