@@ -34,6 +34,14 @@ export async function updateSession(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
   const isAuthRoute = pathname.startsWith("/login");
+  const isCallbackRoute = pathname.startsWith("/auth/callback");
+  const isOnboardingRoute = pathname.startsWith("/onboarding");
+
+  // The OAuth callback handler must run regardless of session state — it's
+  // what *creates* the session. Let it through untouched.
+  if (isCallbackRoute) {
+    return response;
+  }
 
   if (!user && !isAuthRoute) {
     const redirectUrl = request.nextUrl.clone();
@@ -44,7 +52,7 @@ export async function updateSession(request: NextRequest) {
   if (user && !isAuthRoute) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role")
+      .select("role, nickname, date_of_birth")
       .eq("id", user.id)
       .maybeSingle();
 
@@ -54,6 +62,23 @@ export async function updateSession(request: NextRequest) {
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = "/login";
       redirectUrl.searchParams.set("error", "forbidden");
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    const hasNickname = !!profile?.nickname && profile.nickname.trim() !== "";
+    const hasDob = !!profile?.date_of_birth;
+    const hasPassword = !!user.identities?.some((i) => i.provider === "email");
+    const isComplete = hasNickname && hasDob && hasPassword;
+
+    if (!isComplete && !isOnboardingRoute) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/onboarding/complete-profile";
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    if (isComplete && isOnboardingRoute) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/";
       return NextResponse.redirect(redirectUrl);
     }
   }
