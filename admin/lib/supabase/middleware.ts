@@ -3,14 +3,6 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "./database.types";
 
-/**
- * Refreshes the Supabase auth cookie and returns either the original
- * response (to continue the request) or a redirect to /login when the
- * caller is unauthenticated on a protected route.
- *
- * F1 only checks "is logged in". Role-based gating (admin / superadmin)
- * is added in F2 via requireAdmin().
- */
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
 
@@ -47,6 +39,23 @@ export async function updateSession(request: NextRequest) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/login";
     return NextResponse.redirect(redirectUrl);
+  }
+
+  if (user && !isAuthRoute) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const role = profile?.role;
+    if (role !== "admin" && role !== "superadmin") {
+      await supabase.auth.signOut();
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/login";
+      redirectUrl.searchParams.set("error", "forbidden");
+      return NextResponse.redirect(redirectUrl);
+    }
   }
 
   if (user && isAuthRoute) {
