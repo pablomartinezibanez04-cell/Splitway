@@ -87,6 +87,18 @@ export async function promoteAdmin(
   );
   if (!target) return { error: "No existe ningún usuario con ese email." };
 
+  const { data: existing } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", target.id)
+    .maybeSingle();
+  if (existing?.role === "superadmin") {
+    return { error: "No se puede modificar el rol de un superadmin." };
+  }
+  if (existing?.role === "admin") {
+    return { error: "Este usuario ya es administrador." };
+  }
+
   const { error: updateErr } = await supabase
     .from("profiles")
     .update({ role: "admin" })
@@ -148,7 +160,7 @@ export async function demoteAdmin(
     action: "demote_admin",
     targetType: "user",
     targetId: parsed.data.userId,
-    details: { newRole: "user" },
+    details: { oldRole: "admin", newRole: "user" },
   });
 
   revalidatePath("/settings");

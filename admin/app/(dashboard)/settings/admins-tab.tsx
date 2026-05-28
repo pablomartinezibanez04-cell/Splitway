@@ -19,6 +19,11 @@ export async function AdminsTab({
 }: {
   currentAdmin: AdminProfile;
 }) {
+  // Authorization invariant: this component relies on its caller having
+  // already gated the route via requireAdmin(). The `currentAdmin` prop is
+  // the proof. If reusing this component from a new entry point, ensure
+  // the caller calls requireAdmin() first — otherwise adminClient() will
+  // leak the full admin list and auth user emails.
   const supabase = adminClient();
   const { data: admins } = await supabase
     .from("profiles")
