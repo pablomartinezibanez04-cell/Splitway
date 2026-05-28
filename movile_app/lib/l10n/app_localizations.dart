@@ -1670,6 +1670,102 @@ abstract class AppLocalizations {
   /// **'Exporting…'**
   String get settingsExportSharing;
 
+  /// No description provided for @settingsDiagnosticsSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Diagnostics'**
+  String get settingsDiagnosticsSection;
+
+  /// No description provided for @settingsDiagnosticsLogsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'View logs'**
+  String get settingsDiagnosticsLogsLabel;
+
+  /// No description provided for @settingsDiagnosticsLogsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Errors and warnings from Mapbox, Supabase and the app'**
+  String get settingsDiagnosticsLogsDesc;
+
+  /// No description provided for @settingsDiagnosticsRemoteLogsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload logs to server'**
+  String get settingsDiagnosticsRemoteLogsLabel;
+
+  /// No description provided for @settingsDiagnosticsRemoteLogsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Allows reviewing logs from the Supabase dashboard'**
+  String get settingsDiagnosticsRemoteLogsDesc;
+
+  /// No description provided for @logsScreenTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Diagnostics'**
+  String get logsScreenTitle;
+
+  /// No description provided for @logsUploadTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload now'**
+  String get logsUploadTooltip;
+
+  /// No description provided for @logsShareTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Share all'**
+  String get logsShareTooltip;
+
+  /// No description provided for @logsClearTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear all'**
+  String get logsClearTooltip;
+
+  /// No description provided for @logsClearConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete all logs?'**
+  String get logsClearConfirmTitle;
+
+  /// No description provided for @logsClearConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This action cannot be undone.'**
+  String get logsClearConfirmBody;
+
+  /// No description provided for @logsClearConfirmButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get logsClearConfirmButton;
+
+  /// No description provided for @logsPending.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} pending upload'**
+  String logsPending(int count);
+
+  /// No description provided for @logsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No logs yet'**
+  String get logsEmpty;
+
+  /// No description provided for @logsSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search…'**
+  String get logsSearchHint;
+
+  /// No description provided for @logsCopiedToClipboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied to clipboard'**
+  String get logsCopiedToClipboard;
+
   /// No description provided for @mapNoRoute.
   ///
   /// In en, this message translates to:

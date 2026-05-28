@@ -11,7 +11,7 @@ class SplitwayLocalDatabase {
 
   Database get raw => _db;
 
-  static const int _schemaVersion = 8;
+  static const int _schemaVersion = 9;
 
   static Future<SplitwayLocalDatabase> open({String? overridePath}) async {
     final path = overridePath ?? await _defaultPath();
@@ -185,6 +185,35 @@ class SplitwayLocalDatabase {
       ''');
       await db.execute(
         'CREATE INDEX IF NOT EXISTS idx_speed_sessions_user_created ON speed_sessions(user_id, created_at DESC)',
+      );
+    }
+    if (from < 9 && to >= 9) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS app_logs (
+          id TEXT PRIMARY KEY NOT NULL,
+          timestamp INTEGER NOT NULL,
+          level TEXT NOT NULL,
+          tag TEXT NOT NULL,
+          message TEXT NOT NULL,
+          error TEXT,
+          stack_trace TEXT,
+          context_json TEXT,
+          app_version TEXT NOT NULL,
+          platform TEXT NOT NULL,
+          device_model TEXT NOT NULL,
+          user_id TEXT,
+          synced INTEGER NOT NULL DEFAULT 0,
+          sync_attempts INTEGER NOT NULL DEFAULT 0
+        )
+      ''');
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_app_logs_synced_ts ON app_logs(synced, timestamp)',
+      );
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_app_logs_ts ON app_logs(timestamp DESC)',
+      );
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_app_logs_level_tag ON app_logs(level, tag)',
       );
     }
   }

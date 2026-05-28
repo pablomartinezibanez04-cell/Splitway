@@ -912,6 +912,58 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsExportSharing => 'Exporting…';
 
   @override
+  String get settingsDiagnosticsSection => 'Diagnostics';
+
+  @override
+  String get settingsDiagnosticsLogsLabel => 'View logs';
+
+  @override
+  String get settingsDiagnosticsLogsDesc =>
+      'Errors and warnings from Mapbox, Supabase and the app';
+
+  @override
+  String get settingsDiagnosticsRemoteLogsLabel => 'Upload logs to server';
+
+  @override
+  String get settingsDiagnosticsRemoteLogsDesc =>
+      'Allows reviewing logs from the Supabase dashboard';
+
+  @override
+  String get logsScreenTitle => 'Diagnostics';
+
+  @override
+  String get logsUploadTooltip => 'Upload now';
+
+  @override
+  String get logsShareTooltip => 'Share all';
+
+  @override
+  String get logsClearTooltip => 'Clear all';
+
+  @override
+  String get logsClearConfirmTitle => 'Delete all logs?';
+
+  @override
+  String get logsClearConfirmBody => 'This action cannot be undone.';
+
+  @override
+  String get logsClearConfirmButton => 'Delete';
+
+  @override
+  String logsPending(int count) {
+    return '$count pending upload';
+  }
+
+  @override
+  String get logsEmpty => 'No logs yet';
+
+  @override
+  String get logsSearchHint => 'Search…';
+
+  @override
+  String get logsCopiedToClipboard => 'Copied to clipboard';
+
+  @override
   String get mapNoRoute => 'No route';
 
   @override

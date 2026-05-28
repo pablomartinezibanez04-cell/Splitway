@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../services/logging/app_logger.dart';
 import '../../services/speed/speed_session.dart';
 import '../local/speed_session_dao.dart';
 
@@ -15,8 +16,14 @@ class SpeedRepository {
     if (client != null && client.auth.currentUser != null) {
       try {
         await client.from('speed_sessions').upsert(session.toJson());
-      } catch (_) {
+      } catch (e, st) {
         // Network failure or RLS — keep local copy; SyncService will retry.
+        AppLogger.maybeInstance?.warning(
+          'supabase',
+          'speed.save remote upsert failed',
+          error: e,
+          stackTrace: st,
+        );
       }
     }
   }
@@ -35,8 +42,14 @@ class SpeedRepository {
             .from('speed_sessions')
             .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
             .eq('id', id);
-      } catch (_) {
+      } catch (e, st) {
         // sync will reconcile
+        AppLogger.maybeInstance?.warning(
+          'supabase',
+          'speed.softDelete remote update failed',
+          error: e,
+          stackTrace: st,
+        );
       }
     }
   }
@@ -51,8 +64,14 @@ class SpeedRepository {
       try {
         await client.from('speed_sessions').upsert(s.toJson());
         n++;
-      } catch (_) {
+      } catch (e, st) {
         // best-effort
+        AppLogger.maybeInstance?.warning(
+          'supabase',
+          'speed.pushAllForUser upsert failed',
+          error: e,
+          stackTrace: st,
+        );
       }
     }
     return n;
@@ -76,7 +95,13 @@ class SpeedRepository {
         n++;
       }
       return n;
-    } catch (_) {
+    } catch (e, st) {
+      AppLogger.maybeInstance?.warning(
+        'supabase',
+        'speed.pullAllForUser failed',
+        error: e,
+        stackTrace: st,
+      );
       return 0;
     }
   }

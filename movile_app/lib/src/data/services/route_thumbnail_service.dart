@@ -2,6 +2,8 @@ import 'package:http/http.dart' as http;
 import 'package:splitway_core/splitway_core.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../services/logging/http_logging.dart';
+
 /// Downloads a Mapbox Static API image of a route and uploads it to
 /// Supabase Storage, returning a signed URL valid for 1 year.
 class RouteThumbnailService {
@@ -42,7 +44,7 @@ class RouteThumbnailService {
     );
 
     // 3. Download PNG
-    final response = await _http.get(url);
+    final response = await logHttp('mapbox', url, () => _http.get(url));
     if (response.statusCode != 200) {
       throw Exception(
         'Mapbox Static API error ${response.statusCode}: ${response.body}',
@@ -51,18 +53,24 @@ class RouteThumbnailService {
 
     // 4. Upload to Supabase Storage (upsert)
     final storagePath = '$userId/${route.id}.png';
-    await _supabase.storage.from(_bucket).uploadBinary(
-          storagePath,
-          response.bodyBytes,
-          fileOptions: const FileOptions(
-            upsert: true,
-            contentType: 'image/png',
+    await logSupabase(
+      'thumbnail.upload',
+      () => _supabase.storage.from(_bucket).uploadBinary(
+            storagePath,
+            response.bodyBytes,
+            fileOptions: const FileOptions(
+              upsert: true,
+              contentType: 'image/png',
+            ),
           ),
-        );
+    );
 
     // 5. Create signed URL (1 year)
-    return _supabase.storage
-        .from(_bucket)
-        .createSignedUrl(storagePath, _signedUrlExpiry);
+    return logSupabase(
+      'thumbnail.signedUrl',
+      () => _supabase.storage
+          .from(_bucket)
+          .createSignedUrl(storagePath, _signedUrlExpiry),
+    );
   }
 }

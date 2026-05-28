@@ -283,6 +283,22 @@ class SettingsScreen extends StatelessWidget {
               ),
               onTap: () => _confirmClearCache(context, l),
             ),
+
+            // ── Diagnostics ─────────────────────────────────────────────
+            _SectionHeader(l.settingsDiagnosticsSection),
+            ListTile(
+              leading: const Icon(Icons.bug_report_outlined),
+              title: Text(l.settingsDiagnosticsLogsLabel),
+              subtitle: Text(l.settingsDiagnosticsLogsDesc),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push('/settings/logs'),
+            ),
+            SwitchListTile(
+              title: Text(l.settingsDiagnosticsRemoteLogsLabel),
+              subtitle: Text(l.settingsDiagnosticsRemoteLogsDesc),
+              value: settingsController.remoteLogsEnabled,
+              onChanged: settingsController.setRemoteLogsEnabled,
+            ),
           ],
         ),
       ),

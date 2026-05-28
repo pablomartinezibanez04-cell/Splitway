@@ -3,6 +3,9 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:splitway_core/splitway_core.dart';
 
+import '../logging/app_logger.dart';
+import '../logging/http_logging.dart';
+
 class ForwardGeocodingService {
   const ForwardGeocodingService({required this.accessToken, http.Client? client})
       : _client = client;
@@ -22,7 +25,11 @@ class ForwardGeocodingService {
 
     try {
       final client = _client ?? http.Client();
-      final response = await client.get(url).timeout(const Duration(seconds: 5));
+      final response = await logHttp(
+        'mapbox',
+        url,
+        () => client.get(url).timeout(const Duration(seconds: 5)),
+      );
       if (_client == null) client.close();
 
       if (response.statusCode != 200) return const [];
@@ -52,7 +59,14 @@ class ForwardGeocodingService {
         ));
       }
       return results;
-    } catch (_) {
+    } catch (e, st) {
+      AppLogger.maybeInstance?.warning(
+        'mapbox',
+        'forwardGeocode failed',
+        error: e,
+        stackTrace: st,
+        context: {'url': url.toString()},
+      );
       return const [];
     }
   }

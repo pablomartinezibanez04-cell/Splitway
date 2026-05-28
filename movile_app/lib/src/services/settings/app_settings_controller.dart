@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../logging/log_level.dart';
+
 enum UnitSystem { metric, imperial }
 
 enum AppThemeMode { system, light, dark }
@@ -26,6 +28,10 @@ class AppSettingsController extends ChangeNotifier {
     _defaultVehicleId = _prefs.getString(_kDefaultVehicleId);
     _defaultRoutingProfile =
         _prefs.getString(_kDefaultRoutingProfile) ?? 'driving';
+    _minLogLevel = LogLevel.fromName(
+      _prefs.getString(_kMinLogLevel) ?? LogLevel.warning.name,
+    );
+    _remoteLogsEnabled = _prefs.getBool(_kRemoteLogsEnabled) ?? true;
   }
 
   static const _kUnitSystem = 'unit_system';
@@ -39,6 +45,8 @@ class AppSettingsController extends ChangeNotifier {
   static const _kDefaultRoutingProfile = 'default_routing_profile';
   static const _kNotificationPermissionAsked = 'notification_permission_asked';
   static const _kDismissedDemoIds = 'dismissed_demo_route_ids';
+  static const _kMinLogLevel = 'min_log_level';
+  static const _kRemoteLogsEnabled = 'remote_logs_enabled';
 
   final SharedPreferences _prefs;
 
@@ -51,6 +59,8 @@ class AppSettingsController extends ChangeNotifier {
   late GpsSamplingInterval _gpsSamplingInterval;
   String? _defaultVehicleId;
   late String _defaultRoutingProfile;
+  late LogLevel _minLogLevel;
+  late bool _remoteLogsEnabled;
 
   UnitSystem get unitSystem => _unitSystem;
   AppThemeMode get themeMode => _themeMode;
@@ -61,6 +71,8 @@ class AppSettingsController extends ChangeNotifier {
   GpsSamplingInterval get gpsSamplingInterval => _gpsSamplingInterval;
   String? get defaultVehicleId => _defaultVehicleId;
   String get defaultRoutingProfile => _defaultRoutingProfile;
+  LogLevel get minLogLevel => _minLogLevel;
+  bool get remoteLogsEnabled => _remoteLogsEnabled;
   bool get notificationPermissionAsked =>
       _prefs.getBool(_kNotificationPermissionAsked) ?? false;
 
@@ -160,5 +172,19 @@ class AppSettingsController extends ChangeNotifier {
     final current = dismissedDemoIds;
     if (current.contains(id)) return;
     await _prefs.setStringList(_kDismissedDemoIds, [...current, id]);
+  }
+
+  Future<void> setMinLogLevel(LogLevel v) async {
+    if (_minLogLevel == v) return;
+    _minLogLevel = v;
+    await _prefs.setString(_kMinLogLevel, v.name);
+    notifyListeners();
+  }
+
+  Future<void> setRemoteLogsEnabled(bool v) async {
+    if (_remoteLogsEnabled == v) return;
+    _remoteLogsEnabled = v;
+    await _prefs.setBool(_kRemoteLogsEnabled, v);
+    notifyListeners();
   }
 }
