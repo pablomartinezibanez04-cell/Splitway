@@ -1,5 +1,14 @@
 -- supabase/migrations/20260528000003_admin_audit_log.sql
 -- Audit log for every mutating admin action in the admin panel.
+--
+-- NOTE: admin_id below is declared `not null` while the FK is
+-- `on delete set null`, which is contradictory: deleting the
+-- referenced auth.users row would violate the NOT NULL constraint.
+-- This migration was already applied to the cloud project before the
+-- issue was noticed, so it is preserved as-is for history integrity.
+-- The follow-up migration 20260528000004_fix_admin_audit_log_nullable_admin_id.sql
+-- drops the NOT NULL constraint, which is the intended final state
+-- (audit rows must survive deletion of the original admin user).
 
 create table if not exists public.admin_audit_log (
   id          uuid primary key default gen_random_uuid(),
