@@ -1,4 +1,7 @@
-// admin/lib/supabase/middleware.ts
+// admin/lib/supabase/proxy.ts
+// Helper invoked by `admin/proxy.ts` (the Next.js 16 proxy convention,
+// formerly `middleware.ts`). Refreshes the Supabase session cookie and
+// applies the admin role + profile completeness gates.
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "./database.types";

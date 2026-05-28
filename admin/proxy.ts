@@ -1,8 +1,10 @@
-// admin/middleware.ts
+// admin/proxy.ts
+// Renamed from middleware.ts in Next.js 16 (the "middleware" file
+// convention is deprecated in favor of "proxy"). Behavior unchanged.
 import { type NextRequest } from "next/server";
-import { updateSession } from "@/lib/supabase/middleware";
+import { updateSession } from "@/lib/supabase/proxy";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   return await updateSession(request);
 }
 
