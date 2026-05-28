@@ -25,7 +25,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" className={`${geistSans.variable} ${geistMono.variable}`}>
+    // `suppressHydrationWarning` is for browser extensions like DarkReader
+    // that inject `data-darkreader-*` attributes into <html> before React
+    // hydrates. The mismatch is harmless and not under our control.
+    <html
+      lang="es"
+      className={`${geistSans.variable} ${geistMono.variable}`}
+      suppressHydrationWarning
+    >
       <body className="min-h-screen bg-background text-foreground antialiased">
         {children}
         <Toaster richColors position="top-right" />
