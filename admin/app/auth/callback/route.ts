@@ -41,5 +41,27 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(redirect);
   }
 
+  // Role check happens here (in addition to the proxy) so non-admin
+  // OAuth users land on /login?error=forbidden via a hard navigation
+  // that reliably preserves the query string and the banner renders.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile?.role !== "admin" && profile?.role !== "superadmin") {
+      await supabase.auth.signOut();
+      const redirect = new URL("/login", origin);
+      redirect.searchParams.set("error", "forbidden");
+      return NextResponse.redirect(redirect);
+    }
+  }
+
   return NextResponse.redirect(new URL("/", origin));
 }
