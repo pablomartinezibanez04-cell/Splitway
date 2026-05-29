@@ -30,6 +30,7 @@ import '../services/settings/app_settings_controller.dart';
 import '../services/geocoding/reverse_geocoding_service.dart';
 import '../services/routing/elevation_service.dart';
 import '../services/routing/routing_service.dart';
+import '../features/profile/complete_profile_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../services/profile/profile_service.dart';
 import '../services/sync/sync_service.dart';
@@ -41,6 +42,7 @@ class AppRouter {
     required this.config,
     required this.localeController,
     required this.settingsController,
+    required this.refreshListenable,
     this.authService,
     SyncService? syncService,
     ProfileService? profileService,
@@ -74,6 +76,7 @@ class AppRouter {
   final AppConfig config;
   final LocaleController localeController;
   final AppSettingsController settingsController;
+  final Listenable refreshListenable;
   final AuthService? authService;
   ProfileService? profileService;
   GarageService? garageService;
@@ -93,6 +96,26 @@ class AppRouter {
 
   late final GoRouter router = GoRouter(
     initialLocation: '/routes',
+    refreshListenable: refreshListenable,
+    redirect: (context, state) {
+      final isLoggedIn = authService?.isLoggedIn ?? false;
+      if (!isLoggedIn) return null;
+
+      final isComplete = profileService?.isComplete;
+      // null = haven't checked yet. Don't redirect; let the current
+      // navigation proceed. The refresh listenable will re-run this
+      // callback once refreshCompleteness() resolves.
+      if (isComplete == null) return null;
+
+      final path = state.uri.path;
+      if (!isComplete && path != '/complete-profile') {
+        return '/complete-profile';
+      }
+      if (isComplete && path == '/complete-profile') {
+        return '/routes';
+      }
+      return null;
+    },
     routes: [
       // Login screen (outside the shell — no bottom nav).
       GoRoute(
@@ -106,6 +129,15 @@ class AppRouter {
             bannerMessage: banner,
           );
         },
+      ),
+
+      // Onboarding — only reachable when logged in + profile incomplete.
+      GoRoute(
+        path: '/complete-profile',
+        builder: (context, state) => CompleteProfileScreen(
+          authService: authService!,
+          profileService: profileService!,
+        ),
       ),
 
       GoRoute(
