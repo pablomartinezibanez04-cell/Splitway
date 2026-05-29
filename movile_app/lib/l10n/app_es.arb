@@ -103,6 +103,13 @@
   "profileEmailLabel": "Correo electrónico",
   "profileDateOfBirthLabel": "Fecha de nacimiento",
   "loginDateOfBirthHint": "Fecha de nacimiento",
+  "onboardingTitle": "Completa tu perfil",
+  "onboardingDescription": "Necesitamos algunos datos para terminar de configurar tu cuenta. La contraseña te permitirá iniciar sesión también con email.",
+  "onboardingSubmit": "Guardar y continuar",
+  "onboardingSubmitLoading": "Guardando…",
+  "onboardingDobInvalid": "Debes tener al menos 13 años.",
+  "onboardingProfileFailed": "No se pudo guardar el perfil. Inténtalo de nuevo.",
+  "onboardingPasswordFailed": "No se pudo establecer la contraseña.",
 
   "editorTitle": "Editor de rutas",
   "editorNewRouteTooltip": "Nueva ruta",

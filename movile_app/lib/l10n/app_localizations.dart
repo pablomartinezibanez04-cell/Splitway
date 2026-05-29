@@ -620,6 +620,48 @@ abstract class AppLocalizations {
   /// **'Date of birth'**
   String get loginDateOfBirthHint;
 
+  /// No description provided for @onboardingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete your profile'**
+  String get onboardingTitle;
+
+  /// No description provided for @onboardingDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'We need a few things to finish setting up your account. The password will let you sign in with email too.'**
+  String get onboardingDescription;
+
+  /// No description provided for @onboardingSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Save and continue'**
+  String get onboardingSubmit;
+
+  /// No description provided for @onboardingSubmitLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving…'**
+  String get onboardingSubmitLoading;
+
+  /// No description provided for @onboardingDobInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'You must be at least 13 years old.'**
+  String get onboardingDobInvalid;
+
+  /// No description provided for @onboardingProfileFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save the profile. Please try again.'**
+  String get onboardingProfileFailed;
+
+  /// No description provided for @onboardingPasswordFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not set the password.'**
+  String get onboardingPasswordFailed;
+
   /// No description provided for @editorTitle.
   ///
   /// In en, this message translates to:
