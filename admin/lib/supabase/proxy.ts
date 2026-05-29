@@ -6,6 +6,26 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "./database.types";
 
+/**
+ * Copies cookies set by the Supabase server client onto a new redirect
+ * response. The Supabase SSR client writes session updates (refresh,
+ * sign-out) to a stashed `response` variable via its `setAll` callback;
+ * any redirect we return INSTEAD of that response will silently lose
+ * those cookies. Most visibly, `signOut()` followed by a fresh
+ * `NextResponse.redirect()` does NOT clear the auth cookies — the
+ * browser still sends them on the next request and the gate re-triggers
+ * forever.
+ */
+function copyCookies(
+  destination: NextResponse,
+  source: NextResponse,
+): NextResponse {
+  source.cookies.getAll().forEach((cookie) => {
+    destination.cookies.set(cookie);
+  });
+  return destination;
+}
+
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
 
@@ -49,7 +69,7 @@ export async function updateSession(request: NextRequest) {
   if (!user && !isAuthRoute) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/login";
-    return NextResponse.redirect(redirectUrl);
+    return copyCookies(NextResponse.redirect(redirectUrl), response);
   }
 
   if (user && !isAuthRoute) {
@@ -65,7 +85,7 @@ export async function updateSession(request: NextRequest) {
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = "/login";
       redirectUrl.searchParams.set("error", "forbidden");
-      return NextResponse.redirect(redirectUrl);
+      return copyCookies(NextResponse.redirect(redirectUrl), response);
     }
 
     const hasNickname = !!profile?.nickname && profile.nickname.trim() !== "";
@@ -84,20 +104,20 @@ export async function updateSession(request: NextRequest) {
     if (!isComplete && !isOnboardingRoute) {
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = "/onboarding/complete-profile";
-      return NextResponse.redirect(redirectUrl);
+      return copyCookies(NextResponse.redirect(redirectUrl), response);
     }
 
     if (isComplete && isOnboardingRoute) {
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = "/";
-      return NextResponse.redirect(redirectUrl);
+      return copyCookies(NextResponse.redirect(redirectUrl), response);
     }
   }
 
   if (user && isAuthRoute) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/";
-    return NextResponse.redirect(redirectUrl);
+    return copyCookies(NextResponse.redirect(redirectUrl), response);
   }
 
   return response;
