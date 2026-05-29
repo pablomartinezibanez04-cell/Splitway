@@ -503,6 +503,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      find_email_by_user_id: { Args: { p_user_id: string }; Returns: string }
       find_user_id_by_email: { Args: { p_email: string }; Returns: string }
       update_nickname: { Args: { new_nickname: string }; Returns: undefined }
       upsert_free_ride_with_telemetry: {

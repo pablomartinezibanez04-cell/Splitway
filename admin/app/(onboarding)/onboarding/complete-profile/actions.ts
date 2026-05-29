@@ -93,7 +93,11 @@ export async function completeOnboarding(
     action: "complete_profile",
     targetType: "user",
     targetId: admin.id,
-    details: { fieldsSet: ["nickname", "date_of_birth", "password"] },
+    details: {
+      email: admin.email,
+      nickname: parsed.data.nickname,
+      fieldsSet: ["nickname", "date_of_birth", "password"],
+    },
   });
 
   redirect("/");

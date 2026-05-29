@@ -49,6 +49,7 @@ export async function changeOwnPassword(
     action: "change_own_password",
     targetType: "user",
     targetId: admin.id,
+    details: { email: admin.email, nickname: admin.nickname },
   });
 
   return { ok: true };
@@ -89,7 +90,7 @@ export async function promoteAdmin(
 
   const { data: existing } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, nickname")
     .eq("id", targetUserId)
     .maybeSingle();
   if (!existing) {
@@ -116,7 +117,13 @@ export async function promoteAdmin(
     action: "promote_admin",
     targetType: "user",
     targetId: targetUserId,
-    details: { email: parsed.data.email, newRole: "admin" },
+    details: {
+      targetEmail: parsed.data.email,
+      targetNickname: existing.nickname,
+      oldRole: "user",
+      newRole: "admin",
+      actorEmail: superadmin.email,
+    },
   });
 
   revalidatePath("/settings");
@@ -148,12 +155,17 @@ export async function demoteAdmin(
 
   const { data: current } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, nickname")
     .eq("id", parsed.data.userId)
     .maybeSingle();
   if (current?.role === "superadmin") {
     return { error: "No se puede degradar a otro superadmin." };
   }
+
+  const { data: targetEmail } = await supabase.rpc(
+    "find_email_by_user_id",
+    { p_user_id: parsed.data.userId },
+  );
 
   const { error: updateErr } = await supabase
     .from("profiles")
@@ -166,7 +178,13 @@ export async function demoteAdmin(
     action: "demote_admin",
     targetType: "user",
     targetId: parsed.data.userId,
-    details: { oldRole: "admin", newRole: "user" },
+    details: {
+      targetEmail: targetEmail ?? null,
+      targetNickname: current?.nickname ?? null,
+      oldRole: "admin",
+      newRole: "user",
+      actorEmail: superadmin.email,
+    },
   });
 
   revalidatePath("/settings");
