@@ -70,7 +70,15 @@ export async function updateSession(request: NextRequest) {
 
     const hasNickname = !!profile?.nickname && profile.nickname.trim() !== "";
     const hasDob = !!profile?.date_of_birth;
-    const hasPassword = !!user.identities?.some((i) => i.provider === "email");
+    // `user.identities` is not reliable: Supabase's updateUser({ password })
+    // sets auth.users.encrypted_password but does NOT add an "email"
+    // identity for users who originally signed up via OAuth. We instead
+    // call a SECURITY DEFINER function (migration 20260528000005) that
+    // reads encrypted_password directly under auth.uid().
+    const { data: hasPasswordResult } = await supabase.rpc(
+      "user_has_password",
+    );
+    const hasPassword = hasPasswordResult === true;
     const isComplete = hasNickname && hasDob && hasPassword;
 
     if (!isComplete && !isOnboardingRoute) {

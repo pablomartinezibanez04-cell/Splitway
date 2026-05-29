@@ -540,6 +540,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      user_has_password: { Args: never; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
