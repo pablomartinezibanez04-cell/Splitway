@@ -46,6 +46,7 @@ class _SplitwayAppState extends State<SplitwayApp> {
   SyncService? _syncService;
   ProfileService? _profileService;
   GarageService? _garageService;
+  final _RouterRefresh _routerRefresh = _RouterRefresh();
 
   @override
   void initState() {
@@ -60,6 +61,7 @@ class _SplitwayAppState extends State<SplitwayApp> {
       final client = Supabase.instance.client;
       _authService = AuthService(client: client);
       _authService!.addListener(_onAuthStateChanged);
+      _authService!.addListener(_routerRefresh.notify);
       if (client.auth.currentUser != null) {
         _repository.userId = client.auth.currentUser!.id;
         _createSyncService(client);
@@ -77,6 +79,7 @@ class _SplitwayAppState extends State<SplitwayApp> {
       garageService: _garageService,
       localeController: widget.localeController,
       settingsController: widget.settingsController,
+      refreshListenable: _routerRefresh,
     );
   }
 
@@ -132,20 +135,14 @@ class _SplitwayAppState extends State<SplitwayApp> {
 
   void _createProfileService(SupabaseClient client, {bool updateRouter = true}) {
     final repo = ProfileRepository(client);
-    _profileService = ProfileService(repo);
+    _profileService = ProfileService(repo, client: client);
     if (updateRouter) _router.profileService = _profileService;
 
-    final user = client.auth.currentUser;
-    final nickname = user?.userMetadata?['nickname'] as String? ??
-        user?.userMetadata?['full_name'] as String? ??
-        user?.email?.split('@').first ??
-        'User';
-    final dobStr = user?.userMetadata?['date_of_birth'] as String?;
-    final dateOfBirth = dobStr != null ? DateTime.tryParse(dobStr) : null;
-    _profileService!.ensureProfile(
-      fallbackNickname: nickname,
-      dateOfBirth: dateOfBirth,
-    );
+    // Re-fetch profile + check completeness from scratch on every login.
+    // Triggers a router redirect via the refresh listenable if the user
+    // ends up incomplete.
+    _profileService!.refreshCompleteness();
+    _profileService!.addListener(_routerRefresh.notify);
 
     final garageRepo = GarageRepository(client);
     _garageService = GarageService(garageRepo);
@@ -163,6 +160,7 @@ class _SplitwayAppState extends State<SplitwayApp> {
     _router.dispose();
     _repository.dispose();
     widget.database.close();
+    _routerRefresh.dispose();
     super.dispose();
   }
 
@@ -203,4 +201,11 @@ class _SplitwayAppState extends State<SplitwayApp> {
       ),
     );
   }
+}
+
+/// Tiny ChangeNotifier exposed to GoRouter as `refreshListenable` so the
+/// router re-evaluates its `redirect` whenever auth or profile state
+/// changes (login, logout, profile loaded, completeness changed).
+class _RouterRefresh extends ChangeNotifier {
+  void notify() => notifyListeners();
 }
