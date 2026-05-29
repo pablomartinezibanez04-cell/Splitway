@@ -75,42 +75,48 @@ export async function promoteAdmin(
 
   const supabase = adminClient();
 
-  // Look the user up by email via the auth admin API.
-  const { data: list, error: listErr } = await supabase.auth.admin.listUsers({
-    page: 1,
-    perPage: 1000,
-  });
-  if (listErr) return { error: "No se pudo consultar usuarios." };
-
-  const target = list.users.find(
-    (u) => u.email?.toLowerCase() === parsed.data.email.toLowerCase(),
+  // Look the user up directly in auth.users via a SECURITY DEFINER RPC.
+  // auth.admin.listUsers is capped at perPage=1000 and was returning
+  // false negatives once the user base grew past that.
+  const { data: targetUserId, error: lookupErr } = await supabase.rpc(
+    "find_user_id_by_email",
+    { p_email: parsed.data.email },
   );
-  if (!target) return { error: "No existe ningún usuario con ese email." };
+  if (lookupErr) return { error: "No se pudo consultar usuarios." };
+  if (!targetUserId) {
+    return { error: "No existe ningún usuario con ese email." };
+  }
 
   const { data: existing } = await supabase
     .from("profiles")
     .select("role")
-    .eq("id", target.id)
+    .eq("id", targetUserId)
     .maybeSingle();
-  if (existing?.role === "superadmin") {
+  if (!existing) {
+    return {
+      error:
+        "Ese usuario aún no tiene perfil — debe abrir la app móvil al menos una vez antes de poder ser promovido.",
+    };
+  }
+  if (existing.role === "superadmin") {
     return { error: "No se puede modificar el rol de un superadmin." };
   }
-  if (existing?.role === "admin") {
+  if (existing.role === "admin") {
     return { error: "Este usuario ya es administrador." };
   }
 
   const { error: updateErr } = await supabase
     .from("profiles")
     .update({ role: "admin" })
-    .eq("id", target.id);
+    .eq("id", targetUserId);
   if (updateErr) return { error: "No se pudo actualizar el perfil." };
 
   await writeAuditLog({
     adminId: superadmin.id,
     action: "promote_admin",
     targetType: "user",
-    targetId: target.id,
-    details: { email: target.email, newRole: "admin" },
+    targetId: targetUserId,
+    details: { email: parsed.data.email, newRole: "admin" },
   });
 
   revalidatePath("/settings");
