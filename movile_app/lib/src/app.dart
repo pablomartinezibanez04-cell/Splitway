@@ -153,8 +153,10 @@ class _SplitwayAppState extends State<SplitwayApp> {
   @override
   void dispose() {
     _authService?.removeListener(_onAuthStateChanged);
+    _authService?.removeListener(_routerRefresh.notify);
     _authService?.dispose();
     _syncService?.dispose();
+    _profileService?.removeListener(_routerRefresh.notify);
     _profileService?.dispose();
     _garageService?.dispose();
     _router.dispose();

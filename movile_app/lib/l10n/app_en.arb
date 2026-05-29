@@ -110,6 +110,7 @@
   "onboardingDobInvalid": "You must be at least 13 years old.",
   "onboardingProfileFailed": "Could not save the profile. Please try again.",
   "onboardingPasswordFailed": "Could not set the password.",
+  "onboardingPasswordMinLength": "Minimum 8 characters.",
 
   "editorTitle": "Route editor",
   "editorNewRouteTooltip": "New route",

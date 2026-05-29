@@ -188,7 +188,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                       if (v == null || v.isEmpty) {
                         return l.loginPasswordRequired;
                       }
-                      if (v.length < 6) return l.loginPasswordMinLength;
+                      if (v.length < 8) return l.onboardingPasswordMinLength;
                       return null;
                     },
                   ),

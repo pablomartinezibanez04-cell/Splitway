@@ -662,6 +662,12 @@ abstract class AppLocalizations {
   /// **'Could not set the password.'**
   String get onboardingPasswordFailed;
 
+  /// No description provided for @onboardingPasswordMinLength.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimum 8 characters.'**
+  String get onboardingPasswordMinLength;
+
   /// No description provided for @editorTitle.
   ///
   /// In en, this message translates to:

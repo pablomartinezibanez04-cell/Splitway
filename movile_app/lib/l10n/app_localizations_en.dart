@@ -325,6 +325,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingPasswordFailed => 'Could not set the password.';
 
   @override
+  String get onboardingPasswordMinLength => 'Minimum 8 characters.';
+
+  @override
   String get editorTitle => 'Route editor';
 
   @override

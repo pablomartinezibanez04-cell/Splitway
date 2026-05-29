@@ -110,6 +110,7 @@
   "onboardingDobInvalid": "Debes tener al menos 13 años.",
   "onboardingProfileFailed": "No se pudo guardar el perfil. Inténtalo de nuevo.",
   "onboardingPasswordFailed": "No se pudo establecer la contraseña.",
+  "onboardingPasswordMinLength": "Mínimo 8 caracteres.",
 
   "editorTitle": "Editor de rutas",
   "editorNewRouteTooltip": "Nueva ruta",
