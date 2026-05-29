@@ -1,13 +1,17 @@
+import 'dart:typed_data';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/repositories/profile_repository.dart';
 import 'user_profile.dart';
 
 class ProfileService extends ChangeNotifier {
-  ProfileService(this._repository);
+  ProfileService(this._repository, {SupabaseClient? client}) : _client = client;
 
   final ProfileRepository _repository;
+  final SupabaseClient? _client;
 
   UserProfile? _profile;
   UserProfile? get profile => _profile;
@@ -17,6 +21,12 @@ class ProfileService extends ChangeNotifier {
 
   String? _error;
   String? get error => _error;
+
+  /// Cached completeness state. `null` while the first load is in
+  /// progress; `true` once nickname + DOB + password are all set;
+  /// `false` if any of the three is missing.
+  bool? _isComplete;
+  bool? get isComplete => _isComplete;
 
   Future<void> loadProfile() async {
     _loading = true;
@@ -34,27 +44,61 @@ class ProfileService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> ensureProfile({
-    required String fallbackNickname,
-    DateTime? dateOfBirth,
+  /// Loads the profile (if not already loaded) and re-evaluates whether
+  /// the account is complete: nickname + DOB locally + the password check
+  /// via the SECURITY DEFINER RPC. Call this after sign-in and after the
+  /// onboarding form submits.
+  Future<void> refreshCompleteness() async {
+    await loadProfile();
+
+    final hasRequiredFields = _profile?.hasRequiredFields ?? false;
+    bool hasPassword = false;
+    try {
+      final result = await _client?.rpc('user_has_password');
+      hasPassword = result == true;
+    } catch (e) {
+      debugPrint('ProfileService.refreshCompleteness rpc error: $e');
+      // On failure, treat as "we don't know" → require onboarding to be
+      // safe. The user can still sign out from the onboarding screen.
+      hasPassword = false;
+    }
+
+    _isComplete = hasRequiredFields && hasPassword;
+    notifyListeners();
+  }
+
+  /// Upserts the profile row with the given nickname + date of birth.
+  /// Used by [CompleteProfileScreen] during onboarding. Returns true on
+  /// success.
+  Future<bool> completeProfile({
+    required String nickname,
+    required DateTime dateOfBirth,
   }) async {
-    if (_profile != null) return true;
+    _error = null;
 
     try {
-      _profile = await _repository.getProfile();
-      if (_profile != null) {
-        notifyListeners();
-        return true;
+      if (_profile == null) {
+        // First-time profile creation (typical for OAuth-only users).
+        _profile = await _repository.createProfile(
+          nickname: nickname,
+          dateOfBirth: dateOfBirth,
+        );
+      } else {
+        // Existing row: update nickname via the cooldown-respecting RPC
+        // when it actually changed, then patch DOB.
+        if (_profile!.nickname.trim() != nickname.trim()) {
+          await _repository.updateNickname(nickname);
+        }
+        await _repository.updateDateOfBirth(dateOfBirth);
+        _profile = _profile!.copyWith(
+          nickname: nickname,
+          dateOfBirth: dateOfBirth,
+        );
       }
-
-      _profile = await _repository.createProfile(
-        nickname: fallbackNickname,
-        dateOfBirth: dateOfBirth,
-      );
       notifyListeners();
       return true;
     } catch (e) {
-      debugPrint('ProfileService.ensureProfile error: $e');
+      debugPrint('ProfileService.completeProfile error: $e');
       _error = e.toString();
       notifyListeners();
       return false;
@@ -122,6 +166,7 @@ class ProfileService extends ChangeNotifier {
     _profile = null;
     _error = null;
     _loading = false;
+    _isComplete = null;
     if (oldUrl != null) {
       PaintingBinding.instance.imageCache.evict(NetworkImage(oldUrl));
     }
