@@ -41,6 +41,8 @@ String _localizedAuthError(AppLocalizations l, AuthErrorCode code) {
       return l.authErrorEmailNotConfirmed;
     case AuthErrorCode.passwordTooShort:
       return l.authErrorPasswordTooShort;
+    case AuthErrorCode.passwordUpdateFailed:
+      return l.authErrorUnexpected;
     case AuthErrorCode.noConnection:
       return l.authErrorNoConnection;
     case AuthErrorCode.unexpected:

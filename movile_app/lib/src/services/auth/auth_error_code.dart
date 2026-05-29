@@ -4,6 +4,7 @@ enum AuthErrorCode {
   invalidCredentials,
   emailNotConfirmed,
   passwordTooShort,
+  passwordUpdateFailed,
   noConnection,
   unexpected,
 }

@@ -259,6 +259,46 @@ class AuthService extends ChangeNotifier {
     }
   }
 
+  /// Sets a password on the currently signed-in user. For users created
+  /// via OAuth (no `email` identity), this also makes email+password
+  /// sign-in possible afterwards. Returns true on success.
+  Future<bool> setPassword(String password) async {
+    if (!isLoggedIn) {
+      _errorCode = AuthErrorCode.unexpected;
+      notifyListeners();
+      return false;
+    }
+
+    try {
+      await _client.auth.updateUser(UserAttributes(password: password));
+      _errorCode = null;
+      notifyListeners();
+      return true;
+    } on AuthException catch (e, st) {
+      AppLogger.maybeInstance?.warning(
+        'auth',
+        'setPassword failed',
+        error: e,
+        stackTrace: st,
+        context: {'method': 'setPassword', 'code': e.code},
+      );
+      _errorCode = _mapAuthError(e);
+      notifyListeners();
+      return false;
+    } catch (e, st) {
+      AppLogger.maybeInstance?.warning(
+        'auth',
+        'setPassword unexpected error',
+        error: e,
+        stackTrace: st,
+        context: {'method': 'setPassword'},
+      );
+      _errorCode = AuthErrorCode.passwordUpdateFailed;
+      notifyListeners();
+      return false;
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Sign out
   // ---------------------------------------------------------------------------
