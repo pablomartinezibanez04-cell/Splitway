@@ -62,6 +62,11 @@ class AuthService extends ChangeNotifier {
       final googleSignIn = GoogleSignIn(
         serverClientId: _webClientId,
       );
+      // Force the account picker every time. Without this, google_sign_in
+      // silently returns the last-used Google account on subsequent calls,
+      // which surprises users who expect to choose which account to use
+      // and looks like the consent step was skipped.
+      await googleSignIn.signOut();
       final googleUser = await googleSignIn.signIn();
       if (googleUser == null) {
         // User cancelled the sign-in flow.
