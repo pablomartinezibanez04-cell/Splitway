@@ -106,11 +106,11 @@ select
   u.banned_until,
   greatest(
     coalesce(
-      (select max(created_at) from public.session_runs where owner_id = p.id),
+      (select max(started_at) from public.session_runs where owner_id = p.id),
       'epoch'::timestamptz
     ),
     coalesce(
-      (select max(created_at) from public.free_rides where owner_id = p.id),
+      (select max(started_at) from public.free_rides where owner_id = p.id),
       'epoch'::timestamptz
     ),
     coalesce(
