@@ -73,6 +73,16 @@
   "authErrorPasswordTooShort": "La contraseña debe tener al menos 6 caracteres.",
   "authErrorNoConnection": "Sin conexión. Inténtalo de nuevo.",
   "authErrorUnexpected": "Error inesperado. Inténtalo de nuevo.",
+  "authErrorBanned": "Tu cuenta está baneada.",
+  "authErrorBannedUntil": "Tu cuenta está baneada hasta el {date}.",
+  "@authErrorBannedUntil": {
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "yMd"
+      }
+    }
+  },
 
   "loginForgotPassword": "¿Olvidaste tu contraseña?",
   "loginForgotPasswordTitle": "Restablecer contraseña",
@@ -103,6 +113,14 @@
   "profileEmailLabel": "Correo electrónico",
   "profileDateOfBirthLabel": "Fecha de nacimiento",
   "loginDateOfBirthHint": "Fecha de nacimiento",
+  "onboardingTitle": "Completa tu perfil",
+  "onboardingDescription": "Necesitamos algunos datos para terminar de configurar tu cuenta. La contraseña te permitirá iniciar sesión también con email.",
+  "onboardingSubmit": "Guardar y continuar",
+  "onboardingSubmitLoading": "Guardando…",
+  "onboardingDobInvalid": "Debes tener al menos 13 años.",
+  "onboardingProfileFailed": "No se pudo guardar el perfil. Inténtalo de nuevo.",
+  "onboardingPasswordFailed": "No se pudo establecer la contraseña.",
+  "onboardingPasswordMinLength": "Mínimo 8 caracteres.",
 
   "editorTitle": "Editor de rutas",
   "editorNewRouteTooltip": "Nueva ruta",

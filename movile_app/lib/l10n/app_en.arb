@@ -73,6 +73,16 @@
   "authErrorPasswordTooShort": "Password must be at least 6 characters.",
   "authErrorNoConnection": "No connection. Try again.",
   "authErrorUnexpected": "Unexpected error. Try again.",
+  "authErrorBanned": "Your account is banned.",
+  "authErrorBannedUntil": "Your account is banned until {date}.",
+  "@authErrorBannedUntil": {
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "yMd"
+      }
+    }
+  },
 
   "loginForgotPassword": "Forgot your password?",
   "loginForgotPasswordTitle": "Reset password",
@@ -103,6 +113,14 @@
   "profileEmailLabel": "Email",
   "profileDateOfBirthLabel": "Date of birth",
   "loginDateOfBirthHint": "Date of birth",
+  "onboardingTitle": "Complete your profile",
+  "onboardingDescription": "We need a few things to finish setting up your account. The password will let you sign in with email too.",
+  "onboardingSubmit": "Save and continue",
+  "onboardingSubmitLoading": "Saving…",
+  "onboardingDobInvalid": "You must be at least 13 years old.",
+  "onboardingProfileFailed": "Could not save the profile. Please try again.",
+  "onboardingPasswordFailed": "Could not set the password.",
+  "onboardingPasswordMinLength": "Minimum 8 characters.",
 
   "editorTitle": "Route editor",
   "editorNewRouteTooltip": "New route",

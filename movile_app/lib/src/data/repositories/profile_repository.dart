@@ -63,6 +63,18 @@ class ProfileRepository {
     );
   }
 
+  Future<void> updateDateOfBirth(DateTime dateOfBirth) async {
+    final iso =
+        '${dateOfBirth.year}-${dateOfBirth.month.toString().padLeft(2, '0')}-${dateOfBirth.day.toString().padLeft(2, '0')}';
+    await logSupabase(
+      'profile.updateDateOfBirth',
+      () => _client.from('profiles').update({
+        'date_of_birth': iso,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      }).eq('id', _uid),
+    );
+  }
+
   Future<String> uploadAvatar(Uint8List bytes, String extension) async {
     try {
       final old = await _client.storage.from(_avatarBucket).list(path: _uid);

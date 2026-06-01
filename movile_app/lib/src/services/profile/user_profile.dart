@@ -20,6 +20,12 @@ class UserProfile {
   bool get canChangeNickname =>
       DateTime.now().difference(nicknameChangedAt) >= _cooldown;
 
+  /// True when the profile has the fields the app requires for full use:
+  /// a non-empty nickname AND a date of birth. Mirrors the admin panel's
+  /// completeness contract (see admin/lib/supabase/proxy.ts).
+  bool get hasRequiredFields =>
+      nickname.trim().isNotEmpty && dateOfBirth != null;
+
   Duration get nicknameCooldownRemaining {
     final elapsed = DateTime.now().difference(nicknameChangedAt);
     final remaining = _cooldown - elapsed;
