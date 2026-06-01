@@ -124,19 +124,14 @@ export function RoutesTable({ rows }: { rows: Row[] }) {
     {
       accessorKey: "owner_nickname",
       header: "Propietario",
-      cell: ({ row }) =>
-        row.original.is_official
-          ? "splitway"
-          : (row.original.owner_nickname ?? "—"),
+      cell: ({ row }) => row.original.owner_nickname ?? "—",
     },
     {
       accessorKey: "owner_email",
       header: "Email",
       cell: ({ row }) => (
         <span className="text-sm text-muted-foreground">
-          {row.original.is_official
-            ? "splitway@gmail.com"
-            : (row.original.owner_email ?? "—")}
+          {row.original.owner_email ?? "—"}
         </span>
       ),
     },

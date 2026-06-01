@@ -117,13 +117,12 @@ export async function toggleRouteOfficial(
   }
 
   const supabase = adminClient();
-  const { error } = await supabase
-    .from("route_templates")
-    .update({
-      is_official: parsed.data.isOfficial,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", parsed.data.routeId);
+  // Use the RPC so that marking-as-official atomically also transfers
+  // owner_id to the splitway curator account.
+  const { error } = await supabase.rpc("toggle_route_official", {
+    p_route_id: parsed.data.routeId,
+    p_official: parsed.data.isOfficial,
+  });
   if (error) return { error: "No se pudo actualizar la ruta." };
 
   await writeAuditLog({
@@ -164,9 +163,12 @@ export async function duplicateRouteAsOfficial(
   }
 
   const supabase = adminClient();
+  // The RPC sets owner_id to the splitway curator internally; we no
+  // longer pass p_admin_id (the audit log below still records which
+  // admin clicked the button).
   const { data: newId, error } = await supabase.rpc(
     "duplicate_route_as_official",
-    { p_source_route_id: parsed.data.routeId, p_admin_id: admin.id },
+    { p_source_route_id: parsed.data.routeId },
   );
   if (error || !newId) {
     return { error: "No se pudo duplicar la ruta." };

@@ -554,12 +554,17 @@ export type Database = {
     }
     Functions: {
       duplicate_route_as_official: {
-        Args: { p_admin_id: string; p_source_route_id: string }
+        Args: { p_source_route_id: string }
         Returns: string
       }
       find_email_by_user_id: { Args: { p_user_id: string }; Returns: string }
       find_user_id_by_email: { Args: { p_email: string }; Returns: string }
+      get_splitway_user_id: { Args: never; Returns: string }
       get_user_ban_until: { Args: { p_email: string }; Returns: string }
+      toggle_route_official: {
+        Args: { p_official: boolean; p_route_id: string }
+        Returns: undefined
+      }
       update_nickname: { Args: { new_nickname: string }; Returns: undefined }
       upsert_free_ride_with_telemetry: {
         Args: {
