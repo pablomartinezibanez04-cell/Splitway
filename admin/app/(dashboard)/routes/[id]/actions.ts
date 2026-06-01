@@ -13,7 +13,7 @@ import { writeAuditLog } from "@/lib/audit";
 // ---------- edit metadata ----------
 
 const editSchema = z.object({
-  routeId: z.string().min(1),
+  routeId: z.string().uuid(),
   name: z.string().trim().min(1).max(120),
   description: z.string().max(2000).nullable(),
   difficulty: z.enum(["easy", "medium", "hard", "extreme"]),
@@ -83,7 +83,7 @@ export async function editRoute(
 // ---------- toggle is_official ----------
 
 const toggleSchema = z.object({
-  routeId: z.string().min(1),
+  routeId: z.string().uuid(),
   isOfficial: z.coerce.boolean(),
 });
 
@@ -134,7 +134,7 @@ export async function toggleRouteOfficial(
 
 // ---------- duplicate as official ----------
 
-const duplicateSchema = z.object({ routeId: z.string().min(1) });
+const duplicateSchema = z.object({ routeId: z.string().uuid() });
 
 export type DuplicateState = { error?: string };
 
@@ -177,7 +177,7 @@ export async function duplicateRouteAsOfficial(
 
 // ---------- delete ----------
 
-const deleteSchema = z.object({ routeId: z.string().min(1) });
+const deleteSchema = z.object({ routeId: z.string().uuid() });
 
 export type DeleteRouteState = { error?: string };
 
