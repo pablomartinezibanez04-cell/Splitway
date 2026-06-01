@@ -8,7 +8,6 @@ import {
   flexRender,
   type ColumnDef,
 } from "@tanstack/react-table";
-import { format } from "date-fns";
 import { ArrowUpDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,11 +38,19 @@ type Row = {
   routes_count: number | null;
 };
 
+// Timezone-stable date formatter. Parsing an ISO timestamp with `new Date()`
+// and formatting it gives different results on the server (UTC) vs the
+// browser (local TZ), which causes hydration mismatches. We slice the
+// YYYY-MM-DD prefix from the raw string instead — same characters on both
+// sides regardless of timezone. The view returns 'epoch' (1970-01-01) for
+// "no activity" rows; those still get filtered out as "—".
 function fmt(date: string | null): string {
   if (!date) return "—";
-  const d = new Date(date);
-  if (Number.isNaN(d.getTime()) || d.getFullYear() < 2000) return "—";
-  return format(d, "dd/MM/yyyy");
+  const ymd = date.slice(0, 10);
+  if (ymd < "2000-01-01") return "—";
+  const parts = ymd.split("-");
+  if (parts.length !== 3) return "—";
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
 }
 
 function statusOf(row: Row): "active" | "banned" {
