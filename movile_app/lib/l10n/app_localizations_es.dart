@@ -206,6 +206,17 @@ class AppLocalizationsEs extends AppLocalizations {
   String get authErrorUnexpected => 'Error inesperado. Inténtalo de nuevo.';
 
   @override
+  String get authErrorBanned => 'Tu cuenta está baneada.';
+
+  @override
+  String authErrorBannedUntil(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return 'Tu cuenta está baneada hasta el $dateString.';
+  }
+
+  @override
   String get loginForgotPassword => '¿Olvidaste tu contraseña?';
 
   @override
@@ -301,6 +312,32 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get loginDateOfBirthHint => 'Fecha de nacimiento';
+
+  @override
+  String get onboardingTitle => 'Completa tu perfil';
+
+  @override
+  String get onboardingDescription =>
+      'Necesitamos algunos datos para terminar de configurar tu cuenta. La contraseña te permitirá iniciar sesión también con email.';
+
+  @override
+  String get onboardingSubmit => 'Guardar y continuar';
+
+  @override
+  String get onboardingSubmitLoading => 'Guardando…';
+
+  @override
+  String get onboardingDobInvalid => 'Debes tener al menos 13 años.';
+
+  @override
+  String get onboardingProfileFailed =>
+      'No se pudo guardar el perfil. Inténtalo de nuevo.';
+
+  @override
+  String get onboardingPasswordFailed => 'No se pudo establecer la contraseña.';
+
+  @override
+  String get onboardingPasswordMinLength => 'Mínimo 8 caracteres.';
 
   @override
   String get editorTitle => 'Editor de rutas';

@@ -45,3 +45,4 @@ supabase/.temp
 
 client_secret*.json
 .claude/*
+admin/.pnpm-store/*

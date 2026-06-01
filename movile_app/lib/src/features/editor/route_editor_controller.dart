@@ -188,12 +188,19 @@ class RouteEditorController extends ChangeNotifier {
     _loading = true;
     notifyListeners();
     _routes = await _repo.getAllRoutes();
-    _selected ??= _routes.isNotEmpty ? _routes.first : null;
-    if (_selected != null) {
+    if (_routes.isEmpty) {
+      // After clearUserData (e.g. sign-out) the repo can return an empty
+      // list while `_selected` still points to a now-deleted route. Bail
+      // out cleanly instead of crashing on `_routes.first`.
+      _selected = null;
+    } else {
+      _selected ??= _routes.first;
       _selected = _routes.firstWhere(
         (r) => r.id == _selected!.id,
         orElse: () => _routes.first,
       );
+    } else if (_routes.isEmpty) {
+      _selected = null;
     }
     _loading = false;
     notifyListeners();
