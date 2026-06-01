@@ -62,6 +62,7 @@ class AuthService extends ChangeNotifier {
       final googleSignIn = GoogleSignIn(
         serverClientId: _webClientId,
       );
+      await googleSignIn.signOut();
       final googleUser = await googleSignIn.signIn();
       if (googleUser == null) {
         // User cancelled the sign-in flow.

@@ -369,7 +369,8 @@ Create `admin/lib/users/search-params.ts` with EXACTLY:
 
 ```ts
 // admin/lib/users/search-params.ts
-import "server-only";
+// NOTE: no `import "server-only"` here — the client components in
+// Tasks 9-11 (FiltersBar, UsersTable, Pagination) call these functions.
 
 export type RoleFilter = "all" | "user" | "admin" | "superadmin";
 export type StatusFilter = "all" | "active" | "banned";

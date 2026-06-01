@@ -45,4 +45,8 @@ supabase/.temp
 
 client_secret*.json
 .claude/*
+<<<<<<< Updated upstream
 admin/.pnpm-store/
+=======
+admin/.pnpm-store/*
+>>>>>>> Stashed changes

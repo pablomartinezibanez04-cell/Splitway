@@ -189,11 +189,13 @@ class RouteEditorController extends ChangeNotifier {
     notifyListeners();
     _routes = await _repo.getAllRoutes();
     _selected ??= _routes.isNotEmpty ? _routes.first : null;
-    if (_selected != null) {
+    if (_selected != null && _routes.isNotEmpty) {
       _selected = _routes.firstWhere(
         (r) => r.id == _selected!.id,
         orElse: () => _routes.first,
       );
+    } else if (_routes.isEmpty) {
+      _selected = null;
     }
     _loading = false;
     notifyListeners();
