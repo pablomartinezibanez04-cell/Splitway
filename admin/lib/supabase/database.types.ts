@@ -500,7 +500,22 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      admin_users_view: {
+        Row: {
+          avatar_url: string | null
+          banned_until: string | null
+          email: string | null
+          id: string | null
+          last_activity: string | null
+          nickname: string | null
+          profile_created_at: string | null
+          role: string | null
+          routes_count: number | null
+          sessions_count: number | null
+          signup_date: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       find_email_by_user_id: { Args: { p_user_id: string }; Returns: string }
