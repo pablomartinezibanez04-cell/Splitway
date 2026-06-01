@@ -22,11 +22,14 @@ export type AuditAction =
   | "ban_user"
   | "unban_user"
   | "reset_user_password"
-  // Reserved for later phases (kept here so the union is stable):
-  | "delete_user"
+  // F4 actions:
   | "edit_route"
   | "mark_route_official"
+  | "unmark_route_official"
+  | "duplicate_route"
   | "delete_route"
+  // Reserved for later phases (kept here so the union is stable):
+  | "delete_user"
   | "delete_session";
 
 export type AuditEntry = {
