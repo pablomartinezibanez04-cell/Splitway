@@ -24,7 +24,7 @@ export default async function RoutesPage({
   if (q.search.trim() !== "") {
     const term = `%${q.search.trim()}%`;
     query = query.or(
-      `name.ilike.${term},owner_nickname.ilike.${term},location_label.ilike.${term}`,
+      `name.ilike.${term},owner_nickname.ilike.${term},owner_email.ilike.${term},location_label.ilike.${term}`,
     );
   }
   if (q.difficulty !== "all") {

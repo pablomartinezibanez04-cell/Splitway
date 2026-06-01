@@ -29,6 +29,7 @@ type Row = {
   id: string | null;
   name: string | null;
   owner_nickname: string | null;
+  owner_email: string | null;
   difficulty: string | null;
   location_label: string | null;
   thumbnail_url: string | null;
@@ -124,6 +125,15 @@ export function RoutesTable({ rows }: { rows: Row[] }) {
       accessorKey: "owner_nickname",
       header: "Propietario",
       cell: ({ row }) => row.original.owner_nickname ?? "—",
+    },
+    {
+      accessorKey: "owner_email",
+      header: "Email",
+      cell: ({ row }) => (
+        <span className="text-sm text-muted-foreground">
+          {row.original.owner_email ?? "—"}
+        </span>
+      ),
     },
     {
       accessorKey: "difficulty",

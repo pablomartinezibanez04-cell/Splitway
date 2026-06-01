@@ -45,7 +45,7 @@ export function FiltersBar({ query }: { query: RoutesQuery }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Input
-        placeholder="Buscar por nombre, propietario o ubicación…"
+        placeholder="Buscar por nombre, propietario, email o ubicación…"
         className="max-w-sm"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
