@@ -10,10 +10,22 @@ import { adminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
 
+// Accepts any 32-hex string in the canonical 8-4-4-4-12 layout —
+// matches what Postgres' `uuid` column actually stores. We avoid
+// `z.string().uuid()` because it enforces version+variant bits, and
+// the legacy text→uuid conversion (migration 20260601000004) produced
+// md5-derived ids that have UUID shape but arbitrary version digits.
+const uuidLike = z
+  .string()
+  .regex(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+    "ID inválido.",
+  );
+
 // ---------- edit metadata ----------
 
 const editSchema = z.object({
-  routeId: z.string().uuid(),
+  routeId: uuidLike,
   name: z.string().trim().min(1).max(120),
   description: z.string().max(2000).nullable(),
   difficulty: z.enum(["easy", "medium", "hard", "extreme"]),
@@ -83,7 +95,7 @@ export async function editRoute(
 // ---------- toggle is_official ----------
 
 const toggleSchema = z.object({
-  routeId: z.string().uuid(),
+  routeId: uuidLike,
   isOfficial: z.coerce.boolean(),
 });
 
@@ -134,7 +146,7 @@ export async function toggleRouteOfficial(
 
 // ---------- duplicate as official ----------
 
-const duplicateSchema = z.object({ routeId: z.string().uuid() });
+const duplicateSchema = z.object({ routeId: uuidLike });
 
 export type DuplicateState = { error?: string };
 
@@ -177,7 +189,7 @@ export async function duplicateRouteAsOfficial(
 
 // ---------- delete ----------
 
-const deleteSchema = z.object({ routeId: z.string().uuid() });
+const deleteSchema = z.object({ routeId: uuidLike });
 
 export type DeleteRouteState = { error?: string };
 
