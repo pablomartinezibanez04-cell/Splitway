@@ -27,7 +27,7 @@ import {
 } from "@/lib/users/search-params";
 
 type Row = {
-  id: string;
+  id: string | null;
   nickname: string | null;
   avatar_url: string | null;
   role: string | null;
@@ -221,7 +221,7 @@ export function UsersTable({
               <TableRow
                 key={row.id}
                 className="cursor-pointer hover:bg-accent/40"
-                onClick={() => router.push(`/users/${row.original.id}`)}
+                onClick={() => row.original.id && router.push(`/users/${row.original.id}`)}
               >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id}>
