@@ -29,7 +29,11 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-String _localizedAuthError(AppLocalizations l, AuthErrorCode code) {
+String _localizedAuthError(
+  AppLocalizations l,
+  AuthErrorCode code,
+  DateTime? bannedUntil,
+) {
   switch (code) {
     case AuthErrorCode.googleTokenUnavailable:
       return l.authErrorGoogleToken;
@@ -43,6 +47,10 @@ String _localizedAuthError(AppLocalizations l, AuthErrorCode code) {
       return l.authErrorPasswordTooShort;
     case AuthErrorCode.passwordUpdateFailed:
       return l.authErrorUnexpected;
+    case AuthErrorCode.userBanned:
+      return bannedUntil != null
+          ? l.authErrorBannedUntil(bannedUntil)
+          : l.authErrorBanned;
     case AuthErrorCode.noConnection:
       return l.authErrorNoConnection;
     case AuthErrorCode.unexpected:
@@ -557,7 +565,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                         .withValues(alpha: 0.5)),
                               ),
                               child: Text(
-                                _localizedAuthError(l, auth.errorCode!),
+                                _localizedAuthError(
+                                  l,
+                                  auth.errorCode!,
+                                  auth.bannedUntil,
+                                ),
                                 style: const TextStyle(
                                     color: Colors.white, fontSize: 12),
                                 textAlign: TextAlign.center,

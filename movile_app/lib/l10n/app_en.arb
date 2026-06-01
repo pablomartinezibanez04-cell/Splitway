@@ -73,6 +73,16 @@
   "authErrorPasswordTooShort": "Password must be at least 6 characters.",
   "authErrorNoConnection": "No connection. Try again.",
   "authErrorUnexpected": "Unexpected error. Try again.",
+  "authErrorBanned": "Your account is banned.",
+  "authErrorBannedUntil": "Your account is banned until {date}.",
+  "@authErrorBannedUntil": {
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "yMd"
+      }
+    }
+  },
 
   "loginForgotPassword": "Forgot your password?",
   "loginForgotPasswordTitle": "Reset password",

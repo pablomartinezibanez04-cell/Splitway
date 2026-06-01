@@ -33,6 +33,13 @@ class AuthService extends ChangeNotifier {
   bool _pendingEmailConfirmation = false;
   bool get pendingEmailConfirmation => _pendingEmailConfirmation;
 
+  /// When the most recent sign-in attempt failed because the user is
+  /// banned, this holds the `banned_until` timestamp returned by the
+  /// `get_user_ban_until` RPC (null if the ban is permanent / unknown
+  /// or if the last failure was something else).
+  DateTime? _bannedUntil;
+  DateTime? get bannedUntil => _bannedUntil;
+
   void clearPendingConfirmation() {
     _pendingEmailConfirmation = false;
   }
@@ -56,6 +63,7 @@ class AuthService extends ChangeNotifier {
   Future<bool> signInWithGoogle() async {
     _loading = true;
     _errorCode = null;
+    _bannedUntil = null;
     notifyListeners();
 
     try {
@@ -86,11 +94,28 @@ class AuthService extends ChangeNotifier {
         return false;
       }
 
-      await _client.auth.signInWithIdToken(
-        provider: OAuthProvider.google,
-        idToken: idToken,
-        accessToken: accessToken,
-      );
+      try {
+        await _client.auth.signInWithIdToken(
+          provider: OAuthProvider.google,
+          idToken: idToken,
+          accessToken: accessToken,
+        );
+      } on AuthException catch (e, st) {
+        AppLogger.maybeInstance?.warning(
+          'auth',
+          'signInWithGoogle id-token exchange failed',
+          error: e,
+          stackTrace: st,
+          context: {'method': 'signInWithGoogle', 'code': e.code},
+        );
+        _errorCode = _mapAuthError(e);
+        if (_errorCode == AuthErrorCode.userBanned) {
+          await _fetchBanInfo(googleUser.email);
+        }
+        _loading = false;
+        notifyListeners();
+        return false;
+      }
 
       _loading = false;
       notifyListeners();
@@ -118,6 +143,7 @@ class AuthService extends ChangeNotifier {
   Future<bool> signInWithEmail(String email, String password) async {
     _loading = true;
     _errorCode = null;
+    _bannedUntil = null;
     notifyListeners();
 
     try {
@@ -137,6 +163,9 @@ class AuthService extends ChangeNotifier {
         context: {'method': 'signInWithEmail', 'code': e.code},
       );
       _errorCode = _mapAuthError(e);
+      if (_errorCode == AuthErrorCode.userBanned) {
+        await _fetchBanInfo(email);
+      }
       _loading = false;
       notifyListeners();
       return false;
@@ -335,8 +364,31 @@ class AuthService extends ChangeNotifier {
     defaultValue: '',
   );
 
+  Future<void> _fetchBanInfo(String email) async {
+    try {
+      final result = await _client.rpc(
+        'get_user_ban_until',
+        params: {'p_email': email},
+      );
+      if (result is String) {
+        _bannedUntil = DateTime.tryParse(result);
+      } else {
+        _bannedUntil = null;
+      }
+    } catch (e) {
+      debugPrint('AuthService._fetchBanInfo error: $e');
+      _bannedUntil = null;
+    }
+  }
+
   AuthErrorCode _mapAuthError(AuthException e) {
     final msg = e.message.toLowerCase();
+    final code = e.code?.toLowerCase() ?? '';
+    if (code == 'user_banned' ||
+        msg.contains('user is banned') ||
+        msg.contains('user banned')) {
+      return AuthErrorCode.userBanned;
+    }
     if (msg.contains('invalid login credentials') ||
         msg.contains('invalid_credentials')) {
       return AuthErrorCode.invalidCredentials;

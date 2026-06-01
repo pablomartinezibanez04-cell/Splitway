@@ -206,6 +206,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authErrorUnexpected => 'Unexpected error. Try again.';
 
   @override
+  String get authErrorBanned => 'Your account is banned.';
+
+  @override
+  String authErrorBannedUntil(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return 'Your account is banned until $dateString.';
+  }
+
+  @override
   String get loginForgotPassword => 'Forgot your password?';
 
   @override

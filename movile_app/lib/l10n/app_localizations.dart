@@ -470,6 +470,18 @@ abstract class AppLocalizations {
   /// **'Unexpected error. Try again.'**
   String get authErrorUnexpected;
 
+  /// No description provided for @authErrorBanned.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account is banned.'**
+  String get authErrorBanned;
+
+  /// No description provided for @authErrorBannedUntil.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account is banned until {date}.'**
+  String authErrorBannedUntil(DateTime date);
+
   /// No description provided for @loginForgotPassword.
   ///
   /// In en, this message translates to:
