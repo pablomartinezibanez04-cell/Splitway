@@ -17,10 +17,12 @@ export type AuditAction =
   | "demote_admin"
   | "change_own_password"
   | "complete_profile"
-  // Reserved for later phases (kept here so the union is stable):
+  // F3 actions:
+  | "edit_user_profile"
   | "ban_user"
   | "unban_user"
   | "reset_user_password"
+  // Reserved for later phases (kept here so the union is stable):
   | "delete_user"
   | "edit_route"
   | "mark_route_official"
