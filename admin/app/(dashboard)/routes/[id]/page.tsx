@@ -78,7 +78,12 @@ export default async function RouteDetailPage({
         <p className="text-sm text-muted-foreground">
           {row.location_label ? row.location_label + " · " : ""}
           Propietario:{" "}
-          <span className="font-medium">{owner?.nickname ?? "—"}</span>
+          <span className="font-medium">
+            {row.is_official ? "splitway" : (owner?.nickname ?? "—")}
+          </span>
+          {row.is_official ? (
+            <span className="ml-2 text-xs">(splitway@gmail.com)</span>
+          ) : null}
         </p>
       </div>
 
