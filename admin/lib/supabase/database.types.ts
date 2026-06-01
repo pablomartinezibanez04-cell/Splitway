@@ -128,6 +128,13 @@ export type Database = {
             foreignKeyName: "free_ride_telemetry_free_ride_id_fkey"
             columns: ["free_ride_id"]
             isOneToOne: false
+            referencedRelation: "admin_free_rides_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "free_ride_telemetry_free_ride_id_fkey"
+            columns: ["free_ride_id"]
+            isOneToOne: false
             referencedRelation: "free_rides"
             referencedColumns: ["id"]
           },
@@ -462,6 +469,13 @@ export type Database = {
             foreignKeyName: "telemetry_points_session_id_fkey"
             columns: ["session_id"]
             isOneToOne: false
+            referencedRelation: "admin_session_runs_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telemetry_points_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
             referencedRelation: "session_runs"
             referencedColumns: ["id"]
           },
@@ -517,6 +531,26 @@ export type Database = {
       }
     }
     Views: {
+      admin_free_rides_view: {
+        Row: {
+          avg_speed_mps: number | null
+          description: string | null
+          duration_seconds: number | null
+          ended_at: string | null
+          id: string | null
+          location_label: string | null
+          max_speed_mps: number | null
+          name: string | null
+          owner_id: string | null
+          owner_nickname: string | null
+          started_at: string | null
+          status: string | null
+          total_distance_m: number | null
+          vehicle_id: string | null
+          vehicle_name: string | null
+        }
+        Relationships: []
+      }
       admin_routes_view: {
         Row: {
           created_at: string | null
@@ -534,6 +568,66 @@ export type Database = {
           thumbnail_url: string | null
         }
         Relationships: []
+      }
+      admin_session_runs_view: {
+        Row: {
+          avg_speed_mps: number | null
+          duration_seconds: number | null
+          ended_at: string | null
+          id: string | null
+          max_speed_mps: number | null
+          owner_id: string | null
+          owner_nickname: string | null
+          route_id: string | null
+          route_name: string | null
+          started_at: string | null
+          status: string | null
+          total_distance_m: number | null
+          vehicle_id: string | null
+          vehicle_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_runs_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "admin_routes_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_runs_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "route_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_speed_sessions_view: {
+        Row: {
+          countdown_seconds: number | null
+          created_at: string | null
+          finished_at: string | null
+          id: string | null
+          is_partial: boolean | null
+          name: string | null
+          owner_id: string | null
+          owner_nickname: string | null
+          results: Json | null
+          selected_metrics: string[] | null
+          started_at: string | null
+          vehicle_id: string | null
+          vehicle_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "speed_sessions_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       admin_users_view: {
         Row: {
