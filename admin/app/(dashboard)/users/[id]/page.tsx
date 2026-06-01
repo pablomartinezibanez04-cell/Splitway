@@ -37,6 +37,13 @@ export default async function UserDetailPage({
     .maybeSingle();
   if (!row || !row.id) notFound();
 
+  const { data: profileRow } = await supabase
+    .from("profiles")
+    .select("bio")
+    .eq("id", row.id)
+    .maybeSingle();
+  const initialBio = profileRow?.bio ?? "";
+
   const isBanned =
     !!row.banned_until && new Date(row.banned_until) > new Date();
 
@@ -92,6 +99,7 @@ export default async function UserDetailPage({
           <ProfileTab
             userId={row.id}
             initialNickname={row.nickname ?? ""}
+            initialBio={initialBio}
             currentRole={row.role ?? "user"}
             actorRole={admin.role}
           />

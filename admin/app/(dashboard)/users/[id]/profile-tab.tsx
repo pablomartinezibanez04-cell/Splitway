@@ -14,11 +14,13 @@ const initialState: EditProfileState = {};
 export function ProfileTab({
   userId,
   initialNickname,
+  initialBio,
   currentRole,
   actorRole,
 }: {
   userId: string;
   initialNickname: string;
+  initialBio: string;
   currentRole: string;
   actorRole: "admin" | "superadmin";
 }) {
@@ -26,7 +28,7 @@ export function ProfileTab({
     editUserProfile,
     initialState,
   );
-  const [bio, setBio] = useState<string>("");
+  const [bio, setBio] = useState<string>(initialBio);
 
   useEffect(() => {
     if (state.ok) toast.success("Perfil actualizado.");

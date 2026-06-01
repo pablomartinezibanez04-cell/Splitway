@@ -1,6 +1,8 @@
 // admin/app/(dashboard)/users/[id]/actions.ts
 "use server";
 
+import "server-only";
+
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { adminClient } from "@/lib/supabase/admin";

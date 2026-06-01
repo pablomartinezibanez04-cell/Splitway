@@ -65,7 +65,9 @@ export function parseUsersQuery(
       [25, 50, 100].includes(pageSizeRaw)
         ? pageSizeRaw
         : DEFAULTS.pageSize,
-    search: (raw("search") ?? DEFAULTS.search).slice(0, 100),
+    search: (raw("search") ?? DEFAULTS.search)
+      .replace(/[,:]/g, " ")
+      .slice(0, 100),
     role: pickOne(raw("role"), ROLES, DEFAULTS.role),
     status: pickOne(raw("status"), STATUSES, DEFAULTS.status),
     sort: pickOne(raw("sort"), SORTS, DEFAULTS.sort),
