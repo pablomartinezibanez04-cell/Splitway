@@ -224,6 +224,7 @@ export type Database = {
           difficulty: string
           elevation_range_m: number | null
           id: string
+          is_official: boolean
           location_label: string | null
           name: string
           owner_id: string
@@ -238,6 +239,7 @@ export type Database = {
           difficulty?: string
           elevation_range_m?: number | null
           id: string
+          is_official?: boolean
           location_label?: string | null
           name: string
           owner_id: string
@@ -252,6 +254,7 @@ export type Database = {
           difficulty?: string
           elevation_range_m?: number | null
           id?: string
+          is_official?: boolean
           location_label?: string | null
           name?: string
           owner_id?: string
@@ -285,6 +288,13 @@ export type Database = {
           route_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "sectors_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "admin_routes_view"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "sectors_route_id_fkey"
             columns: ["route_id"]
@@ -341,6 +351,13 @@ export type Database = {
           vehicle_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "session_runs_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "admin_routes_view"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "session_runs_route_id_fkey"
             columns: ["route_id"]
@@ -500,6 +517,24 @@ export type Database = {
       }
     }
     Views: {
+      admin_routes_view: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          difficulty: string | null
+          id: string | null
+          is_official: boolean | null
+          location_label: string | null
+          name: string | null
+          owner_email: string | null
+          owner_id: string | null
+          owner_nickname: string | null
+          sectors_count: number | null
+          sessions_count: number | null
+          thumbnail_url: string | null
+        }
+        Relationships: []
+      }
       admin_users_view: {
         Row: {
           avatar_url: string | null
@@ -518,8 +553,13 @@ export type Database = {
       }
     }
     Functions: {
+      duplicate_route_as_official: {
+        Args: { p_admin_id: string; p_source_route_id: string }
+        Returns: string
+      }
       find_email_by_user_id: { Args: { p_user_id: string }; Returns: string }
       find_user_id_by_email: { Args: { p_email: string }; Returns: string }
+      get_user_ban_until: { Args: { p_email: string }; Returns: string }
       update_nickname: { Args: { new_nickname: string }; Returns: undefined }
       upsert_free_ride_with_telemetry: {
         Args: {
