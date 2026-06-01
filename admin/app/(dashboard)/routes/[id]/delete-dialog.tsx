@@ -44,9 +44,10 @@ export function DeleteRouteDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Eliminar {routeName}</AlertDialogTitle>
           <AlertDialogDescription>
-            Esta acción borrará la ruta y sus sectores. Las sesiones que
-            apunten a ella quedarán huérfanas (route_id pasa a null). No se
-            puede deshacer.
+            Esta acción borrará la ruta, sus sectores Y todas las sesiones
+            (session_runs) que la usaron — la foreign key tiene{" "}
+            <code className="rounded bg-muted px-1">ON DELETE CASCADE</code>.
+            No se puede deshacer.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <form action={formAction}>
