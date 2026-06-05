@@ -1,4 +1,4 @@
-// admin/app/(dashboard)/users/users-table.tsx
+// admin/app/(dashboard)/routes/routes-table.tsx
 "use client";
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
@@ -20,60 +20,48 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  parseUsersQuery,
-  serializeUsersQuery,
+  parseRoutesQuery,
+  serializeRoutesQuery,
   type SortKey,
-} from "@/lib/users/search-params";
+} from "@/lib/routes/search-params";
 
 type Row = {
   id: string | null;
-  nickname: string | null;
-  avatar_url: string | null;
-  role: string | null;
-  email: string | null;
-  signup_date: string | null;
-  banned_until: string | null;
-  last_activity: string | null;
+  name: string | null;
+  owner_nickname: string | null;
+  owner_email: string | null;
+  difficulty: string | null;
+  location_label: string | null;
+  thumbnail_url: string | null;
+  is_official: boolean | null;
+  created_at: string | null;
+  sectors_count: number | null;
   sessions_count: number | null;
-  routes_count: number | null;
 };
 
 // Timezone-stable date formatter. Parsing an ISO timestamp with `new Date()`
 // and formatting it gives different results on the server (UTC) vs the
 // browser (local TZ), which causes hydration mismatches. We slice the
 // YYYY-MM-DD prefix from the raw string instead — same characters on both
-// sides regardless of timezone. The view returns 'epoch' (1970-01-01) for
-// "no activity" rows; those still get filtered out as "—".
+// sides regardless of timezone.
 function fmt(date: string | null): string {
   if (!date) return "—";
   const ymd = date.slice(0, 10);
-  if (ymd < "2000-01-01") return "—";
   const parts = ymd.split("-");
   if (parts.length !== 3) return "—";
   return `${parts[2]}/${parts[1]}/${parts[0]}`;
 }
 
-function statusOf(row: Row): "active" | "banned" {
-  if (!row.banned_until) return "active";
-  return new Date(row.banned_until) > new Date() ? "banned" : "active";
-}
-
-export function UsersTable({
-  rows,
-  currentAdminRole,
-}: {
-  rows: Row[];
-  currentAdminRole: string;
-}) {
+export function RoutesTable({ rows }: { rows: Row[] }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const query = parseUsersQuery(Object.fromEntries(searchParams.entries()));
+  const query = parseRoutesQuery(Object.fromEntries(searchParams.entries()));
 
   function toggleSort(key: SortKey) {
     const dir =
       query.sort === key && query.dir === "desc" ? "asc" : "desc";
-    router.push(pathname + serializeUsersQuery(query, { sort: key, dir }));
+    router.push(pathname + serializeRoutesQuery(query, { sort: key, dir }));
   }
 
   function SortableHead({
@@ -104,14 +92,14 @@ export function UsersTable({
 
   const columns: ColumnDef<Row>[] = [
     {
-      id: "avatar",
+      id: "thumbnail",
       header: "",
       cell: ({ row }) => (
-        <div className="h-8 w-8 overflow-hidden rounded-full bg-muted">
-          {row.original.avatar_url ? (
+        <div className="h-10 w-16 overflow-hidden rounded bg-muted">
+          {row.original.thumbnail_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={row.original.avatar_url}
+              src={row.original.thumbnail_url}
               alt=""
               className="h-full w-full object-cover"
             />
@@ -120,67 +108,61 @@ export function UsersTable({
       ),
     },
     {
-      accessorKey: "nickname",
-      header: () => <SortableHead label="Nickname" sortKey="nickname" />,
+      accessorKey: "name",
+      header: () => <SortableHead label="Nombre" sortKey="name" />,
       cell: ({ row }) => (
-        <span className="font-medium">{row.original.nickname || "—"}</span>
+        <div className="flex items-center gap-2">
+          <span className="font-medium">{row.original.name || "—"}</span>
+          {row.original.is_official ? (
+            <Badge variant="default" className="text-xs">
+              Oficial
+            </Badge>
+          ) : null}
+        </div>
       ),
     },
     {
-      accessorKey: "email",
+      accessorKey: "owner_nickname",
+      header: "Propietario",
+      cell: ({ row }) => row.original.owner_nickname ?? "—",
+    },
+    {
+      accessorKey: "owner_email",
       header: "Email",
-      cell: ({ row }) => row.original.email ?? "—",
-    },
-    {
-      accessorKey: "role",
-      header: "Rol",
       cell: ({ row }) => (
-        <Badge
-          variant={
-            row.original.role === "superadmin"
-              ? "default"
-              : row.original.role === "admin"
-                ? "secondary"
-                : "outline"
-          }
-        >
-          {row.original.role ?? "user"}
-        </Badge>
+        <span className="text-sm text-muted-foreground">
+          {row.original.owner_email ?? "—"}
+        </span>
       ),
     },
     {
-      accessorKey: "signup_date",
-      header: () => <SortableHead label="Alta" sortKey="signup_date" />,
-      cell: ({ row }) => fmt(row.original.signup_date),
+      accessorKey: "difficulty",
+      header: () => <SortableHead label="Dificultad" sortKey="difficulty" />,
+      cell: ({ row }) => (
+        <Badge variant="outline">{row.original.difficulty ?? "—"}</Badge>
+      ),
     },
     {
-      accessorKey: "last_activity",
-      header: () => (
-        <SortableHead label="Última actividad" sortKey="last_activity" />
-      ),
-      cell: ({ row }) => fmt(row.original.last_activity),
+      accessorKey: "sectors_count",
+      header: () => <SortableHead label="Sectores" sortKey="sectors_count" />,
+      cell: ({ row }) => row.original.sectors_count ?? 0,
     },
     {
       accessorKey: "sessions_count",
-      header: () => <SortableHead label="Sesiones" sortKey="sessions_count" />,
+      header: () => (
+        <SortableHead label="Sesiones" sortKey="sessions_count" />
+      ),
       cell: ({ row }) => row.original.sessions_count ?? 0,
     },
     {
-      accessorKey: "routes_count",
-      header: () => <SortableHead label="Rutas" sortKey="routes_count" />,
-      cell: ({ row }) => row.original.routes_count ?? 0,
+      accessorKey: "location_label",
+      header: "Ubicación",
+      cell: ({ row }) => row.original.location_label ?? "—",
     },
     {
-      id: "status",
-      header: "Estado",
-      cell: ({ row }) => {
-        const s = statusOf(row.original);
-        return (
-          <Badge variant={s === "banned" ? "destructive" : "outline"}>
-            {s === "banned" ? "Baneado" : "Activo"}
-          </Badge>
-        );
-      },
+      accessorKey: "created_at",
+      header: () => <SortableHead label="Creada" sortKey="created_at" />,
+      cell: ({ row }) => fmt(row.original.created_at),
     },
   ];
 
@@ -189,10 +171,6 @@ export function UsersTable({
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
-
-  // currentAdminRole reserved for future role-aware UI (admin vs superadmin
-  // sees the same list for now).
-  void currentAdminRole;
 
   return (
     <div className="rounded-md border">
@@ -204,10 +182,7 @@ export function UsersTable({
                 <TableHead key={h.id}>
                   {h.isPlaceholder
                     ? null
-                    : flexRender(
-                        h.column.columnDef.header,
-                        h.getContext(),
-                      )}
+                    : flexRender(h.column.columnDef.header, h.getContext())}
                 </TableHead>
               ))}
             </TableRow>
@@ -228,7 +203,11 @@ export function UsersTable({
               <TableRow
                 key={row.id}
                 className="cursor-pointer hover:bg-accent/40"
-                onClick={() => row.original.id && router.push(`/users/${row.original.id}`)}
+                onClick={() => {
+                  if (row.original.id) {
+                    router.push(`/routes/${row.original.id}`);
+                  }
+                }}
               >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id}>

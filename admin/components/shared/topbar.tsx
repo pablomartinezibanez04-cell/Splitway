@@ -1,4 +1,5 @@
 // admin/components/shared/topbar.tsx
+import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/app/(dashboard)/actions";
 import type { AdminProfile } from "@/lib/auth";
@@ -12,11 +13,14 @@ export function Topbar({ admin }: { admin: AdminProfile }) {
           {admin.role}
         </span>
       </div>
-      <form action={signOut}>
-        <Button type="submit" variant="outline" size="sm">
-          Cerrar sesión
-        </Button>
-      </form>
+      <div className="flex items-center gap-2">
+        <ThemeToggle />
+        <form action={signOut}>
+          <Button type="submit" variant="outline" size="sm">
+            Cerrar sesión
+          </Button>
+        </form>
+      </div>
     </header>
   );
 }
