@@ -718,6 +718,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sessionAwaitingFirstFix => 'Waiting for first fix…';
 
   @override
+  String get gpsSignalLabel => 'GPS Signal';
+
+  @override
+  String get gpsSignalNone => 'No signal';
+
+  @override
+  String get gpsSignalLow => 'Low';
+
+  @override
+  String get gpsSignalMedium => 'Medium';
+
+  @override
+  String get gpsSignalHigh => 'High';
+
+  @override
   String get sessionSimulatePoint => 'Simulate point';
 
   @override
@@ -1633,4 +1648,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get statsMetricSelectorLabel => 'Metric:';
+
+  @override
+  String get recordingPauseButton => 'Pause ride';
+
+  @override
+  String get recordingResumeButton => 'Resume';
 }

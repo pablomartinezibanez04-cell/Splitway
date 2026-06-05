@@ -4,22 +4,28 @@ import 'package:flutter/foundation.dart';
 import 'package:splitway_core/splitway_core.dart';
 
 import '../../data/repositories/local_draft_repository.dart';
+import '../../services/sensors/device_heading_service.dart';
 import '../../services/tracking/live_tracking_controller.dart';
 import '../../services/tracking/background_tracking_service.dart';
 import '../../services/tracking/location_service.dart';
 
-enum LiveSessionStage { selecting, ready, running, finished }
+enum LiveSessionStage { selecting, ready, running, paused, finished }
 
 enum TrackingSource { simulated, realGps }
 
 class LiveSessionController extends ChangeNotifier {
-  LiveSessionController(this._repo) {
+  LiveSessionController(
+    this._repo, {
+    DeviceHeadingService? headingService,
+  }) : _headingService = headingService ?? DeviceHeadingService() {
     _changesSub = _repo.changes.listen((_) => _onRepoChanged());
   }
 
   final LocalDraftRepository _repo;
   StreamSubscription<void>? _changesSub;
   Timer? _reloadDebouncer;
+  final DeviceHeadingService _headingService;
+  StreamSubscription<double>? _headingSub;
 
   LiveSessionStage _stage = LiveSessionStage.selecting;
   LiveSessionStage get stage => _stage;
@@ -66,6 +72,34 @@ class LiveSessionController extends ChangeNotifier {
   StreamSubscription<TelemetryPoint>? _gpsSub;
   Timer? _bgNotificationTicker;
   int _distanceFilterMeters = 0;
+
+  /// Latest known heading in degrees (0 = north, clockwise). Blends the
+  /// phone's magnetic compass (so the camera rotates when the user turns
+  /// the device) with the GPS-derived course (so it snaps to direction of
+  /// travel when actually moving). At standstill the compass wins; above
+  /// ~4 m/s the GPS course wins.
+  double? get currentBearingDeg {
+    final compass = _headingService.currentHeadingDeg;
+    final gpsCourse = _gpsCourseDeg();
+    final speed = _tracker?.snapshot.lastSpeedMps ?? 0.0;
+    return fusedBearingDeg(
+      compassDeg: compass,
+      gpsCourseDeg: gpsCourse,
+      speedMps: speed,
+    );
+  }
+
+  double? _gpsCourseDeg() {
+    final t = _tracker;
+    if (t == null || t.ingested.isEmpty) return null;
+    final last = t.ingested.last;
+    final reported = last.bearingDeg;
+    if (reported != null && reported >= 0) return reported;
+    if (t.ingested.length < 2) return null;
+    final prev = t.ingested[t.ingested.length - 2];
+    if (prev.location.distanceTo(last.location) < 1.0) return null;
+    return prev.location.bearingTo(last.location);
+  }
 
   Future<void> load() async {
     _routes = await _repo.getAllRoutes();
@@ -124,6 +158,7 @@ class LiveSessionController extends ChangeNotifier {
       ..addListener(_onTrackerChange)
       ..startSession();
     _stage = LiveSessionStage.running;
+    _subscribeToHeading();
     notifyListeners();
 
     if (_source == TrackingSource.realGps) {
@@ -137,18 +172,61 @@ class LiveSessionController extends ChangeNotifier {
         _startBgNotificationTicker();
       }
 
-      _gpsSub = LocationService.positionStream(
-        distanceFilterMeters: distanceFilterMeters,
-        backgroundMode: _backgroundActive,
-      ).listen((p) {
-        _tracker?.ingestSimulatedPoint(p);
-        notifyListeners();
-      }, onError: (_) {
-        // Fall back to simulated so the user can still finish the run.
-        _source = TrackingSource.simulated;
-        notifyListeners();
-      });
+      _subscribeToGps();
     }
+  }
+
+  void _subscribeToHeading() {
+    _headingService.start();
+    _headingSub?.cancel();
+    _headingSub = _headingService.headingStream.listen((_) {
+      // Phone heading changed — notify the UI so the camera can rotate
+      // even when no new GPS sample has arrived.
+      notifyListeners();
+    });
+  }
+
+  void _unsubscribeFromHeading() {
+    _headingSub?.cancel();
+    _headingSub = null;
+    _headingService.stop();
+  }
+
+  void _subscribeToGps() {
+    _gpsSub = LocationService.positionStream(
+      distanceFilterMeters: _distanceFilterMeters,
+      backgroundMode: _backgroundActive,
+    ).listen((p) {
+      _tracker?.ingestSimulatedPoint(p);
+      notifyListeners();
+    }, onError: (_) {
+      // Fall back to simulated so the user can still finish the run.
+      _source = TrackingSource.simulated;
+      notifyListeners();
+    });
+  }
+
+  /// Pause an in-progress session. GPS samples are dropped while paused.
+  void pauseSession() {
+    if (_stage != LiveSessionStage.running) return;
+    _stage = LiveSessionStage.paused;
+    _gpsSub?.cancel();
+    _gpsSub = null;
+    _autoSimulator?.cancel();
+    _autoSimulator = null;
+    _unsubscribeFromHeading();
+    notifyListeners();
+  }
+
+  /// Resume a paused session.
+  void resumeSession() {
+    if (_stage != LiveSessionStage.paused) return;
+    _stage = LiveSessionStage.running;
+    if (_source == TrackingSource.realGps) {
+      _subscribeToGps();
+    }
+    _subscribeToHeading();
+    notifyListeners();
   }
 
   void simulateOnePoint() {
@@ -244,6 +322,7 @@ class LiveSessionController extends ChangeNotifier {
     }
     _autoSimulator?.cancel();
     _autoSimulator = null;
+    _unsubscribeFromHeading();
     final t = _tracker;
     if (t == null) return null;
     final raw = t.finishSession();
@@ -289,16 +368,7 @@ class LiveSessionController extends ChangeNotifier {
 
     // Restart the GPS stream with background mode enabled.
     await _gpsSub?.cancel();
-    _gpsSub = LocationService.positionStream(
-      distanceFilterMeters: _distanceFilterMeters,
-      backgroundMode: true,
-    ).listen((p) {
-      _tracker?.ingestSimulatedPoint(p);
-      notifyListeners();
-    }, onError: (_) {
-      _source = TrackingSource.simulated;
-      notifyListeners();
-    });
+    _subscribeToGps();
 
     notifyListeners();
   }
@@ -306,7 +376,7 @@ class LiveSessionController extends ChangeNotifier {
   void _startBgNotificationTicker() {
     _bgNotificationTicker?.cancel();
     _bgNotificationTicker = Timer.periodic(
-      const Duration(milliseconds: 500),
+      const Duration(seconds: 1),
       (_) {
         if (!_backgroundActive) return;
         final snap = _tracker?.snapshot;
@@ -339,6 +409,8 @@ class LiveSessionController extends ChangeNotifier {
     _tracker?.removeListener(_onTrackerChange);
     _tracker?.dispose();
     _bgNotificationTicker?.cancel();
+    _headingSub?.cancel();
+    _headingService.dispose();
     if (_backgroundActive) {
       BackgroundTrackingService.stopTracking();
     }

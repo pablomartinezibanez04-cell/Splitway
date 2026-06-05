@@ -243,6 +243,11 @@
   "sessionGpsAccuracy": "Accuracy: {accuracy} m · {lat}, {lng}",
   "@sessionGpsAccuracy": { "placeholders": { "accuracy": { "type": "String" }, "lat": { "type": "String" }, "lng": { "type": "String" } } },
   "sessionAwaitingFirstFix": "Waiting for first fix…",
+  "gpsSignalLabel": "GPS Signal",
+  "gpsSignalNone": "No signal",
+  "gpsSignalLow": "Low",
+  "gpsSignalMedium": "Medium",
+  "gpsSignalHigh": "High",
   "sessionSimulatePoint": "Simulate point",
   "sessionPauseAuto": "Pause auto",
   "sessionAutoLap": "Auto lap",
@@ -576,5 +581,7 @@
   "statsBestQuarterMileShort": "Best 1/4 mi",
   "statsNoSpeedSessionsForVehicle": "No speed tests",
   "statsUnknownVehicle": "Unknown vehicle",
-  "statsMetricSelectorLabel": "Metric:"
+  "statsMetricSelectorLabel": "Metric:",
+  "recordingPauseButton": "Pause ride",
+  "recordingResumeButton": "Resume"
 }
