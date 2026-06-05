@@ -77,15 +77,26 @@ class LocationService {
     int distanceFilterMeters = 0,
     LocationAccuracy accuracy = LocationAccuracy.bestForNavigation,
     bool backgroundMode = false,
+    Duration updateInterval = const Duration(milliseconds: 500),
   }) {
     final LocationSettings settings;
-    if (backgroundMode && Platform.isIOS) {
+    if (Platform.isIOS) {
       settings = AppleSettings(
         accuracy: accuracy,
         distanceFilter: distanceFilterMeters,
-        allowBackgroundLocationUpdates: true,
+        allowBackgroundLocationUpdates: backgroundMode,
         pauseLocationUpdatesAutomatically: false,
-        showBackgroundLocationIndicator: true,
+        showBackgroundLocationIndicator: backgroundMode,
+        activityType: ActivityType.otherNavigation,
+      );
+    } else if (Platform.isAndroid) {
+      // Request sub-second updates from the fused location provider so the
+      // map and metrics tick faster than the default 1 Hz cadence.
+      settings = AndroidSettings(
+        accuracy: accuracy,
+        distanceFilter: distanceFilterMeters,
+        intervalDuration: updateInterval,
+        forceLocationManager: false,
       );
     } else {
       settings = LocationSettings(

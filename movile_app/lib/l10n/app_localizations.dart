@@ -1310,6 +1310,36 @@ abstract class AppLocalizations {
   /// **'Waiting for first fix…'**
   String get sessionAwaitingFirstFix;
 
+  /// No description provided for @gpsSignalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'GPS Signal'**
+  String get gpsSignalLabel;
+
+  /// No description provided for @gpsSignalNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No signal'**
+  String get gpsSignalNone;
+
+  /// No description provided for @gpsSignalLow.
+  ///
+  /// In en, this message translates to:
+  /// **'Low'**
+  String get gpsSignalLow;
+
+  /// No description provided for @gpsSignalMedium.
+  ///
+  /// In en, this message translates to:
+  /// **'Medium'**
+  String get gpsSignalMedium;
+
+  /// No description provided for @gpsSignalHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'High'**
+  String get gpsSignalHigh;
+
   /// No description provided for @sessionSimulatePoint.
   ///
   /// In en, this message translates to:
@@ -2971,6 +3001,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Metric:'**
   String get statsMetricSelectorLabel;
+
+  /// No description provided for @recordingPauseButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause ride'**
+  String get recordingPauseButton;
+
+  /// No description provided for @recordingResumeButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume'**
+  String get recordingResumeButton;
 }
 
 class _AppLocalizationsDelegate

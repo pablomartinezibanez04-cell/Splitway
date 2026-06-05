@@ -46,8 +46,20 @@ class FlyToNotifier extends ChangeNotifier {
   GeoPoint? _target;
   GeoPoint? get target => _target;
 
-  void flyTo(GeoPoint point) {
+  double? _bearing;
+  double? get bearing => _bearing;
+
+  Duration _animationDuration = const Duration(milliseconds: 800);
+  Duration get animationDuration => _animationDuration;
+
+  void flyTo(
+    GeoPoint point, {
+    double? bearing,
+    Duration animationDuration = const Duration(milliseconds: 800),
+  }) {
     _target = point;
+    _bearing = bearing;
+    _animationDuration = animationDuration;
     notifyListeners();
   }
 }
@@ -204,16 +216,20 @@ class _SplitwayMapState extends State<SplitwayMap> {
   }
 
   void _onFlyToChanged() {
-    final target = widget.flyToNotifier?.target;
+    final notifier = widget.flyToNotifier;
+    final target = notifier?.target;
     if (target == null || _map == null || !mounted) return;
+    final bearing = notifier?.bearing;
+    final durationMs = notifier?.animationDuration.inMilliseconds ?? 800;
     _map!.flyTo(
       mbx.CameraOptions(
         center: mbx.Point(
           coordinates: mbx.Position(target.longitude, target.latitude),
         ),
-        zoom: 15,
+        zoom: 17,
+        bearing: bearing,
       ),
-      mbx.MapAnimationOptions(duration: 800),
+      mbx.MapAnimationOptions(duration: durationMs),
     ).catchError((_) {
       // Map channel torn down — ignore silently.
     });

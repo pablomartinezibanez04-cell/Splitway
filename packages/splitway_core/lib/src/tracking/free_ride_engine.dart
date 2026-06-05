@@ -53,6 +53,14 @@ class FreeRideEngine {
 
     _points.add(point);
 
+    // Speed is a per-sample value — update it on every ingest so the live
+    // display tracks the GPS-reported speed instantly, regardless of gap
+    // detection state.
+    _lastSpeedMps = point.speedMps ?? _lastSpeedMps;
+    if ((point.speedMps ?? 0) > _maxSpeedMps) {
+      _maxSpeedMps = point.speedMps!;
+    }
+
     final prev = _previous;
     if (prev == null) {
       _previous = point;
@@ -71,12 +79,6 @@ class FreeRideEngine {
         return;
       }
       _recoveringUntil = null;
-    }
-
-    _lastSpeedMps = point.speedMps ?? _lastSpeedMps;
-
-    if ((point.speedMps ?? 0) > _maxSpeedMps) {
-      _maxSpeedMps = point.speedMps!;
     }
 
     _totalDistanceMeters += prev.location.distanceTo(point.location);

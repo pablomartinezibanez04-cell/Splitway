@@ -195,7 +195,7 @@ void main() {
   });
 
   group('gap detection', () {
-    test('gap skips distance and speed updates', () async {
+    test('gap skips distance accumulation but updates speed', () async {
       final route = _buildTestRoute();
       final base = DateTime.parse('2026-04-29T10:00:00Z');
       final engine =
@@ -211,9 +211,11 @@ void main() {
       engine.ingest(_p(0.01, 0, base.add(const Duration(seconds: 11)),
           speed: 99));
 
+      // Distance must not jump across the gap (anti-teleport guard).
       expect(engine.snapshot.totalDistanceMeters,
           preGapSnapshot.totalDistanceMeters);
-      expect(engine.snapshot.lastSpeedMps, preGapSnapshot.lastSpeedMps);
+      // But speed is per-sample — the latest reading is shown immediately.
+      expect(engine.snapshot.lastSpeedMps, 99);
       await engine.dispose();
     });
 
