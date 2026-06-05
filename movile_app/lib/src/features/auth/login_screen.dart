@@ -127,6 +127,15 @@ class _LoginScreenState extends State<LoginScreen> {
           mounted) {
         widget.authService.clearPendingConfirmation();
         await _showConfirmationEmailDialog(email);
+        if (!mounted) return;
+        // Switch the form to sign-in mode so when the user comes back
+        // after confirming their email the form is ready for them.
+        // Keep the email pre-filled (in _emailCtrl) but clear passwords.
+        setState(() {
+          _isSignUp = false;
+          _passwordCtrl.clear();
+          _confirmPasswordCtrl.clear();
+        });
         return;
       }
     } else {

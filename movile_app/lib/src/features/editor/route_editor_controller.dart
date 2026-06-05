@@ -199,8 +199,6 @@ class RouteEditorController extends ChangeNotifier {
         (r) => r.id == _selected!.id,
         orElse: () => _routes.first,
       );
-    } else if (_routes.isEmpty) {
-      _selected = null;
     }
     _loading = false;
     notifyListeners();
