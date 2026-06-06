@@ -59,6 +59,7 @@ class SupabaseRepository {
       'updated_at': DateTime.now().toUtc().toIso8601String(),
       'thumbnail_url': route.thumbnailUrl,
       'elevation_range_m': route.elevationRangeMeters,
+      'is_official': route.isOfficial,
     }));
 
     // Delete old sectors and re-insert
@@ -93,6 +94,34 @@ class SupabaseRepository {
     for (final row in rows) {
       final sectorRows = await logSupabase(
         'fetchAllRoutes.sectors',
+        () => _client
+            .from('sectors')
+            .select()
+            .eq('route_id', row['id'] as String)
+            .order('order_index'),
+      );
+      routes.add(_parseRoute(row, sectorRows));
+    }
+    return routes;
+  }
+
+  /// Fetches every official route (`is_official = true`) along with its
+  /// sectors. Readable by both anon and authenticated clients via the
+  /// `official_routes_public_read` RLS policy.
+  Future<List<RouteTemplate>> fetchOfficialRoutes() async {
+    final rows = await logSupabase(
+      'fetchOfficialRoutes',
+      () => _client
+          .from('route_templates')
+          .select()
+          .eq('is_official', true)
+          .order('created_at', ascending: false),
+    );
+
+    final routes = <RouteTemplate>[];
+    for (final row in rows) {
+      final sectorRows = await logSupabase(
+        'fetchOfficialRoutes.sectors',
         () => _client
             .from('sectors')
             .select()
@@ -367,6 +396,10 @@ class SupabaseRepository {
       createdAt: DateTime.parse(row['created_at'] as String).toLocal(),
       thumbnailUrl: row['thumbnail_url'] as String?,
       elevationRangeMeters: (row['elevation_range_m'] as num?)?.toDouble(),
+      isOfficial: (row['is_official'] as bool?) ?? false,
+      updatedAt: row['updated_at'] == null
+          ? null
+          : DateTime.parse(row['updated_at'] as String).toLocal(),
     );
   }
 
