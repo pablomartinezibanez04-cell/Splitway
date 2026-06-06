@@ -92,6 +92,7 @@ class _SplitwayAppState extends State<SplitwayApp> {
       garageService: _garageService,
       localeController: widget.localeController,
       settingsController: widget.settingsController,
+      officialRoutesService: _officialRoutesService,
       refreshListenable: _routerRefresh,
     );
   }

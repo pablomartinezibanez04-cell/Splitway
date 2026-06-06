@@ -5,6 +5,7 @@ import 'package:splitway_core/splitway_core.dart';
 
 import '../../data/repositories/local_draft_repository.dart';
 import '../../services/geocoding/reverse_geocoding_service.dart';
+import '../../services/official_routes/official_routes_service.dart';
 import '../../services/routing/elevation_service.dart';
 import '../../services/routing/routing_service.dart';
 import '../../services/sync/sync_service.dart';
@@ -35,7 +36,7 @@ class RouteEditorController extends ChangeNotifier {
     this.geocodingService,
     this.elevationService,
     String defaultRoutingProfile = 'driving',
-    this.onRouteDeleted,
+    this.officialRoutesService,
   }) : _defaultRoutingProfile = defaultRoutingProfile {
     _routingProfile = _defaultRoutingProfile;
     _changesSub = _repo.changes.listen((_) => _onRepoChanged());
@@ -63,9 +64,11 @@ class RouteEditorController extends ChangeNotifier {
   /// so sync cannot re-download routes the user has deleted.
   SyncService? syncService;
 
-  /// Optional: called when a route is deleted, to allow listeners to react
-  /// (e.g., to tombstone demo routes in settings).
-  final Future<void> Function(String id)? onRouteDeleted;
+  /// Optional: when present, deletions of official routes are routed through
+  /// [OfficialRoutesService.dismiss] so the route is tombstoned locally
+  /// (against its current `updated_at`) and a future modification on the
+  /// Splitway side will re-introduce it.
+  final OfficialRoutesService? officialRoutesService;
 
   List<SessionRun> _sessionsForSelected = const [];
   List<SessionRun> get sessionsForSelected => _sessionsForSelected;
@@ -624,12 +627,22 @@ class RouteEditorController extends ChangeNotifier {
   // ---------- CRUD on existing routes ----------
 
   Future<void> deleteRoute(String id) async {
-    if (syncService != null) {
+    // Official routes are not owned by the user. Going through the sync
+    // service would attempt a remote DELETE that RLS rejects; instead we
+    // dismiss them via OfficialRoutesService, which tombstones the local
+    // row against the route's current `updated_at`.
+    final existing = await _repo.getRouteTemplate(id);
+    if (existing != null && existing.isOfficial) {
+      if (officialRoutesService != null) {
+        await officialRoutesService!.dismiss(id);
+      } else {
+        await _repo.deleteRoute(id);
+      }
+    } else if (syncService != null) {
       await syncService!.deleteRoute(id);
     } else {
       await _repo.deleteRoute(id);
     }
-    await onRouteDeleted?.call(id);
     if (_selected?.id == id) {
       _selected = null;
     }
