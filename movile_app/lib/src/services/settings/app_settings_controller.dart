@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -32,6 +34,7 @@ class AppSettingsController extends ChangeNotifier {
       _prefs.getString(_kMinLogLevel) ?? LogLevel.warning.name,
     );
     _remoteLogsEnabled = _prefs.getBool(_kRemoteLogsEnabled) ?? true;
+    _maybeMigrateLegacyDismissals();
   }
 
   static const _kUnitSystem = 'unit_system';
@@ -44,7 +47,7 @@ class AppSettingsController extends ChangeNotifier {
   static const _kDefaultVehicleId = 'default_vehicle_id';
   static const _kDefaultRoutingProfile = 'default_routing_profile';
   static const _kNotificationPermissionAsked = 'notification_permission_asked';
-  static const _kDismissedDemoIds = 'dismissed_demo_route_ids';
+  static const _kDismissedOfficialRoutes = 'dismissed_official_routes';
   static const _kMinLogLevel = 'min_log_level';
   static const _kRemoteLogsEnabled = 'remote_logs_enabled';
 
@@ -76,8 +79,12 @@ class AppSettingsController extends ChangeNotifier {
   bool get notificationPermissionAsked =>
       _prefs.getBool(_kNotificationPermissionAsked) ?? false;
 
-  Set<String> get dismissedDemoIds =>
-      (_prefs.getStringList(_kDismissedDemoIds) ?? []).toSet();
+  Map<String, int> get dismissedOfficialRoutes {
+    final raw = _prefs.getString(_kDismissedOfficialRoutes);
+    if (raw == null || raw.isEmpty) return const {};
+    final decoded = jsonDecode(raw) as Map<String, dynamic>;
+    return decoded.map((k, v) => MapEntry(k, (v as num).toInt()));
+  }
 
   ThemeMode get flutterThemeMode => switch (_themeMode) {
         AppThemeMode.system => ThemeMode.system,
@@ -168,11 +175,34 @@ class AppSettingsController extends ChangeNotifier {
     await _prefs.setBool(_kNotificationPermissionAsked, true);
   }
 
-  Future<void> dismissDemoRoute(String id) async {
-    final current = dismissedDemoIds;
-    if (current.contains(id)) return;
-    await _prefs.setStringList(_kDismissedDemoIds, [...current, id]);
+  Future<void> recordDismissal(String routeId, int updatedAtMillis) async {
+    final current = Map<String, int>.from(dismissedOfficialRoutes);
+    current[routeId] = updatedAtMillis;
+    await _prefs.setString(_kDismissedOfficialRoutes, jsonEncode(current));
   }
+
+  Future<void> clearDismissal(String routeId) async {
+    final current = Map<String, int>.from(dismissedOfficialRoutes);
+    if (current.remove(routeId) == null) return;
+    await _prefs.setString(_kDismissedOfficialRoutes, jsonEncode(current));
+  }
+
+  void _maybeMigrateLegacyDismissals() {
+    const legacyKey = 'dismissed_demo_route_ids';
+    if (!_prefs.containsKey(legacyKey)) return;
+    final legacy = _prefs.getStringList(legacyKey) ?? const [];
+    final migrated = <String, int>{
+      for (final id in legacy) id: 0,
+    };
+    _prefs.setString(_kDismissedOfficialRoutes, jsonEncode(migrated));
+    _prefs.remove(legacyKey);
+  }
+
+  @Deprecated('Use dismissedOfficialRoutes. Removed in T11/T14.')
+  Set<String> get dismissedDemoIds => dismissedOfficialRoutes.keys.toSet();
+
+  @Deprecated('Use recordDismissal. Removed in T11/T14.')
+  Future<void> dismissDemoRoute(String id) => recordDismissal(id, 0);
 
   Future<void> setMinLogLevel(LogLevel v) async {
     if (_minLogLevel == v) return;

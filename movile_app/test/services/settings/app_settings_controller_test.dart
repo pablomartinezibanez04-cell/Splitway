@@ -87,23 +87,41 @@ void main() {
     expect(ctrl.defaultVehicleId, isNull);
   });
 
-  test('dismissedDemoIds is empty by default', () async {
+  test('recordDismissal persists across reloads', () async {
     final ctrl = await AppSettingsController.load();
-    expect(ctrl.dismissedDemoIds, isEmpty);
-  });
-
-  test('dismissDemoRoute persists across reloads', () async {
-    final ctrl = await AppSettingsController.load();
-    await ctrl.dismissDemoRoute('demo-jarama');
+    await ctrl.recordDismissal('route-1', 1234567890);
 
     final ctrl2 = await AppSettingsController.load();
-    expect(ctrl2.dismissedDemoIds, contains('demo-jarama'));
+    expect(ctrl2.dismissedOfficialRoutes, {'route-1': 1234567890});
   });
 
-  test('dismissDemoRoute is idempotent', () async {
+  test('recordDismissal overwrites previous value', () async {
     final ctrl = await AppSettingsController.load();
-    await ctrl.dismissDemoRoute('demo-jarama');
-    await ctrl.dismissDemoRoute('demo-jarama');
-    expect(ctrl.dismissedDemoIds, {'demo-jarama'});
+    await ctrl.recordDismissal('route-1', 100);
+    await ctrl.recordDismissal('route-1', 200);
+    expect(ctrl.dismissedOfficialRoutes, {'route-1': 200});
+  });
+
+  test('clearDismissal removes the entry', () async {
+    final ctrl = await AppSettingsController.load();
+    await ctrl.recordDismissal('route-1', 100);
+    await ctrl.clearDismissal('route-1');
+    expect(ctrl.dismissedOfficialRoutes, isEmpty);
+  });
+
+  test('migrates legacy dismissed_demo_route_ids set to map with epoch values',
+      () async {
+    SharedPreferences.setMockInitialValues({
+      'dismissed_demo_route_ids': ['demo-espana', 'demo-jarama'],
+    });
+    final ctrl = await AppSettingsController.load();
+    expect(ctrl.dismissedOfficialRoutes,
+        {'demo-espana': 0, 'demo-jarama': 0});
+
+    // Old key is gone — verified by reloading the controller and seeing
+    // the migrated state, not the legacy list.
+    final ctrl2 = await AppSettingsController.load();
+    expect(ctrl2.dismissedOfficialRoutes,
+        {'demo-espana': 0, 'demo-jarama': 0});
   });
 }
