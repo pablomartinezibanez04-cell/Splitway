@@ -469,8 +469,16 @@ class SettingsScreen extends StatelessWidget {
 
       final routes = await repository.getAllRoutes();
       for (final r in routes) {
+        // Official routes are part of the shared catalog. Record the
+        // dismissal against their current updated_at so they don't
+        // reappear on the next refresh unless Splitway modifies them.
+        if (r.isOfficial) {
+          await settingsController.recordDismissal(
+            r.id,
+            r.updatedAt?.millisecondsSinceEpoch ?? 0,
+          );
+        }
         await repository.deleteRoute(r.id);
-        await settingsController.dismissDemoRoute(r.id);
       }
 
       if (!context.mounted) return;

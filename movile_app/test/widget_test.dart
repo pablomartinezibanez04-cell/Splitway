@@ -7,7 +7,6 @@ import 'package:splitway_mobile/l10n/app_localizations.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:splitway_core/splitway_core.dart';
 import 'package:splitway_mobile/src/config/app_config.dart';
-import 'package:splitway_mobile/src/data/demo/demo_seed.dart';
 import 'package:splitway_mobile/src/data/local/splitway_local_database.dart';
 import 'package:splitway_mobile/src/data/repositories/local_draft_repository.dart';
 import 'package:splitway_mobile/src/features/editor/route_editor_controller.dart';
@@ -23,9 +22,32 @@ import 'package:splitway_mobile/src/services/settings/app_settings_controller.da
 /// to `integration_test` for full-app coverage.
 int _dbCounter = 0;
 
+/// A reusable test route owned by no one and marked official, so the
+/// repository's NULL-owner guardrail accepts it without needing a Supabase
+/// fetch or a logged-in user. Used as a stand-in for what
+/// [OfficialRoutesService] would otherwise hydrate from the cloud.
+RouteTemplate _testOfficialRoute({String id = 'test-official-r1'}) {
+  return RouteTemplate(
+    id: id,
+    name: 'Test Official Route',
+    path: [
+      GeoPoint(latitude: 40.5, longitude: -3.5),
+      GeoPoint(latitude: 40.501, longitude: -3.501),
+    ],
+    startFinishGate: GateDefinition(
+      left: GeoPoint(latitude: 40.5, longitude: -3.5),
+      right: GeoPoint(latitude: 40.5001, longitude: -3.5001),
+    ),
+    sectors: const [],
+    difficulty: RouteDifficulty.medium,
+    createdAt: DateTime.utc(2026, 1, 1),
+    isOfficial: true,
+    updatedAt: DateTime.utc(2026, 5, 1),
+  );
+}
+
 Future<({SplitwayLocalDatabase db, LocalDraftRepository repo})> _bootRepo({
   bool seed = true,
-  AppSettingsController? settingsController,
 }) async {
   // Each test needs a fresh in-memory DB; sqflite_common_ffi caches
   // connections by path, so we use a counter to keep them distinct.
@@ -35,8 +57,7 @@ Future<({SplitwayLocalDatabase db, LocalDraftRepository repo})> _bootRepo({
   );
   final repo = LocalDraftRepository(db);
   if (seed) {
-    final settings = settingsController ?? await AppSettingsController.load();
-    await DemoSeed.ensureSeeded(repo, settings);
+    await repo.saveRouteTemplate(_testOfficialRoute());
   }
   return (db: db, repo: repo);
 }
@@ -56,16 +77,6 @@ void main() {
   });
 
   setUp(() => SharedPreferences.setMockInitialValues({}));
-
-  test('SplitwayLocalDatabase + DemoSeed populate the demo route', () async {
-    final boot = await _bootRepo();
-    final routes = await boot.repo.getAllRoutes();
-    expect(routes, hasLength(1));
-    expect(routes.first.name, 'Circuito del Jarama');
-    expect(routes.first.sectors, hasLength(2));
-    expect(routes.first.startFinishGate, isA<GateDefinition>());
-    await _shutdown(boot);
-  });
 
   test('LocalDraftRepository round-trips a SessionRun', () async {
     final boot = await _bootRepo();
@@ -108,7 +119,7 @@ void main() {
     await _shutdown(boot);
   });
 
-  testWidgets('RouteEditorScreen renders the demo route after load',
+  testWidgets('RouteEditorScreen renders the seeded official route after load',
       (tester) async {
     late ({SplitwayLocalDatabase db, LocalDraftRepository repo}) boot;
     late RouteEditorController controller;
@@ -138,7 +149,7 @@ void main() {
       await tester.pump();
     }
 
-    expect(find.text('Circuito del Jarama'), findsAtLeastNWidgets(1));
+    expect(find.text('Test Official Route'), findsAtLeastNWidgets(1));
 
     controller.dispose();
     await tester.runAsync(() => _shutdown(boot));

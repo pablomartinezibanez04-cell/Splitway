@@ -9,7 +9,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'src/app.dart';
 import 'src/config/app_config.dart';
-import 'src/data/demo/demo_seed.dart';
 import 'src/data/local/splitway_local_database.dart';
 import 'src/data/repositories/local_draft_repository.dart';
 import 'src/services/locale/locale_controller.dart';
@@ -21,7 +20,6 @@ import 'src/services/logging/sinks/console_sink.dart';
 import 'src/services/logging/sinks/local_sink.dart';
 import 'src/services/logging/sinks/log_sink.dart';
 import 'src/services/logging/sinks/remote_sink.dart';
-import 'src/services/routing/elevation_service.dart';
 import 'src/services/settings/app_settings_controller.dart';
 import 'src/services/tracking/background_tracking_service.dart';
 
@@ -107,16 +105,11 @@ Future<void> main() async {
     // Initial drain in case there are leftovers from a previous run.
     unawaited(uploader.drain());
 
+    // Purge any orphan demo routes left over from older builds (NULL owner +
+    // is_official=0). The official catalog is now hydrated from Supabase by
+    // OfficialRoutesService inside SplitwayApp, so we don't seed anything
+    // here. Safe to run on every cold start (idempotent no-op when clean).
     final seedRepo = LocalDraftRepository(database);
-    await DemoSeed.ensureSeeded(
-      seedRepo,
-      settingsController,
-      elevationService: ElevationService(),
-    );
-    // One-shot purge of legacy routes left over from older builds where
-    // the owner_id column was unset. Without this, a signed-out user would
-    // see those orphan routes (the public filter is `owner_id IS NULL`).
-    // Only the official seeded demo route is kept for guests.
     await seedRepo.purgeLegacyPublicRoutes();
     await seedRepo.dispose();
 

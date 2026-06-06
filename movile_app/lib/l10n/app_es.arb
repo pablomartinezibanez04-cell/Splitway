@@ -558,6 +558,11 @@
   "speedHistoryDeleteTitle": "Eliminar sesión",
   "speedHistoryDeleteConfirm": "¿Eliminar \"{name}\"? Esta acción no se puede deshacer.",
   "@speedHistoryDeleteConfirm": { "placeholders": { "name": { "type": "String" } } },
+  "speedDetailEditNameTooltip": "Editar nombre",
+  "speedDetailEditNameTitle": "Editar nombre",
+  "speedDetailEditNameHint": "Nombre de la sesión",
+  "speedDetailEditNameSave": "Guardar",
+  "speedDetailEditNameCancel": "Cancelar",
 
   "statsTitle": "Estadísticas",
   "statsEmptyTitle": "Aún no hay datos",

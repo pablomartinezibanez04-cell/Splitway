@@ -114,12 +114,14 @@ class _FreeRideScreenState extends State<FreeRideScreen>
               angularDifferenceDeg(bearing, _lastSentBearing!).abs() >=
                   _kBearingChangeThresholdDeg);
       if ((pointChanged || bearingChanged) && points.isNotEmpty) {
+        // On point changes, match the user-marker glide so the camera and
+        // the dot arrive together; on bearing-only updates stay snappy.
         _flyToNotifier.flyTo(
           points.last.location,
           bearing: bearing,
-          // Short animation: ~300 ms feels responsive both for GPS-driven
-          // position updates (~1-2 Hz) and compass-driven rotations.
-          animationDuration: const Duration(milliseconds: 300),
+          animationDuration: pointChanged
+              ? const Duration(milliseconds: 850)
+              : const Duration(milliseconds: 300),
         );
         _lastSentBearing = bearing;
       }

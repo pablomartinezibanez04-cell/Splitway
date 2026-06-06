@@ -144,10 +144,15 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
               angularDifferenceDeg(bearing, _lastSentBearing!).abs() >=
                   _kBearingChangeThresholdDeg);
       if ((pointChanged || bearingChanged) && ingested.isNotEmpty) {
+        // Match the user-marker glide (~850 ms) on point changes so the
+        // camera and the dot reach the new fix together; keep 300 ms for
+        // bearing-only updates so compass rotation stays snappy.
         _flyToNotifier.flyTo(
           ingested.last.location,
           bearing: bearing,
-          animationDuration: const Duration(milliseconds: 300),
+          animationDuration: pointChanged
+              ? const Duration(milliseconds: 850)
+              : const Duration(milliseconds: 300),
         );
         _lastSentBearing = bearing;
       }

@@ -11,7 +11,7 @@ class SplitwayLocalDatabase {
 
   Database get raw => _db;
 
-  static const int _schemaVersion = 9;
+  static const int _schemaVersion = 10;
 
   static Future<SplitwayLocalDatabase> open({String? overridePath}) async {
     final path = overridePath ?? await _defaultPath();
@@ -214,6 +214,14 @@ class SplitwayLocalDatabase {
       );
       await db.execute(
         'CREATE INDEX IF NOT EXISTS idx_app_logs_level_tag ON app_logs(level, tag)',
+      );
+    }
+    if (from < 10 && to >= 10) {
+      await db.execute(
+        'ALTER TABLE route_templates ADD COLUMN is_official INTEGER NOT NULL DEFAULT 0',
+      );
+      await db.execute(
+        'ALTER TABLE route_templates ADD COLUMN updated_at INTEGER',
       );
     }
   }

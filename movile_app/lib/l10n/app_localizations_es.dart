@@ -1578,6 +1578,21 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get speedDetailEditNameTooltip => 'Editar nombre';
+
+  @override
+  String get speedDetailEditNameTitle => 'Editar nombre';
+
+  @override
+  String get speedDetailEditNameHint => 'Nombre de la sesión';
+
+  @override
+  String get speedDetailEditNameSave => 'Guardar';
+
+  @override
+  String get speedDetailEditNameCancel => 'Cancelar';
+
+  @override
   String get statsTitle => 'Estadísticas';
 
   @override
