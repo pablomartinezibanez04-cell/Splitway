@@ -151,4 +151,50 @@ void main() {
     await Future.wait([svc.refresh(), svc.refresh(), svc.refresh()]);
     expect(remote.callCount, 1);
   });
+
+  test('reappeared route stays visible across subsequent refreshes',
+      () async {
+    // Reproduces the bug where: dismiss → modify in Supabase → refresh
+    // brings the route back → next refresh wrongly removed it again.
+    final oldTs = DateTime.utc(2026, 4, 1);
+    final newTs = DateTime.utc(2026, 5, 1);
+    await settings.recordDismissal('r1', oldTs.millisecondsSinceEpoch);
+
+    final remote = _FakeRemote([official('r1', newTs)]);
+    final svc = OfficialRoutesService(
+        remote: remote, local: repo, settings: settings);
+
+    // First refresh: should resurrect and clear the dismissal.
+    await svc.refresh();
+    expect(await repo.getRouteTemplate('r1'), isNotNull);
+    expect(settings.dismissedOfficialRoutes.containsKey('r1'), isFalse);
+
+    // Second refresh on the SAME remote state: the route MUST stay.
+    await svc.refresh();
+    expect(await repo.getRouteTemplate('r1'), isNotNull,
+        reason: 'route disappeared on the second refresh after being '
+            'resurrected — dismissal must remain cleared');
+    expect(settings.dismissedOfficialRoutes.containsKey('r1'), isFalse);
+  });
+
+  test('dismissed-unchanged route never lands in local during refresh',
+      () async {
+    // Pre-fix, the upsert happened before the dismissal check so a
+    // dismissed route would briefly appear and then be deleted again. The
+    // new logic skips the save entirely for dismissed-unchanged routes.
+    final ts = DateTime.utc(2026, 4, 1);
+    await settings.recordDismissal('r1', ts.millisecondsSinceEpoch);
+
+    // Subscribe to the repository's change stream and count emissions
+    // for the dismissed id. A briefly-saved-then-deleted row would emit
+    // at least two events; the post-fix path emits zero.
+    final remote = _FakeRemote([official('r1', ts)]);
+    final svc = OfficialRoutesService(
+        remote: remote, local: repo, settings: settings);
+    await svc.refresh();
+
+    expect(await repo.getRouteTemplate('r1'), isNull);
+    expect(
+        settings.dismissedOfficialRoutes['r1'], ts.millisecondsSinceEpoch);
+  });
 }

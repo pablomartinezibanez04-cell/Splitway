@@ -58,36 +58,43 @@ class OfficialRoutesService extends ChangeNotifier {
       return;
     }
 
-    final remoteById = {for (final r in remote) r.id: r};
+    // Snapshot dismissals once so the per-route decisions below are
+    // consistent even if clearDismissal mutates prefs mid-loop.
+    final dismissals = _settings.dismissedOfficialRoutes;
 
-    // Upsert remote rows locally.
+    // Reconcile each remote route against dismissals BEFORE writing to
+    // local. This avoids the previous "save then delete" flicker and the
+    // race where a dismissed-unchanged route briefly reappeared.
     for (final r in remote) {
-      await _local.saveRouteTemplate(r);
+      final dismissedAt = dismissals[r.id];
+      if (dismissedAt == null) {
+        // Not dismissed → save normally.
+        await _local.saveRouteTemplate(r);
+        continue;
+      }
+      final remoteMillis = r.updatedAt?.millisecondsSinceEpoch ?? 0;
+      if (remoteMillis > dismissedAt) {
+        // The route was modified after the dismissal — bring it back and
+        // forget the dismissal so future refreshes don't second-guess it.
+        await _settings.clearDismissal(r.id);
+        await _local.saveRouteTemplate(r);
+      } else {
+        // Still dismissed-unchanged — don't save, and make sure no stale
+        // copy lingers locally (e.g. from a pre-fix install).
+        await _local.deleteRoute(r.id);
+      }
     }
 
-    // Prune local officials that no longer exist remotely.
+    // Prune local officials that no longer exist remotely (the curator
+    // deleted them or flipped is_official off).
+    final remoteIds = {for (final r in remote) r.id};
     final localRoutes = await _local.getAllRoutes();
     for (final r in localRoutes) {
       if (!r.isOfficial) continue;
-      if (remoteById.containsKey(r.id)) continue;
+      if (remoteIds.contains(r.id)) continue;
       await _local.deleteRoute(r.id);
     }
 
-    // Apply dismissals: if remote.updated_at > dismissedAt, the user
-    // should see the route again; otherwise keep it dismissed.
-    final dismissals = _settings.dismissedOfficialRoutes;
-    for (final entry in dismissals.entries) {
-      final id = entry.key;
-      final dismissedAt = entry.value;
-      final remoteRoute = remoteById[id];
-      if (remoteRoute == null) continue; // not in catalog anymore — leave entry
-      final remoteMillis = remoteRoute.updatedAt?.millisecondsSinceEpoch ?? 0;
-      if (remoteMillis > dismissedAt) {
-        await _settings.clearDismissal(id);
-      } else {
-        await _local.deleteRoute(id);
-      }
-    }
     notifyListeners();
   }
 
