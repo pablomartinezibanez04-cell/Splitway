@@ -110,6 +110,11 @@ class _SplitwayAppState extends State<SplitwayApp> {
         if (_profileService == null && widget.config.hasSupabase) {
           _createProfileService(client);
         }
+        // Refresh the official catalog now that we're signed in. The
+        // service's own concurrency guard collapses this into the
+        // cold-start fetch if still in flight.
+        // ignore: unawaited_futures
+        _officialRoutesService?.refresh();
       }
 
       // Only wipe local data when a DIFFERENT user is logging in on this
@@ -139,6 +144,10 @@ class _SplitwayAppState extends State<SplitwayApp> {
       // user's local data. Just detach the owner so the repo filter falls
       // back to public/null-owned rows.
       _repository.userId = null;
+      // Refresh the official catalog so the now-anonymous user sees the
+      // latest curated set (and any newly-published demos).
+      // ignore: unawaited_futures
+      _officialRoutesService?.refresh();
       _router.router.go('/routes');
     }
   }
