@@ -198,12 +198,6 @@ class AppSettingsController extends ChangeNotifier {
     _prefs.remove(legacyKey);
   }
 
-  @Deprecated('Use dismissedOfficialRoutes. Removed in T11/T14.')
-  Set<String> get dismissedDemoIds => dismissedOfficialRoutes.keys.toSet();
-
-  @Deprecated('Use recordDismissal. Removed in T11/T14.')
-  Future<void> dismissDemoRoute(String id) => recordDismissal(id, 0);
-
   Future<void> setMinLogLevel(LogLevel v) async {
     if (_minLogLevel == v) return;
     _minLogLevel = v;

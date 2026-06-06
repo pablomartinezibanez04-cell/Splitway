@@ -2,10 +2,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:splitway_core/splitway_core.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:splitway_mobile/src/data/local/splitway_local_database.dart';
 import 'package:splitway_mobile/src/data/repositories/local_draft_repository.dart';
 import 'package:splitway_mobile/src/features/editor/draft_segment.dart';
 import 'package:splitway_mobile/src/features/editor/route_editor_controller.dart';
+import 'package:splitway_mobile/src/services/official_routes/official_routes_service.dart';
+import 'package:splitway_mobile/src/services/settings/app_settings_controller.dart';
 
 Future<LocalDraftRepository> _makeRepo() async {
   sqfliteFfiInit();
@@ -319,27 +322,58 @@ void main() {
     });
   });
 
-  group('deleteRoute callback', () {
-    test('onRouteDeleted fires with correct id when route deleted', () async {
-      // Save a route first
-      ctrl.startDrawing(name: 'To Delete', difficulty: RouteDifficulty.easy);
-      ctrl.handleMapTap(const GeoPoint(latitude: 1.0, longitude: 1.0));
-      ctrl.handleMapTap(const GeoPoint(latitude: 1.0, longitude: 1.1));
-      ctrl.handleMapTap(const GeoPoint(latitude: 1.0, longitude: 1.2));
-      await ctrl.saveDraft();
-      await ctrl.load();
-      final routeId = ctrl.routes.first.id;
+  group('deleteRoute routing', () {
+    test('deleting an official route goes through OfficialRoutesService.dismiss',
+        () async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      SharedPreferences.setMockInitialValues({});
+      // Insert an official route directly (the guardrail allows NULL owner
+      // when isOfficial=true). This stands in for a route the cloud catalog
+      // would have hydrated locally.
+      final updatedAt = DateTime.utc(2026, 5, 1);
+      await repo.saveRouteTemplate(RouteTemplate(
+        id: 'r-official',
+        name: 'Official One',
+        path: const [],
+        startFinishGate: GateDefinition(
+          left: GeoPoint(latitude: 0, longitude: 0),
+          right: GeoPoint(latitude: 0, longitude: 0),
+        ),
+        sectors: const [],
+        difficulty: RouteDifficulty.medium,
+        createdAt: DateTime.utc(2026, 1, 1),
+        isOfficial: true,
+        updatedAt: updatedAt,
+      ));
 
-      final captured = <String>[];
-      final ctrlWithCallback = RouteEditorController(
-        repo,
-        onRouteDeleted: (id) async => captured.add(id),
+      final settings = await AppSettingsController.load();
+      final official = OfficialRoutesService(
+        remote: _EmptyRemote(),
+        local: repo,
+        settings: settings,
       );
-      await ctrlWithCallback.load();
 
-      await ctrlWithCallback.deleteRoute(routeId);
+      final ctrlWithService = RouteEditorController(
+        repo,
+        officialRoutesService: official,
+      );
+      await ctrlWithService.load();
 
-      expect(captured, [routeId]);
+      await ctrlWithService.deleteRoute('r-official');
+
+      // The local row is gone and the dismissal is recorded against its
+      // updated_at, so a future refresh with an unchanged updated_at will
+      // keep it dismissed.
+      expect(await repo.getRouteTemplate('r-official'), isNull);
+      expect(
+        settings.dismissedOfficialRoutes['r-official'],
+        updatedAt.millisecondsSinceEpoch,
+      );
     });
   });
+}
+
+class _EmptyRemote implements OfficialRoutesRemote {
+  @override
+  Future<List<RouteTemplate>> fetchOfficialRoutes() async => const [];
 }

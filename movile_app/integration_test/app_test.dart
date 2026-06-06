@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:splitway_core/splitway_core.dart';
 import 'package:splitway_mobile/src/app.dart';
 import 'package:splitway_mobile/src/config/app_config.dart';
-import 'package:splitway_mobile/src/data/demo/demo_seed.dart';
 import 'package:splitway_mobile/src/data/local/splitway_local_database.dart';
 import 'package:splitway_mobile/src/data/repositories/local_draft_repository.dart';
 import 'package:splitway_mobile/src/services/locale/locale_controller.dart';
@@ -36,7 +36,26 @@ void main() {
   setUp(() async {
     database = await SplitwayLocalDatabase.open();
     seedRepo = LocalDraftRepository(database);
-    await DemoSeed.ensureSeeded(seedRepo, settingsController);
+    // The real catalog comes from Supabase via OfficialRoutesService; in
+    // integration tests we have no live cloud, so manually seed a single
+    // official-flagged route so the screens have something to render.
+    await seedRepo.saveRouteTemplate(RouteTemplate(
+      id: 'integration-official',
+      name: 'Test Integration Route',
+      path: [
+        GeoPoint(latitude: 40.5, longitude: -3.5),
+        GeoPoint(latitude: 40.501, longitude: -3.501),
+      ],
+      startFinishGate: GateDefinition(
+        left: GeoPoint(latitude: 40.5, longitude: -3.5),
+        right: GeoPoint(latitude: 40.5001, longitude: -3.5001),
+      ),
+      sectors: const [],
+      difficulty: RouteDifficulty.medium,
+      createdAt: DateTime.utc(2026, 1, 1),
+      isOfficial: true,
+      updatedAt: DateTime.utc(2026, 5, 1),
+    ));
     await seedRepo.dispose();
   });
 
@@ -45,7 +64,8 @@ void main() {
   });
 
   group('Full app navigation', () {
-    testWidgets('boots on Editor tab and shows demo route', (tester) async {
+    testWidgets('boots on Editor tab and shows the seeded official route',
+        (tester) async {
       await tester.pumpWidget(SplitwayApp(
         config: const AppConfig(),
         database: database,
@@ -54,9 +74,9 @@ void main() {
       ));
       await tester.pumpAndSettle(const Duration(seconds: 2));
 
-      // Editor is the initial tab — should show the demo route chip.
+      // Editor is the initial tab — should show the seeded official route.
       expect(find.text('Editor'), findsOneWidget);
-      expect(find.text('Circuito del Jarama'), findsAtLeastNWidgets(1));
+      expect(find.text('Test Integration Route'), findsAtLeastNWidgets(1));
     });
 
     testWidgets('navigates to Session tab and shows route selector',
@@ -115,8 +135,8 @@ void main() {
       await tester.tap(find.text('Sesión'));
       await tester.pumpAndSettle(const Duration(seconds: 2));
 
-      // The session screen should be in "ready" stage with the demo route
-      // pre-selected (it's the only route in the DB).
+      // The session screen should be in "ready" stage with the seeded
+      // official route pre-selected (it's the only route in the DB).
       // Find and tap "Comenzar grabación"
       final startButton = find.text('Comenzar grabación');
       if (startButton.evaluate().isNotEmpty) {
