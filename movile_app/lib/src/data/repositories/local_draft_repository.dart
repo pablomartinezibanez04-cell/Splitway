@@ -34,16 +34,14 @@ class LocalDraftRepository {
 
   Future<void> saveRouteTemplate(RouteTemplate route) async {
     // Guardrail: a route can only be persisted with `owner_id IS NULL` if
-    // it is the official seeded demo route. Anything else (a user route
-    // saved while the session silently expired, a pull that raced with a
-    // sign-out, etc.) would become an orphan public-looking route on the
-    // next start. Drop those writes loudly instead of letting them rot in
-    // the DB.
-    if (_userId == null && route.id != _activeDemoId) {
+    // it is marked is_official. Anything else (a user route saved while the
+    // session silently expired, a pull that raced with a sign-out, etc.)
+    // would become an orphan public-looking route on the next start.
+    if (_userId == null && !route.isOfficial) {
       assert(
         false,
         'Refusing to save route ${route.id} with NULL owner_id '
-        '(only $_activeDemoId may be public). Caller must set userId first.',
+        '(only is_official routes may be public). Caller must set userId first.',
       );
       return;
     }
@@ -58,9 +56,11 @@ class LocalDraftRepository {
         'difficulty': route.difficulty.id,
         'created_at': route.createdAt.toUtc().millisecondsSinceEpoch,
         'location_label': route.locationLabel,
-        'owner_id': _userId,
+        'owner_id': route.isOfficial ? null : _userId,
         'thumbnail_url': route.thumbnailUrl,
         'elevation_range_m': route.elevationRangeMeters,
+        'is_official': route.isOfficial ? 1 : 0,
+        'updated_at': route.updatedAt?.toUtc().millisecondsSinceEpoch,
       };
       // INSERT OR IGNORE avoids the DELETE+INSERT that ConflictAlgorithm.replace
       // would trigger, which would cascade-delete all sessions for this route.
@@ -151,6 +151,13 @@ class LocalDraftRepository {
       locationLabel: row['location_label'] as String?,
       thumbnailUrl: row['thumbnail_url'] as String?,
       elevationRangeMeters: (row['elevation_range_m'] as num?)?.toDouble(),
+      isOfficial: ((row['is_official'] as int?) ?? 0) == 1,
+      updatedAt: row['updated_at'] == null
+          ? null
+          : DateTime.fromMillisecondsSinceEpoch(
+              row['updated_at']! as int,
+              isUtc: true,
+            ).toLocal(),
     );
   }
 
@@ -500,35 +507,28 @@ class LocalDraftRepository {
     // Kept as non-throwing to allow callers that reference it to compile.
   }
 
-  /// The ID of the only active seeded demo route. All other rows — including
-  /// legacy demo routes (e.g. 'demo-oval', 'demo-jarama') and user routes —
-  /// are removed by [clearUserData].
-  static const _activeDemoId = 'demo-espana';
-
   /// Deletes all user-owned data (routes, sessions, free rides and their
-  /// telemetry) from the local database. Only the active seeded demo route
-  /// is kept; everything else — including legacy rows where owner_id is NULL
-  /// because they pre-date the owner_id column — is removed.
-  /// Called on login/logout to avoid stale data from a different account.
+  /// telemetry) from the local database. Every route marked `is_official = 1`
+  /// is preserved (the official catalog is shared between anon and any
+  /// signed-in user). Called on login/logout to avoid stale data from a
+  /// different account.
   Future<void> clearUserData() async {
     await _db.transaction((txn) async {
-      await txn.delete('route_templates', where: 'id != ?', whereArgs: [_activeDemoId]);
+      await txn.delete('route_templates', where: 'is_official = 0');
       await txn.delete('session_runs', where: '1=1');
       await txn.delete('free_rides', where: '1=1');
     });
     _changes.add(null);
   }
 
-  /// Removes any orphan/legacy route with `owner_id IS NULL` other than the
-  /// active seeded demo. These exist on older installs from before the
-  /// `owner_id` column was populated; they would otherwise be shown to a
-  /// signed-out user because the public filter is `owner_id IS NULL`.
-  /// Idempotent and safe to call on every cold start.
+  /// Removes any route with `owner_id IS NULL` and `is_official = 0`. These
+  /// only exist on installs upgraded from before the official-catalog feature,
+  /// where the seeded demo lived in a public/null-owner row without the
+  /// is_official flag. Idempotent and safe to call on every cold start.
   Future<void> purgeLegacyPublicRoutes() async {
     final deleted = await _db.delete(
       'route_templates',
-      where: 'owner_id IS NULL AND id != ?',
-      whereArgs: [_activeDemoId],
+      where: 'owner_id IS NULL AND is_official = 0',
     );
     if (deleted > 0) _changes.add(null);
   }
