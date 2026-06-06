@@ -30,6 +30,8 @@ class RouteTemplate {
     this.locationLabel,
     this.thumbnailUrl,
     this.elevationRangeMeters,
+    this.isOfficial = false,
+    this.updatedAt,
   });
 
   final String id;
@@ -43,6 +45,8 @@ class RouteTemplate {
   final RouteDifficulty difficulty;
   final DateTime createdAt;
   final double? elevationRangeMeters;
+  final bool isOfficial;
+  final DateTime? updatedAt;
 
   /// True when the route is a closed circuit (first and last path points
   /// are the same, as set when the gap between them is ≤ 20 m at save time).
@@ -71,6 +75,8 @@ class RouteTemplate {
     RouteDifficulty? difficulty,
     DateTime? createdAt,
     Object? elevationRangeMeters = _sentinel,
+    bool? isOfficial,
+    Object? updatedAt = _sentinel,
   }) {
     return RouteTemplate(
       id: id ?? this.id,
@@ -88,6 +94,10 @@ class RouteTemplate {
       elevationRangeMeters: elevationRangeMeters == _sentinel
           ? this.elevationRangeMeters
           : elevationRangeMeters as double?,
+      isOfficial: isOfficial ?? this.isOfficial,
+      updatedAt: updatedAt == _sentinel
+          ? this.updatedAt
+          : updatedAt as DateTime?,
     );
   }
 
@@ -103,6 +113,8 @@ class RouteTemplate {
         'difficulty': difficulty.id,
         'createdAt': createdAt.toUtc().toIso8601String(),
         'elevationRangeMeters': elevationRangeMeters,
+        'isOfficial': isOfficial,
+        'updatedAt': updatedAt?.toUtc().toIso8601String(),
       };
 
   factory RouteTemplate.fromJson(Map<String, dynamic> json) => RouteTemplate(
@@ -124,5 +136,9 @@ class RouteTemplate {
         createdAt: DateTime.parse(json['createdAt'] as String),
         elevationRangeMeters:
             (json['elevationRangeMeters'] as num?)?.toDouble(),
+        isOfficial: json['isOfficial'] as bool? ?? false,
+        updatedAt: json['updatedAt'] == null
+            ? null
+            : DateTime.parse(json['updatedAt'] as String),
       );
 }
