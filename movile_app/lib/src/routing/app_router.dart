@@ -265,7 +265,10 @@ class AppRouter {
                   body: Center(child: Text('Not found')),
                 );
               }
-              return SpeedSessionDetailScreen(session: s);
+              return SpeedSessionDetailScreen(
+                session: s,
+                repository: speedRepository,
+              );
             },
           );
         },

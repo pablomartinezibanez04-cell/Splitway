@@ -38,6 +38,27 @@ class SpeedSession {
     return '$vehicleName-${fmt.format(ts)}';
   }
 
+  SpeedSession copyWith({
+    String? name,
+    DateTime? updatedAt,
+  }) {
+    return SpeedSession(
+      id: id,
+      userId: userId,
+      vehicleId: vehicleId,
+      name: name ?? this.name,
+      selectedMetrics: selectedMetrics,
+      results: results,
+      countdownSeconds: countdownSeconds,
+      isPartial: isPartial,
+      startedAt: startedAt,
+      finishedAt: finishedAt,
+      createdAt: createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt,
+    );
+  }
+
   factory SpeedSession.fromJson(Map<String, dynamic> json) {
     final metricsRaw = (json['selected_metrics'] as List).cast<String>();
     final selected = metricsRaw

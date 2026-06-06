@@ -558,6 +558,11 @@
   "speedHistoryDeleteTitle": "Delete session",
   "speedHistoryDeleteConfirm": "Delete \"{name}\"? This cannot be undone.",
   "@speedHistoryDeleteConfirm": { "placeholders": { "name": { "type": "String" } } },
+  "speedDetailEditNameTooltip": "Edit name",
+  "speedDetailEditNameTitle": "Edit name",
+  "speedDetailEditNameHint": "Session name",
+  "speedDetailEditNameSave": "Save",
+  "speedDetailEditNameCancel": "Cancel",
 
   "statsTitle": "Statistics",
   "statsEmptyTitle": "No data yet",

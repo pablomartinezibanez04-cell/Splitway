@@ -2870,6 +2870,36 @@ abstract class AppLocalizations {
   /// **'Delete \"{name}\"? This cannot be undone.'**
   String speedHistoryDeleteConfirm(String name);
 
+  /// No description provided for @speedDetailEditNameTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit name'**
+  String get speedDetailEditNameTooltip;
+
+  /// No description provided for @speedDetailEditNameTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit name'**
+  String get speedDetailEditNameTitle;
+
+  /// No description provided for @speedDetailEditNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Session name'**
+  String get speedDetailEditNameHint;
+
+  /// No description provided for @speedDetailEditNameSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get speedDetailEditNameSave;
+
+  /// No description provided for @speedDetailEditNameCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get speedDetailEditNameCancel;
+
   /// No description provided for @statsTitle.
   ///
   /// In en, this message translates to:

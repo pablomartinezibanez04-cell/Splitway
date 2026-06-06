@@ -53,6 +53,10 @@ class SpeedMeasurementService {
   SpeedSample? _previousSample;
   Duration? _reactionCandidateTime;
   Duration? _falseStartCandidateTime;
+  // Time (relative to session start / "Go!") at which sustained vehicle
+  // motion was first observed. All timed splits (0-50, 0-100, 60ft, etc.)
+  // are reported as offsets from this point, not from "Go!".
+  Duration? _motionStartTime;
 
   StreamSubscription<Position>? _gpsSub;
   StreamSubscription<AccelerometerEvent>? _accelSub;
@@ -148,6 +152,7 @@ class SpeedMeasurementService {
     _resetResults();
     _previousSample = null;
     _reactionCandidateTime = null;
+    _motionStartTime = null;
     elapsed.value = Duration.zero;
   }
 
@@ -217,36 +222,45 @@ class SpeedMeasurementService {
       if (s.speedKmh > current) updated[SpeedMetric.topSpeed] = s.speedKmh;
     }
 
-    if (targets.contains(SpeedMetric.reactionTime) &&
-        updated[SpeedMetric.reactionTime] == null) {
-      // Reaction triggers on either real GPS motion or a clear IMU spike,
-      // whichever happens first. This lets the metric resolve even when
-      // GPS lag is hiding the start of motion.
+    // Always run motion detection — it provides the t0 for every timed split,
+    // regardless of whether reactionTime is one of the selected targets.
+    if (_motionStartTime == null) {
       final motion = s.speedKmh >= _reactionSpeedKmh ||
           s.accelMs2 >= _reactionAccelMs2;
       if (motion) {
         _reactionCandidateTime ??= s.tSinceStart;
         final sustained = s.tSinceStart - _reactionCandidateTime!;
         if (sustained >= _reactionSustain) {
-          updated[SpeedMetric.reactionTime] =
-              _reactionCandidateTime!.inMicroseconds / 1e6;
+          _motionStartTime = _reactionCandidateTime;
+          if (targets.contains(SpeedMetric.reactionTime)) {
+            updated[SpeedMetric.reactionTime] =
+                _reactionCandidateTime!.inMicroseconds / 1e6;
+          }
         }
       } else {
         _reactionCandidateTime = null;
       }
     }
 
-    final prev = _previousSample;
-    if (prev != null) {
-      _resolveDistanceCrossing(
-          updated, prev, s, SpeedMetric.sixtyFoot, _sixtyFeetMeters);
-      _resolveDistanceCrossing(
-          updated, prev, s, SpeedMetric.eighthMile, _eighthMileMeters);
-      _resolveDistanceCrossing(
-          updated, prev, s, SpeedMetric.quarterMile, _quarterMileMeters);
-      _resolveSpeedCrossing(updated, prev, s, SpeedMetric.zeroTo50, 50);
-      _resolveSpeedCrossing(updated, prev, s, SpeedMetric.zeroTo100, 100);
-      _resolveSpeedCrossing(updated, prev, s, SpeedMetric.zeroTo200, 200);
+    // Splits are only resolvable once we know when motion began — their
+    // time is reported as an offset from that point.
+    final motionStart = _motionStartTime;
+    if (motionStart != null) {
+      final prev = _previousSample;
+      if (prev != null) {
+        _resolveDistanceCrossing(updated, prev, s, SpeedMetric.sixtyFoot,
+            _sixtyFeetMeters, motionStart);
+        _resolveDistanceCrossing(updated, prev, s, SpeedMetric.eighthMile,
+            _eighthMileMeters, motionStart);
+        _resolveDistanceCrossing(updated, prev, s, SpeedMetric.quarterMile,
+            _quarterMileMeters, motionStart);
+        _resolveSpeedCrossing(
+            updated, prev, s, SpeedMetric.zeroTo50, 50, motionStart);
+        _resolveSpeedCrossing(
+            updated, prev, s, SpeedMetric.zeroTo100, 100, motionStart);
+        _resolveSpeedCrossing(
+            updated, prev, s, SpeedMetric.zeroTo200, 200, motionStart);
+      }
     }
 
     if (!_mapEquals(updated, results.value)) {
@@ -260,6 +274,7 @@ class SpeedMeasurementService {
     SpeedSample curr,
     SpeedMetric metric,
     double thresholdM,
+    Duration motionStart,
   ) {
     if (!targets.contains(metric)) return;
     if (out[metric] != null) return;
@@ -269,7 +284,7 @@ class SpeedMeasurementService {
       final dtMicros = curr.tSinceStart.inMicroseconds -
           prev.tSinceStart.inMicroseconds;
       final tMicros = prev.tSinceStart.inMicroseconds + ratio * dtMicros;
-      out[metric] = tMicros / 1e6;
+      out[metric] = (tMicros - motionStart.inMicroseconds) / 1e6;
     }
   }
 
@@ -279,6 +294,7 @@ class SpeedMeasurementService {
     SpeedSample curr,
     SpeedMetric metric,
     double thresholdKmh,
+    Duration motionStart,
   ) {
     if (!targets.contains(metric)) return;
     if (out[metric] != null) return;
@@ -288,7 +304,7 @@ class SpeedMeasurementService {
       final dtMicros = curr.tSinceStart.inMicroseconds -
           prev.tSinceStart.inMicroseconds;
       final tMicros = prev.tSinceStart.inMicroseconds + ratio * dtMicros;
-      out[metric] = tMicros / 1e6;
+      out[metric] = (tMicros - motionStart.inMicroseconds) / 1e6;
     }
   }
 
