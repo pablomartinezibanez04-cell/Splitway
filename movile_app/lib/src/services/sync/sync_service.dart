@@ -155,26 +155,11 @@ class SyncService extends ChangeNotifier {
     final routesWithNewThumbnails = <RouteTemplate>[];
     final pushedRouteIds = <String>{};
     for (final route in localRoutes) {
-      if (route.id == 'demo-espana') {
-        // Never push demo route data, but generate its thumbnail if missing.
-        if (route.thumbnailUrl == null &&
-            remote.thumbnailService != null &&
-            userId != null) {
-          try {
-            final url =
-                await remote.thumbnailService!.generate(route, userId!);
-            await local.saveRouteTemplate(route.copyWith(thumbnailUrl: url));
-            transferred++;
-          } catch (e, st) {
-            debugPrint('SyncService: demo thumbnail generation failed: $e');
-            AppLogger.maybeInstance?.warning(
-              'sync',
-              'demo thumbnail generation failed',
-              error: e,
-              stackTrace: st,
-            );
-          }
-        }
+      if (route.isOfficial) {
+        // Official routes are owned by Splitway and curated via
+        // OfficialRoutesService. Never push them or generate thumbnails
+        // here — that is the official account's responsibility, and the
+        // catalog fetch already brings the remote thumbnail URL.
         continue;
       }
       final remoteUpdated = remoteRouteTs[route.id];
@@ -197,11 +182,12 @@ class SyncService extends ChangeNotifier {
       await local.saveRouteTemplate(route);
     }
 
-    // Reconcile: remove local non-demo routes that no longer exist in
+    // Reconcile: remove local non-official routes that no longer exist in
     // Supabase and were not pushed in this cycle (which would mean they
-    // are newly created, not remotely deleted).
+    // are newly created, not remotely deleted). Official routes are owned
+    // by OfficialRoutesService and intentionally bypass this loop.
     for (final route in localRoutes) {
-      if (route.id == 'demo-espana') continue;
+      if (route.isOfficial) continue;
       if (pushedRouteIds.contains(route.id)) continue;
       if (!remoteRouteTs.containsKey(route.id)) {
         await local.deleteRoute(route.id);
