@@ -33,6 +33,20 @@ class LocalDraftRepository {
   // ---------- Routes ----------
 
   Future<void> saveRouteTemplate(RouteTemplate route) async {
+    // Guardrail: a route can only be persisted with `owner_id IS NULL` if
+    // it is the official seeded demo route. Anything else (a user route
+    // saved while the session silently expired, a pull that raced with a
+    // sign-out, etc.) would become an orphan public-looking route on the
+    // next start. Drop those writes loudly instead of letting them rot in
+    // the DB.
+    if (_userId == null && route.id != _activeDemoId) {
+      assert(
+        false,
+        'Refusing to save route ${route.id} with NULL owner_id '
+        '(only $_activeDemoId may be public). Caller must set userId first.',
+      );
+      return;
+    }
     await _db.transaction((txn) async {
       final fields = {
         'id': route.id,
@@ -503,6 +517,20 @@ class LocalDraftRepository {
       await txn.delete('free_rides', where: '1=1');
     });
     _changes.add(null);
+  }
+
+  /// Removes any orphan/legacy route with `owner_id IS NULL` other than the
+  /// active seeded demo. These exist on older installs from before the
+  /// `owner_id` column was populated; they would otherwise be shown to a
+  /// signed-out user because the public filter is `owner_id IS NULL`.
+  /// Idempotent and safe to call on every cold start.
+  Future<void> purgeLegacyPublicRoutes() async {
+    final deleted = await _db.delete(
+      'route_templates',
+      where: 'owner_id IS NULL AND id != ?',
+      whereArgs: [_activeDemoId],
+    );
+    if (deleted > 0) _changes.add(null);
   }
 
   Future<void> dispose() async {

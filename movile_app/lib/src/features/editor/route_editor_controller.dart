@@ -184,10 +184,19 @@ class RouteEditorController extends ChangeNotifier {
 
   // ---------- Load / select ----------
 
+  /// Monotonically-increasing generation. Each [load] bumps it; only the
+  /// most recent invocation publishes its result, so overlapping loads
+  /// from rapid `userId` changes or repo events can't leave the controller
+  /// in a stale state.
+  int _loadGeneration = 0;
+
   Future<void> load() async {
+    final generation = ++_loadGeneration;
     _loading = true;
     notifyListeners();
-    _routes = await _repo.getAllRoutes();
+    final routes = await _repo.getAllRoutes();
+    if (generation != _loadGeneration) return;
+    _routes = routes;
     if (_routes.isEmpty) {
       // After clearUserData (e.g. sign-out) the repo can return an empty
       // list while `_selected` still points to a now-deleted route. Bail

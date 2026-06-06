@@ -85,16 +85,29 @@ class _SplitwayAppState extends State<SplitwayApp> {
 
   void _onAuthStateChanged() {
     final isLoggedIn = _authService?.isLoggedIn ?? false;
-
     if (isLoggedIn && _syncService == null && widget.config.hasSupabase) {
-      _repository.clearUserData().then((_) {
-        _repository.userId = Supabase.instance.client.auth.currentUser?.id;
-        _createSyncService(Supabase.instance.client);
+      final client = Supabase.instance.client;
+      final newUid = client.auth.currentUser!.id;
+      final previousUid = _repository.userId;
+
+      void proceed() {
+        _repository.userId = newUid;
+        _createSyncService(client);
         _router.syncService = _syncService;
         if (_profileService == null && widget.config.hasSupabase) {
-          _createProfileService(Supabase.instance.client);
+          _createProfileService(client);
         }
-      });
+      }
+
+      // Only wipe local data when a DIFFERENT user is logging in on this
+      // device. Same user re-login or first-time hydration must preserve
+      // any pre-existing local routes/sessions (including legacy
+      // `owner_id IS NULL` rows).
+      if (previousUid != null && previousUid != newUid) {
+        _repository.clearUserData().then((_) => proceed());
+      } else {
+        proceed();
+      }
     } else if (!isLoggedIn && _syncService != null) {
       _syncService!.stopPeriodicSync();
       _syncService!.dispose();
@@ -108,9 +121,11 @@ class _SplitwayAppState extends State<SplitwayApp> {
       _garageService?.dispose();
       _garageService = null;
       _router.garageService = null;
-      _repository.clearUserData().then((_) {
-        _repository.userId = null;
-      });
+      // Do NOT call clearUserData here: a sign-out (or a stale refresh
+      // token that Supabase reports as signedOut) must not delete the
+      // user's local data. Just detach the owner so the repo filter falls
+      // back to public/null-owned rows.
+      _repository.userId = null;
       _router.router.go('/routes');
     }
   }

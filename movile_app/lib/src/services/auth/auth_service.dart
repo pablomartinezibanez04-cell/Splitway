@@ -22,6 +22,18 @@ class AuthService extends ChangeNotifier {
   User? get currentUser => _client.auth.currentUser;
   bool get isLoggedIn => currentUser != null;
 
+  /// The most recent [AuthChangeEvent] emitted by Supabase, exposed so the
+  /// app can distinguish e.g. `initialSession` (cold-start hydration) from
+  /// `signedIn` (explicit login).
+  AuthChangeEvent? _lastEvent;
+  AuthChangeEvent? get lastEvent => _lastEvent;
+
+  /// Set the first time we force a local `signOut` in response to a
+  /// `signedOut` event. Prevents the resulting follow-up `signedOut` events
+  /// (which Supabase emits as part of the cleanup) from re-triggering the
+  /// same cleanup in an infinite loop. Reset when a fresh session arrives.
+  bool _localCleanupDone = false;
+
   bool _loading = false;
   bool get loading => _loading;
 
@@ -52,6 +64,36 @@ class AuthService extends ChangeNotifier {
 
   void _onAuthEvent(AuthState state) {
     debugPrint('AuthService: ${state.event}');
+    _lastEvent = state.event;
+    switch (state.event) {
+      case AuthChangeEvent.signedOut:
+        // If Supabase emits signedOut because the persisted refresh token
+        // is invalid (e.g. the user was deleted on the backend, or the
+        // project's JWT secret rotated), the local storage still holds a
+        // stale session and `currentUser` will be hydrated on every cold
+        // start, looping the same failure. Force a local-only signOut to
+        // wipe that storage so the next start boots cleanly without ever
+        // calling refresh.
+        //
+        // The signOut call itself triggers further signedOut events as it
+        // tears down the session; guard with `_localCleanupDone` to avoid
+        // an infinite loop.
+        if (!_localCleanupDone) {
+          _localCleanupDone = true;
+          unawaited(
+            _client.auth
+                .signOut(scope: SignOutScope.local)
+                .catchError((_) {}),
+          );
+        }
+      case AuthChangeEvent.signedIn:
+      case AuthChangeEvent.tokenRefreshed:
+        // A fresh, valid session is now active — arm the cleanup again so
+        // that a future stale-refresh logout is handled correctly.
+        _localCleanupDone = false;
+      default:
+        break;
+    }
     _errorCode = null;
     notifyListeners();
   }

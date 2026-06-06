@@ -402,23 +402,6 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
               child: drawerLeading,
             ),
           ),
-        if (ctrl.source == TrackingSource.realGps)
-          Positioned(
-            top: 0,
-            right: 0,
-            child: SafeArea(
-              bottom: false,
-              left: false,
-              child: Padding(
-                padding: const EdgeInsets.only(top: 8, right: 12),
-                child: GpsSignalBadge(
-                  lastPoint: tracker.ingested.isNotEmpty
-                      ? tracker.ingested.last
-                      : null,
-                ),
-              ),
-            ),
-          ),
         Positioned(
           left: 0,
           right: 0,
@@ -462,6 +445,20 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
                     ),
                   ),
                   const SizedBox(height: 8),
+                ],
+                if (ctrl.source == TrackingSource.realGps) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(
+                        left: 16, right: 16, bottom: 8),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: GpsSignalBadge(
+                        lastPoint: tracker.ingested.isNotEmpty
+                            ? tracker.ingested.last
+                            : null,
+                      ),
+                    ),
+                  ),
                 ],
                 Container(
                   decoration: BoxDecoration(

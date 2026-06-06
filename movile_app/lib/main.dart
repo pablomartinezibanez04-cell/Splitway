@@ -113,6 +113,11 @@ Future<void> main() async {
       settingsController,
       elevationService: ElevationService(),
     );
+    // One-shot purge of legacy routes left over from older builds where
+    // the owner_id column was unset. Without this, a signed-out user would
+    // see those orphan routes (the public filter is `owner_id IS NULL`).
+    // Only the official seeded demo route is kept for guests.
+    await seedRepo.purgeLegacyPublicRoutes();
     await seedRepo.dispose();
 
     final deviceLocale =

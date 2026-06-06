@@ -351,21 +351,6 @@ class _FreeRideScreenState extends State<FreeRideScreen>
             ),
           ),
         Positioned(
-          top: 0,
-          right: 0,
-          child: SafeArea(
-            bottom: false,
-            left: false,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 8, right: 12),
-              child: GpsSignalBadge(
-                lastPoint:
-                    ctrl.ingested.isNotEmpty ? ctrl.ingested.last : null,
-              ),
-            ),
-          ),
-        ),
-        Positioned(
           left: 0,
           right: 0,
           bottom: 0,
@@ -409,14 +394,23 @@ class _FreeRideScreenState extends State<FreeRideScreen>
                   const SizedBox(height: 8),
                 ],
                 Padding(
-                  padding: const EdgeInsets.only(right: 16, bottom: 8),
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: FloatingActionButton.small(
-                      heroTag: 'free_ride_center',
-                      onPressed: _centerOnUser,
-                      child: const Icon(Icons.my_location),
-                    ),
+                  padding:
+                      const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      GpsSignalBadge(
+                        lastPoint: ctrl.ingested.isNotEmpty
+                            ? ctrl.ingested.last
+                            : null,
+                      ),
+                      const Spacer(),
+                      FloatingActionButton.small(
+                        heroTag: 'free_ride_center',
+                        onPressed: _centerOnUser,
+                        child: const Icon(Icons.my_location),
+                      ),
+                    ],
                   ),
                 ),
                 Container(

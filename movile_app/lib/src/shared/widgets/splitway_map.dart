@@ -263,9 +263,11 @@ class _SplitwayMapState extends State<SplitwayMap> {
           ),
         if (showStyleButton)
           Positioned(
-            top: 8,
+            // Sits just below the Mapbox compass (anchored top-right,
+            // ~40dp tall with an 8dp top margin).
+            top: 56,
             right: 8,
-            child: SafeArea(child: _buildStyleButton(context)),
+            child: _buildStyleButton(context),
           ),
       ],
     );
