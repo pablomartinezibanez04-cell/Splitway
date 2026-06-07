@@ -1593,6 +1593,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get speedDetailEditNameCancel => 'Cancelar';
 
   @override
+  String get speedDetailEditNameError => 'No se pudo guardar el nombre';
+
+  @override
   String get statsTitle => 'Estadísticas';
 
   @override

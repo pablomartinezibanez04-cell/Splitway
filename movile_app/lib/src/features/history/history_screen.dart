@@ -682,7 +682,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
             icon: const Icon(Icons.delete_outline),
             onPressed: () => _confirmDeleteSpeed(s),
           ),
-          onTap: () => context.push('/history/speed/${s.id}'),
+          onTap: () async {
+            await context.push('/history/speed/${s.id}');
+            if (mounted) _loadSpeed();
+          },
         );
       },
     );

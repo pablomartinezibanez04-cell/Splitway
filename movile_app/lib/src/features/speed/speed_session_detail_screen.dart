@@ -77,13 +77,24 @@ class _SpeedSessionDetailScreenState extends State<SpeedSessionDetailScreen> {
         ],
       ),
     );
-    controller.dispose();
+    // Defer disposal so the dialog exit animation can finish detaching
+    // the TextField from the controller before it is marked as disposed.
+    WidgetsBinding.instance.addPostFrameCallback((_) => controller.dispose());
+    if (!mounted) return;
     if (newName == null || newName.isEmpty || newName == _session.name) return;
     final updated = _session.copyWith(
       name: newName,
       updatedAt: DateTime.now(),
     );
-    await widget.repository.save(updated);
+    try {
+      await widget.repository.save(updated);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l.speedDetailEditNameError)),
+      );
+      return;
+    }
     if (!mounted) return;
     setState(() => _session = updated);
   }

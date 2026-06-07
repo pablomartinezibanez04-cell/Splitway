@@ -1589,6 +1589,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get speedDetailEditNameCancel => 'Cancel';
 
   @override
+  String get speedDetailEditNameError => 'Could not save name';
+
+  @override
   String get statsTitle => 'Statistics';
 
   @override

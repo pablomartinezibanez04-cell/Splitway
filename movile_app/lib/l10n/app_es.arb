@@ -563,6 +563,7 @@
   "speedDetailEditNameHint": "Nombre de la sesión",
   "speedDetailEditNameSave": "Guardar",
   "speedDetailEditNameCancel": "Cancelar",
+  "speedDetailEditNameError": "No se pudo guardar el nombre",
 
   "statsTitle": "Estadísticas",
   "statsEmptyTitle": "Aún no hay datos",

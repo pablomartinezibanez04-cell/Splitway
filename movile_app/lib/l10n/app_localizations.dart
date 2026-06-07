@@ -2900,6 +2900,12 @@ abstract class AppLocalizations {
   /// **'Cancel'**
   String get speedDetailEditNameCancel;
 
+  /// No description provided for @speedDetailEditNameError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save name'**
+  String get speedDetailEditNameError;
+
   /// No description provided for @statsTitle.
   ///
   /// In en, this message translates to:

@@ -563,6 +563,7 @@
   "speedDetailEditNameHint": "Session name",
   "speedDetailEditNameSave": "Save",
   "speedDetailEditNameCancel": "Cancel",
+  "speedDetailEditNameError": "Could not save name",
 
   "statsTitle": "Statistics",
   "statsEmptyTitle": "No data yet",
