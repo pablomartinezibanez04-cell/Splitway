@@ -129,6 +129,14 @@ class TrackingEngine {
     }
     _points.add(point);
 
+    // Speed is a per-sample value — update it on every ingest so the live
+    // display tracks the GPS-reported speed instantly, regardless of gap
+    // detection state.
+    _lastSpeedMps = point.speedMps ?? _lastSpeedMps;
+    if ((point.speedMps ?? 0) > _maxSpeedMps) {
+      _maxSpeedMps = point.speedMps!;
+    }
+
     final prev = _previous;
     if (prev == null) {
       _previous = point;
@@ -149,15 +157,10 @@ class TrackingEngine {
       _recoveringUntil = null;
     }
 
-    _lastSpeedMps = point.speedMps ?? _lastSpeedMps;
-
     final stepDistance = prev.location.distanceTo(point.location);
     _totalDistanceMeters += stepDistance;
     _lapDistanceAccumulator += stepDistance;
     _sectorDistanceAccumulator += stepDistance;
-    if ((point.speedMps ?? 0) > _maxSpeedMps) {
-      _maxSpeedMps = point.speedMps!;
-    }
 
     if (_route.startFinishGate.crossedBy(prev.location, point.location)) {
       _onStartFinishCrossed(point.timestamp);

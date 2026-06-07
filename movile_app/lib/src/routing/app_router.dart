@@ -26,6 +26,7 @@ import '../services/logging/app_logger.dart';
 import '../services/auth/auth_service.dart';
 import '../services/garage/garage_service.dart';
 import '../services/locale/locale_controller.dart';
+import '../services/official_routes/official_routes_service.dart';
 import '../services/settings/app_settings_controller.dart';
 import '../services/geocoding/reverse_geocoding_service.dart';
 import '../services/routing/elevation_service.dart';
@@ -44,6 +45,7 @@ class AppRouter {
     required this.settingsController,
     required this.refreshListenable,
     this.authService,
+    this.officialRoutesService,
     SyncService? syncService,
     ProfileService? profileService,
     GarageService? garageService,
@@ -57,7 +59,7 @@ class AppRouter {
               : null,
           elevationService: ElevationService(),
           defaultRoutingProfile: settingsController.defaultRoutingProfile,
-          onRouteDeleted: settingsController.dismissDemoRoute,
+          officialRoutesService: officialRoutesService,
         ),
         _sessionController = LiveSessionController(repository),
         _freeRideController = FreeRideController(
@@ -78,6 +80,7 @@ class AppRouter {
   final AppSettingsController settingsController;
   final Listenable refreshListenable;
   final AuthService? authService;
+  final OfficialRoutesService? officialRoutesService;
   ProfileService? profileService;
   GarageService? garageService;
   late final RouteEditorController _editorController;
@@ -262,7 +265,10 @@ class AppRouter {
                   body: Center(child: Text('Not found')),
                 );
               }
-              return SpeedSessionDetailScreen(session: s);
+              return SpeedSessionDetailScreen(
+                session: s,
+                repository: speedRepository,
+              );
             },
           );
         },

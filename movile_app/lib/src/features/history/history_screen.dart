@@ -682,7 +682,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
             icon: const Icon(Icons.delete_outline),
             onPressed: () => _confirmDeleteSpeed(s),
           ),
-          onTap: () => context.push('/history/speed/${s.id}'),
+          onTap: () async {
+            await context.push('/history/speed/${s.id}');
+            if (mounted) _loadSpeed();
+          },
         );
       },
     );
@@ -1231,6 +1234,13 @@ class _FreeRideSummaryRow extends StatelessWidget {
       (l.historyAvgSpeedLabel, _speedLabel(l, ride.avgSpeedMps, settingsController)),
     ];
     final elevation = ride.elevationRangeMeters;
+    final duration = ride.totalDuration;
+    final secondaryEntries = <(String, String)>[
+      if (duration != null)
+        (l.freeRideElapsedLabel, Formatters.durationHms(duration)),
+      if (elevation != null)
+        (l.elevationRangeLabel, _elevationLabel(l, elevation, settingsController)),
+    ];
     return Column(
       children: [
         Row(
@@ -1254,24 +1264,28 @@ class _FreeRideSummaryRow extends StatelessWidget {
               ),
           ],
         ),
-        if (elevation != null) ...[
+        if (secondaryEntries.isNotEmpty) ...[
           const SizedBox(height: 8),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(l.elevationRangeLabel,
-                      style: Theme.of(context).textTheme.labelSmall),
-                  const SizedBox(width: 8),
-                  Text(
-                    _elevationLabel(l, elevation, settingsController),
-                    style: Theme.of(context).textTheme.titleMedium,
+          Row(
+            children: [
+              for (final e in secondaryEntries)
+                Expanded(
+                  child: Card(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Column(
+                        children: [
+                          Text(e.$1,
+                              style: Theme.of(context).textTheme.labelSmall),
+                          const SizedBox(height: 4),
+                          Text(e.$2,
+                              style: Theme.of(context).textTheme.titleMedium),
+                        ],
+                      ),
+                    ),
                   ),
-                ],
-              ),
-            ),
+                ),
+            ],
           ),
         ],
       ],

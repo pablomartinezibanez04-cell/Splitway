@@ -243,6 +243,11 @@
   "sessionGpsAccuracy": "Precisión: {accuracy} m · {lat}, {lng}",
   "@sessionGpsAccuracy": { "placeholders": { "accuracy": { "type": "String" }, "lat": { "type": "String" }, "lng": { "type": "String" } } },
   "sessionAwaitingFirstFix": "Esperando primer fix…",
+  "gpsSignalLabel": "Señal GPS",
+  "gpsSignalNone": "Sin conexión",
+  "gpsSignalLow": "Baja",
+  "gpsSignalMedium": "Media",
+  "gpsSignalHigh": "Alta",
   "sessionSimulatePoint": "Simular punto",
   "sessionPauseAuto": "Parar auto",
   "sessionAutoLap": "Auto vuelta",
@@ -553,6 +558,12 @@
   "speedHistoryDeleteTitle": "Eliminar sesión",
   "speedHistoryDeleteConfirm": "¿Eliminar \"{name}\"? Esta acción no se puede deshacer.",
   "@speedHistoryDeleteConfirm": { "placeholders": { "name": { "type": "String" } } },
+  "speedDetailEditNameTooltip": "Editar nombre",
+  "speedDetailEditNameTitle": "Editar nombre",
+  "speedDetailEditNameHint": "Nombre de la sesión",
+  "speedDetailEditNameSave": "Guardar",
+  "speedDetailEditNameCancel": "Cancelar",
+  "speedDetailEditNameError": "No se pudo guardar el nombre",
 
   "statsTitle": "Estadísticas",
   "statsEmptyTitle": "Aún no hay datos",
@@ -576,5 +587,7 @@
   "statsBestQuarterMileShort": "Mejor 1/4 mi",
   "statsNoSpeedSessionsForVehicle": "Sin tests",
   "statsUnknownVehicle": "Vehículo desconocido",
-  "statsMetricSelectorLabel": "Métrica:"
+  "statsMetricSelectorLabel": "Métrica:",
+  "recordingPauseButton": "Pausar recorrido",
+  "recordingResumeButton": "Reanudar"
 }

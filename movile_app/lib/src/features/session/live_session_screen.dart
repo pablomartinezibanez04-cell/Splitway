@@ -13,11 +13,13 @@ import '../../routing/app_router.dart';
 import '../../services/auth/auth_service.dart';
 import '../../services/garage/garage_service.dart';
 import '../../services/profile/profile_service.dart';
+import '../../services/sensors/device_heading_service.dart';
 import '../../services/settings/app_settings_controller.dart';
 import '../../shared/widgets/vehicle_picker_tile.dart';
 import '../../services/tracking/location_service.dart';
 import '../../shared/formatters.dart';
 import '../../shared/widgets/empty_state.dart';
+import '../../shared/widgets/gps_signal_badge.dart';
 import '../../shared/widgets/splitway_map.dart';
 import '../home/home_shell.dart';
 import 'live_session_controller.dart';
@@ -69,7 +71,15 @@ class LiveSessionScreen extends StatefulWidget {
 class _LiveSessionScreenState extends State<LiveSessionScreen>
     with WidgetsBindingObserver {
   int _lastEventCount = 0;
+  int _lastPointCount = 0;
+  double? _lastSentBearing;
   AudioPlayer? _audioPlayer;
+  final FlyToNotifier _flyToNotifier = FlyToNotifier();
+  Timer? _uiTicker;
+
+  /// Minimum heading change (degrees) that triggers a new flyTo while the
+  /// session is running. Filters out compass micro-jitter.
+  static const double _kBearingChangeThresholdDeg = 3.0;
 
   @override
   void initState() {
@@ -78,6 +88,13 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
     widget.controller.addListener(_onChange);
     widget.authService?.addListener(_onChange);
     widget.settingsController.addListener(_onSettingsChanged);
+    // 1 Hz tick so the lap-elapsed display keeps ticking between GPS samples.
+    _uiTicker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      if (widget.controller.stage == LiveSessionStage.running) {
+        setState(() {});
+      }
+    });
     widget.controller.load().then((_) {
       if (!mounted) return;
       if (widget.controller.selectedVehicleId == null) {
@@ -96,6 +113,8 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
     widget.authService?.removeListener(_onChange);
     widget.settingsController.removeListener(_onSettingsChanged);
     WakelockPlus.disable().catchError((_) {});
+    _uiTicker?.cancel();
+    _flyToNotifier.dispose();
     _audioPlayer?.dispose();
     super.dispose();
   }
@@ -115,6 +134,30 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
   void _onChange() {
     _updateWakelock();
     _onNewEvents();
+    final ctrl = widget.controller;
+    if (ctrl.stage == LiveSessionStage.running) {
+      final ingested = ctrl.tracker?.ingested ?? const [];
+      final bearing = ctrl.currentBearingDeg;
+      final pointChanged = ingested.length > _lastPointCount;
+      final bearingChanged = bearing != null &&
+          (_lastSentBearing == null ||
+              angularDifferenceDeg(bearing, _lastSentBearing!).abs() >=
+                  _kBearingChangeThresholdDeg);
+      if ((pointChanged || bearingChanged) && ingested.isNotEmpty) {
+        // Match the user-marker glide (~850 ms) on point changes so the
+        // camera and the dot reach the new fix together; keep 300 ms for
+        // bearing-only updates so compass rotation stays snappy.
+        _flyToNotifier.flyTo(
+          ingested.last.location,
+          bearing: bearing,
+          animationDuration: pointChanged
+              ? const Duration(milliseconds: 850)
+              : const Duration(milliseconds: 300),
+        );
+        _lastSentBearing = bearing;
+      }
+      _lastPointCount = ingested.length;
+    }
     setState(() {});
   }
 
@@ -162,7 +205,8 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final ctrl = widget.controller;
-    final isRunning = ctrl.stage == LiveSessionStage.running;
+    final isRunning = ctrl.stage == LiveSessionStage.running ||
+        ctrl.stage == LiveSessionStage.paused;
     return ListenableBuilder(
       listenable: widget.settingsController,
       builder: (context, _) => Scaffold(
@@ -184,6 +228,7 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
           LiveSessionStage.selecting => _buildEmpty(context),
           LiveSessionStage.ready => _buildReady(context, ctrl),
           LiveSessionStage.running => _buildRunning(context, ctrl),
+          LiveSessionStage.paused => _buildRunning(context, ctrl),
           LiveSessionStage.finished => _buildFinished(context, ctrl),
         },
       ),
@@ -331,9 +376,16 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
       widget.profileService,
     );
 
+    // Inset the map below the status bar so Mapbox's compass / attribution
+    // badges aren't hidden behind the system UI.
+    final topInset = MediaQuery.of(context).padding.top;
     return Stack(
       children: [
-        Positioned.fill(
+        Positioned(
+          top: topInset,
+          left: 0,
+          right: 0,
+          bottom: 0,
           child: SplitwayMap(
             useMapbox: widget.config.hasMapbox,
             route: route,
@@ -342,6 +394,7 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
             userLocation: tracker.ingested.isNotEmpty
                 ? tracker.ingested.last.location
                 : null,
+            flyToNotifier: _flyToNotifier,
           ),
         ),
         if (drawerLeading != null)
@@ -398,6 +451,20 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
                   ),
                   const SizedBox(height: 8),
                 ],
+                if (ctrl.source == TrackingSource.realGps) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(
+                        left: 16, right: 16, bottom: 8),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: GpsSignalBadge(
+                        lastPoint: tracker.ingested.isNotEmpty
+                            ? tracker.ingested.last
+                            : null,
+                      ),
+                    ),
+                  ),
+                ],
                 Container(
                   decoration: BoxDecoration(
                     color:
@@ -428,8 +495,11 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
                         ),
                       ],
                       const SizedBox(height: 12),
-                      FilledButton.icon(
-                        onPressed: () async {
+                      _SessionRecordingActions(
+                        isPaused: ctrl.stage == LiveSessionStage.paused,
+                        onPause: ctrl.pauseSession,
+                        onResume: ctrl.resumeSession,
+                        onFinish: () async {
                           final savedText = l.sessionSavedSnackBar;
                           final messenger = ScaffoldMessenger.of(context);
                           final session = await ctrl.finishSession();
@@ -438,12 +508,7 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
                             SnackBar(content: Text(savedText)),
                           );
                         },
-                        icon: const Icon(Icons.stop),
-                        label: Text(l.sessionFinishButton),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: Colors.redAccent,
-                          minimumSize: const Size.fromHeight(48),
-                        ),
+                        finishLabel: l.sessionFinishButton,
                       ),
                     ],
                   ),
@@ -539,6 +604,65 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
   }
 }
 
+class _SessionRecordingActions extends StatelessWidget {
+  const _SessionRecordingActions({
+    required this.isPaused,
+    required this.onPause,
+    required this.onResume,
+    required this.onFinish,
+    required this.finishLabel,
+  });
+
+  final bool isPaused;
+  final VoidCallback onPause;
+  final VoidCallback onResume;
+  final VoidCallback onFinish;
+  final String finishLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    if (!isPaused) {
+      return FilledButton.icon(
+        onPressed: onPause,
+        icon: const Icon(Icons.pause),
+        label: Text(l.recordingPauseButton),
+        style: FilledButton.styleFrom(
+          backgroundColor: Colors.orange.shade700,
+          minimumSize: const Size.fromHeight(48),
+        ),
+      );
+    }
+    return Row(
+      children: [
+        Expanded(
+          child: FilledButton.icon(
+            onPressed: onResume,
+            icon: const Icon(Icons.play_arrow),
+            label: Text(l.recordingResumeButton),
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.green.shade700,
+              minimumSize: const Size.fromHeight(48),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: FilledButton.icon(
+            onPressed: onFinish,
+            icon: const Icon(Icons.stop),
+            label: Text(finishLabel),
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              minimumSize: const Size.fromHeight(48),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _MetricsRow extends StatelessWidget {
   const _MetricsRow({
     required this.snapshot,
@@ -564,10 +688,7 @@ class _MetricsRow extends StatelessWidget {
         Expanded(
           child: _CompactMetric(
             label: l.sessionLapTimeLabel,
-            value: Formatters.duration(
-              snapshot.currentLapElapsed,
-              dotSeparator: settingsController.timeFormatDot,
-            ),
+            value: Formatters.durationHms(snapshot.currentLapElapsed),
           ),
         ),
         Expanded(

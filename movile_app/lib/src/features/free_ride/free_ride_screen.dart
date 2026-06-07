@@ -1,4 +1,6 @@
 // movile_app/lib/src/features/free_ride/free_ride_screen.dart
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -10,10 +12,12 @@ import '../../routing/app_router.dart';
 import '../../services/auth/auth_service.dart';
 import '../../services/garage/garage_service.dart';
 import '../../services/profile/profile_service.dart';
+import '../../services/sensors/device_heading_service.dart';
 import '../../services/settings/app_settings_controller.dart';
 import '../../services/tracking/location_service.dart';
 import '../../shared/formatters.dart';
 import '../../shared/widgets/empty_state.dart';
+import '../../shared/widgets/gps_signal_badge.dart';
 import '../../shared/widgets/splitway_map.dart';
 import '../../shared/widgets/vehicle_picker_tile.dart';
 import '../home/home_shell.dart';
@@ -46,7 +50,14 @@ class _FreeRideScreenState extends State<FreeRideScreen>
   final FlyToNotifier _flyToNotifier = FlyToNotifier();
   bool _followUser = true;
   int _lastPointCount = 0;
+  double? _lastSentBearing;
   GeoPoint? _initialCenter;
+  Timer? _uiTicker;
+
+  /// Minimum heading change (degrees) that triggers a new flyTo. Smaller
+  /// movements are filtered out so we don't spam the Mapbox channel with
+  /// micro-rotations.
+  static const double _kBearingChangeThresholdDeg = 3.0;
 
   @override
   void initState() {
@@ -54,6 +65,11 @@ class _FreeRideScreenState extends State<FreeRideScreen>
     WidgetsBinding.instance.addObserver(this);
     widget.controller.addListener(_onChange);
     widget.settingsController.addListener(_onSettingsChanged);
+    // 1 Hz UI tick so the elapsed timer keeps ticking between GPS samples.
+    _uiTicker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      if (widget.controller.stage == FreeRideStage.recording) setState(() {});
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (widget.controller.selectedVehicleId == null) {
@@ -71,6 +87,7 @@ class _FreeRideScreenState extends State<FreeRideScreen>
     widget.controller.removeListener(_onChange);
     widget.settingsController.removeListener(_onSettingsChanged);
     WakelockPlus.disable().catchError((_) {});
+    _uiTicker?.cancel();
     _flyToNotifier.dispose();
     super.dispose();
   }
@@ -90,8 +107,23 @@ class _FreeRideScreenState extends State<FreeRideScreen>
     final ctrl = widget.controller;
     if (ctrl.stage == FreeRideStage.recording && _followUser) {
       final points = ctrl.ingested;
-      if (points.length > _lastPointCount && points.isNotEmpty) {
-        _flyToNotifier.flyTo(points.last.location);
+      final bearing = ctrl.currentBearingDeg;
+      final pointChanged = points.length > _lastPointCount;
+      final bearingChanged = bearing != null &&
+          (_lastSentBearing == null ||
+              angularDifferenceDeg(bearing, _lastSentBearing!).abs() >=
+                  _kBearingChangeThresholdDeg);
+      if ((pointChanged || bearingChanged) && points.isNotEmpty) {
+        // On point changes, match the user-marker glide so the camera and
+        // the dot arrive together; on bearing-only updates stay snappy.
+        _flyToNotifier.flyTo(
+          points.last.location,
+          bearing: bearing,
+          animationDuration: pointChanged
+              ? const Duration(milliseconds: 850)
+              : const Duration(milliseconds: 300),
+        );
+        _lastSentBearing = bearing;
       }
       _lastPointCount = points.length;
     }
@@ -175,7 +207,8 @@ class _FreeRideScreenState extends State<FreeRideScreen>
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final ctrl = widget.controller;
-    final isRecording = ctrl.stage == FreeRideStage.recording;
+    final isRecording = ctrl.stage == FreeRideStage.recording ||
+        ctrl.stage == FreeRideStage.paused;
     return ListenableBuilder(
       listenable: widget.settingsController,
       builder: (context, _) => Scaffold(
@@ -196,6 +229,7 @@ class _FreeRideScreenState extends State<FreeRideScreen>
         body: switch (ctrl.stage) {
           FreeRideStage.idle => _buildIdle(context, ctrl),
           FreeRideStage.recording => _buildRecording(context, ctrl),
+          FreeRideStage.paused => _buildRecording(context, ctrl),
           FreeRideStage.finished => _buildFinished(context, ctrl),
         },
       ),
@@ -288,9 +322,16 @@ class _FreeRideScreenState extends State<FreeRideScreen>
       widget.profileService,
     );
 
+    // Inset the map below the status bar so Mapbox's compass / attribution
+    // badges aren't hidden behind the system UI.
+    final topInset = MediaQuery.of(context).padding.top;
     return Stack(
       children: [
-        Positioned.fill(
+        Positioned(
+          top: topInset,
+          left: 0,
+          right: 0,
+          bottom: 0,
           child: SplitwayMap(
             useMapbox: widget.config.hasMapbox,
             telemetry: ctrl.ingested,
@@ -355,14 +396,23 @@ class _FreeRideScreenState extends State<FreeRideScreen>
                   const SizedBox(height: 8),
                 ],
                 Padding(
-                  padding: const EdgeInsets.only(right: 16, bottom: 8),
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: FloatingActionButton.small(
-                      heroTag: 'free_ride_center',
-                      onPressed: _centerOnUser,
-                      child: const Icon(Icons.my_location),
-                    ),
+                  padding:
+                      const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      GpsSignalBadge(
+                        lastPoint: ctrl.ingested.isNotEmpty
+                            ? ctrl.ingested.last
+                            : null,
+                      ),
+                      const Spacer(),
+                      FloatingActionButton.small(
+                        heroTag: 'free_ride_center',
+                        onPressed: _centerOnUser,
+                        child: const Icon(Icons.my_location),
+                      ),
+                    ],
                   ),
                 ),
                 Container(
@@ -380,11 +430,7 @@ class _FreeRideScreenState extends State<FreeRideScreen>
                           Expanded(
                             child: _CompactMetric(
                               label: l.freeRideElapsedLabel,
-                              value: Formatters.duration(
-                                snap.elapsed,
-                                dotSeparator:
-                                    widget.settingsController.timeFormatDot,
-                              ),
+                              value: Formatters.durationHms(ctrl.currentElapsed),
                             ),
                           ),
                           Expanded(
@@ -403,8 +449,11 @@ class _FreeRideScreenState extends State<FreeRideScreen>
                         ],
                       ),
                       const SizedBox(height: 12),
-                      FilledButton.icon(
-                        onPressed: () async {
+                      _RecordingActions(
+                        isPaused: ctrl.stage == FreeRideStage.paused,
+                        onPause: ctrl.pauseRecording,
+                        onResume: ctrl.resumeRecording,
+                        onFinish: () async {
                           final savedText = l.freeRideSavedSnackBar;
                           final messenger = ScaffoldMessenger.of(context);
                           await ctrl.finishRecording();
@@ -413,12 +462,7 @@ class _FreeRideScreenState extends State<FreeRideScreen>
                             SnackBar(content: Text(savedText)),
                           );
                         },
-                        icon: const Icon(Icons.stop),
-                        label: Text(l.freeRideFinishButton),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: Colors.redAccent,
-                          minimumSize: const Size.fromHeight(48),
-                        ),
+                        finishLabel: l.freeRideFinishButton,
                       ),
                     ],
                   ),
@@ -694,6 +738,65 @@ class _FreeRideScreenState extends State<FreeRideScreen>
       SnackBar(content: Text(l.freeRideRouteSavedSnack(route.name))),
     );
     ctrl.resetForNewRide();
+  }
+}
+
+class _RecordingActions extends StatelessWidget {
+  const _RecordingActions({
+    required this.isPaused,
+    required this.onPause,
+    required this.onResume,
+    required this.onFinish,
+    required this.finishLabel,
+  });
+
+  final bool isPaused;
+  final VoidCallback onPause;
+  final VoidCallback onResume;
+  final VoidCallback onFinish;
+  final String finishLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    if (!isPaused) {
+      return FilledButton.icon(
+        onPressed: onPause,
+        icon: const Icon(Icons.pause),
+        label: Text(l.recordingPauseButton),
+        style: FilledButton.styleFrom(
+          backgroundColor: Colors.orange.shade700,
+          minimumSize: const Size.fromHeight(48),
+        ),
+      );
+    }
+    return Row(
+      children: [
+        Expanded(
+          child: FilledButton.icon(
+            onPressed: onResume,
+            icon: const Icon(Icons.play_arrow),
+            label: Text(l.recordingResumeButton),
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.green.shade700,
+              minimumSize: const Size.fromHeight(48),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: FilledButton.icon(
+            onPressed: onFinish,
+            icon: const Icon(Icons.stop),
+            label: Text(finishLabel),
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              minimumSize: const Size.fromHeight(48),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 

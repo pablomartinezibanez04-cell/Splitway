@@ -93,6 +93,7 @@ FreeRideRun _makeFreeRide(String id, String name) => FreeRideRun(
 
 /// Seeds the repository with Jarama route, Montmeló route, two sessions and a free ride.
 Future<void> _seed(LocalDraftRepository repo) async {
+  repo.userId = 'test-user';
   final jarama = _makeRoute('route-jarama', 'Jarama');
   final montmelo = _makeRoute('route-montmelo', 'Montmeló');
   await repo.saveRouteTemplate(jarama);
@@ -298,6 +299,7 @@ void main() {
     await tester.runAsync(() async {
       boot = await _openRepo();
       settings = await AppSettingsController.load();
+      boot.repo.userId = 'test-user';
       final routeA = _makeRoute('route-chip-a', 'Ruta Chip A');
       await boot.repo.saveRouteTemplate(routeA);
       await boot.repo.saveSessionRun(
@@ -362,6 +364,7 @@ void main() {
     await tester.runAsync(() async {
       boot = await _openRepo();
       settings = await AppSettingsController.load();
+      boot.repo.userId = 'test-user';
       final routeA = _makeRoute('route-del-a', 'Ruta Del A');
       final routeB = _makeRoute('route-del-b', 'Ruta Del B');
       await boot.repo.saveRouteTemplate(routeA);
@@ -457,6 +460,7 @@ void main() {
     await tester.runAsync(() async {
       boot = await _openRepo();
       settings = await AppSettingsController.load();
+      boot.repo.userId = 'test-user';
 
       // Create one special "needle" route/session with the oldest date so it
       // sorts last in the descending-date order (i.e. it will be beyond the
@@ -547,6 +551,7 @@ void main() {
     await tester.runAsync(() async {
       boot = await _openRepo();
       settings = await AppSettingsController.load();
+      boot.repo.userId = 'test-user';
 
       // 35 "filler" sessions with newer dates.
       for (var i = 0; i < 35; i++) {
@@ -635,6 +640,7 @@ void main() {
     await tester.runAsync(() async {
       boot = await _openRepo();
       settings = await AppSettingsController.load();
+      boot.repo.userId = 'test-user';
 
       // Two routes.
       final routeA = _makeRoute('route-a', 'Ruta A');

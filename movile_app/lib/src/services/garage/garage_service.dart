@@ -17,6 +17,23 @@ class GarageService extends ChangeNotifier {
 
   final GarageRepository? _repository;
 
+  /// Set when [dispose] runs. Async methods kicked off before dispose may
+  /// still complete afterwards and attempt to mutate state / notify
+  /// listeners — both become no-ops once this is true.
+  bool _disposed = false;
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
+  @override
+  void notifyListeners() {
+    if (_disposed) return;
+    super.notifyListeners();
+  }
+
   List<Vehicle> _vehicles = const [];
   List<Vehicle> get vehicles => _vehicles;
 

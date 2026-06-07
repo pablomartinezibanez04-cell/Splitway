@@ -11,6 +11,23 @@ class ProfileService extends ChangeNotifier {
   final ProfileRepository _repository;
   final SupabaseClient? _client;
 
+  /// Set when [dispose] runs. Async methods kicked off before dispose may
+  /// still complete afterwards and attempt to mutate state / notify
+  /// listeners — both become no-ops once this is true.
+  bool _disposed = false;
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
+  @override
+  void notifyListeners() {
+    if (_disposed) return;
+    super.notifyListeners();
+  }
+
   UserProfile? _profile;
   UserProfile? get profile => _profile;
 
@@ -48,6 +65,32 @@ class ProfileService extends ChangeNotifier {
   /// onboarding form submits.
   Future<void> refreshCompleteness() async {
     await loadProfile();
+
+    // Email-signup users typed their nickname + DOB into the signup
+    // form, which stores them in auth.user_metadata. If the profile
+    // row doesn't exist yet (first sign-in after email confirmation),
+    // auto-create it from that metadata so they don't bounce through
+    // the onboarding screen. Google OAuth users won't have DOB in
+    // metadata, so they fall through to onboarding as expected.
+    if (_profile == null && _client != null) {
+      final user = _client.auth.currentUser;
+      final meta = user?.userMetadata;
+      final metaNickname = meta?['nickname'] as String?;
+      final metaDobStr = meta?['date_of_birth'] as String?;
+      final metaDob = metaDobStr != null ? DateTime.tryParse(metaDobStr) : null;
+      if (metaNickname != null &&
+          metaNickname.trim().isNotEmpty &&
+          metaDob != null) {
+        try {
+          _profile = await _repository.createProfile(
+            nickname: metaNickname.trim(),
+            dateOfBirth: metaDob,
+          );
+        } catch (e) {
+          debugPrint('ProfileService bootstrap from metadata failed: $e');
+        }
+      }
+    }
 
     final hasRequiredFields = _profile?.hasRequiredFields ?? false;
     bool hasPassword = false;

@@ -107,7 +107,7 @@ void main() {
     });
 
     group('gap detection', () {
-      test('gap skips distance and speed updates', () {
+      test('gap skips distance accumulation but updates speed', () {
         engine.start();
         engine.ingest(TelemetryPoint(
           timestamp: baseTime,
@@ -121,8 +121,6 @@ void main() {
         ));
 
         final preGapDistance = engine.snapshot.totalDistanceMeters;
-        final preGapMax = engine.snapshot.maxSpeedMps;
-        final preGapCurrent = engine.snapshot.currentSpeedMps;
 
         // 10-second gap — exceeds the 5 s threshold
         engine.ingest(TelemetryPoint(
@@ -131,12 +129,15 @@ void main() {
           speedMps: 99.0,
         ));
 
+        // Distance must not jump across the gap (anti-teleport guard).
         expect(engine.snapshot.totalDistanceMeters, preGapDistance);
-        expect(engine.snapshot.maxSpeedMps, preGapMax);
-        expect(engine.snapshot.currentSpeedMps, preGapCurrent);
+        // But speed is per-sample — the latest reading is shown immediately.
+        expect(engine.snapshot.currentSpeedMps, 99.0);
+        expect(engine.snapshot.maxSpeedMps, 99.0);
       });
 
-      test('recovery window skips metrics for subsequent points', () {
+      test('recovery window skips distance accumulation but keeps speed live',
+          () {
         engine.start();
         engine.ingest(TelemetryPoint(
           timestamp: baseTime,
@@ -166,7 +167,9 @@ void main() {
         ));
 
         expect(engine.snapshot.totalDistanceMeters, preGapDistance);
-        expect(engine.snapshot.maxSpeedMps, 5.0);
+        // Speed is per-sample and updates regardless of gap state.
+        expect(engine.snapshot.currentSpeedMps, 40.0);
+        expect(engine.snapshot.maxSpeedMps, 50.0);
       });
 
       test('normal tracking resumes after recovery window', () {
@@ -206,7 +209,9 @@ void main() {
 
         expect(engine.snapshot.totalDistanceMeters, greaterThan(preResumeDistance));
         expect(engine.snapshot.currentSpeedMps, 12.0);
-        expect(engine.snapshot.maxSpeedMps, 12.0);
+        // Max captures the peak across the whole session, including during
+        // the gap/recovery window where in-gap samples (50) are observed.
+        expect(engine.snapshot.maxSpeedMps, 50.0);
       });
     });
   });

@@ -191,14 +191,28 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
                     label: Text(l.editorNewRouteButton),
                   ),
                 )
-              : _viewMode == _ViewMode.list
-                  ? _buildListView(ctrl)
-                  : _buildGridView(ctrl),
+              : RefreshIndicator(
+                  onRefresh: _refreshOfficialCatalog,
+                  child: _viewMode == _ViewMode.list
+                      ? _buildListView(ctrl)
+                      : _buildGridView(ctrl),
+                ),
     );
+  }
+
+  /// Pull-to-refresh callback: re-fetch the official catalog from Supabase
+  /// and reconcile with local state. Returns a Future the indicator awaits.
+  Future<void> _refreshOfficialCatalog() async {
+    final svc = widget.controller.officialRoutesService;
+    if (svc == null) return;
+    await svc.refresh();
   }
 
   Widget _buildListView(RouteEditorController ctrl) {
     return ListView.separated(
+      // AlwaysScrollableScrollPhysics so the pull gesture works even when the
+      // list is too short to overscroll on its own.
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
       itemCount: ctrl.routes.length,
       separatorBuilder: (_, __) => const SizedBox(height: 8),
@@ -217,6 +231,7 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
 
   Widget _buildGridView(RouteEditorController ctrl) {
     return GridView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,

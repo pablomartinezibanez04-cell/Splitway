@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart' hide Image;
@@ -46,8 +47,20 @@ class FlyToNotifier extends ChangeNotifier {
   GeoPoint? _target;
   GeoPoint? get target => _target;
 
-  void flyTo(GeoPoint point) {
+  double? _bearing;
+  double? get bearing => _bearing;
+
+  Duration _animationDuration = const Duration(milliseconds: 800);
+  Duration get animationDuration => _animationDuration;
+
+  void flyTo(
+    GeoPoint point, {
+    double? bearing,
+    Duration animationDuration = const Duration(milliseconds: 800),
+  }) {
     _target = point;
+    _bearing = bearing;
+    _animationDuration = animationDuration;
     notifyListeners();
   }
 }
@@ -126,7 +139,14 @@ class SplitwayMap extends StatefulWidget {
 const String _kHeatmapSourceId = 'splitway-speed-src';
 const String _kHeatmapLayerId = 'splitway-speed-layer';
 
-class _SplitwayMapState extends State<SplitwayMap> {
+/// Duration of the smooth glide applied to the user-location dot between two
+/// consecutive GPS samples. Chosen to roughly match a 1 Hz sample cadence so
+/// the marker reaches its target just as the next fix arrives, mirroring
+/// Google Maps' navigation feel.
+const Duration _kUserMarkerGlideDuration = Duration(milliseconds: 850);
+
+class _SplitwayMapState extends State<SplitwayMap>
+    with SingleTickerProviderStateMixin {
   mbx.MapboxMap? _map;
   mbx.PolylineAnnotationManager? _lineManager;
   mbx.CircleAnnotationManager? _circleManager;
@@ -136,10 +156,26 @@ class _SplitwayMapState extends State<SplitwayMap> {
   bool _renderPending = false;
   MapStyle _mapStyle = MapStyle.outdoors;
 
+  // Smooth user-location marker animation: interpolates between the previous
+  // visible position and the latest GPS fix instead of teleporting on every
+  // sample.
+  late final AnimationController _userMarkerAnim;
+  GeoPoint? _markerStart;
+  GeoPoint? _markerEnd;
+  GeoPoint? _animatedUserLocation;
+  mbx.CircleAnnotation? _userCircleAnnotation;
+  bool _userMarkerUpdateInFlight = false;
+  bool _userMarkerUpdatePending = false;
+
   @override
   void initState() {
     super.initState();
     widget.flyToNotifier?.addListener(_onFlyToChanged);
+    _userMarkerAnim = AnimationController(
+      vsync: this,
+      duration: _kUserMarkerGlideDuration,
+    )..addListener(_onUserMarkerTick);
+    _animatedUserLocation = widget.userLocation;
     _loadMapStyle();
   }
 
@@ -190,11 +226,15 @@ class _SplitwayMapState extends State<SplitwayMap> {
     }
     _lineManager = await map.annotations.createPolylineAnnotationManager();
     _circleManager = await map.annotations.createCircleAnnotationManager();
+    // The old user-circle handle belonged to the removed manager — drop it
+    // so the next render recreates it on the new manager.
+    _userCircleAnnotation = null;
   }
 
   @override
   void dispose() {
     widget.flyToNotifier?.removeListener(_onFlyToChanged);
+    _userMarkerAnim.dispose();
     final map = _map;
     if (map != null) {
       map.removeInteraction('splitway-tap');
@@ -203,17 +243,134 @@ class _SplitwayMapState extends State<SplitwayMap> {
     super.dispose();
   }
 
+  /// Called on every animation frame while the user-marker is gliding between
+  /// two GPS samples. Interpolates the current position and pushes it to the
+  /// existing circle annotation via [_ensureUserMarker] (no full re-render).
+  void _onUserMarkerTick() {
+    final start = _markerStart;
+    final end = _markerEnd;
+    if (start == null || end == null) return;
+    final t = _userMarkerAnim.value;
+    _animatedUserLocation = GeoPoint(
+      latitude: start.latitude + (end.latitude - start.latitude) * t,
+      longitude: start.longitude + (end.longitude - start.longitude) * t,
+    );
+    // Fire-and-forget: the helper itself coalesces overlapping calls.
+    unawaited(_ensureUserMarker());
+  }
+
+  /// Starts (or restarts) the glide animation from the currently-visible
+  /// position to [target]. The first time a user location appears, we snap
+  /// instantly — there is nothing to animate from.
+  void _animateUserMarkerTo(GeoPoint? target) {
+    if (target == null) {
+      // User location was cleared.
+      _userMarkerAnim.stop();
+      _markerStart = null;
+      _markerEnd = null;
+      _animatedUserLocation = null;
+      unawaited(_ensureUserMarker());
+      return;
+    }
+    final from = _animatedUserLocation;
+    if (from == null) {
+      // First fix — show immediately, no glide.
+      _animatedUserLocation = target;
+      _markerStart = target;
+      _markerEnd = target;
+      unawaited(_ensureUserMarker());
+      return;
+    }
+    _markerStart = from;
+    _markerEnd = target;
+    _userMarkerAnim
+      ..stop()
+      ..forward(from: 0);
+  }
+
+  /// Creates the user-location circle on first use, updates its geometry
+  /// in-place on subsequent frames, or removes it when there is no fix.
+  /// Coalesces overlapping calls so the Pigeon channel isn't flooded if the
+  /// animation ticks faster than the platform side can apply updates.
+  Future<void> _ensureUserMarker() async {
+    if (_userMarkerUpdateInFlight) {
+      _userMarkerUpdatePending = true;
+      return;
+    }
+    _userMarkerUpdateInFlight = true;
+    try {
+      await _ensureUserMarkerCore();
+    } finally {
+      _userMarkerUpdateInFlight = false;
+      if (_userMarkerUpdatePending) {
+        _userMarkerUpdatePending = false;
+        unawaited(_ensureUserMarker());
+      }
+    }
+  }
+
+  Future<void> _ensureUserMarkerCore() async {
+    final circleMgr = _circleManager;
+    if (circleMgr == null || !mounted) return;
+    final pos = _animatedUserLocation;
+    final existing = _userCircleAnnotation;
+
+    if (pos == null) {
+      if (existing != null) {
+        try {
+          await circleMgr.delete(existing);
+        } on PlatformException {
+          // Channel torn down — drop the handle silently.
+        }
+        _userCircleAnnotation = null;
+      }
+      return;
+    }
+
+    final geometry = mbx.Point(
+      coordinates: mbx.Position(pos.longitude, pos.latitude),
+    );
+    if (existing == null) {
+      try {
+        _userCircleAnnotation = await circleMgr.create(
+          mbx.CircleAnnotationOptions(
+            geometry: geometry,
+            circleColor: 0xFF2196F3,
+            circleRadius: 10,
+            circleStrokeColor: 0xFFFFFFFF,
+            circleStrokeWidth: 3,
+          ),
+        );
+      } on PlatformException {
+        // Channel torn down — try again on the next render.
+      }
+    } else {
+      existing.geometry = geometry;
+      try {
+        await circleMgr.update(existing);
+      } on PlatformException {
+        // Handle invalidated (style swap, dispose) — clear so the next tick
+        // recreates it.
+        _userCircleAnnotation = null;
+      }
+    }
+  }
+
   void _onFlyToChanged() {
-    final target = widget.flyToNotifier?.target;
+    final notifier = widget.flyToNotifier;
+    final target = notifier?.target;
     if (target == null || _map == null || !mounted) return;
+    final bearing = notifier?.bearing;
+    final durationMs = notifier?.animationDuration.inMilliseconds ?? 800;
     _map!.flyTo(
       mbx.CameraOptions(
         center: mbx.Point(
           coordinates: mbx.Position(target.longitude, target.latitude),
         ),
-        zoom: 15,
+        zoom: 17,
+        bearing: bearing,
       ),
-      mbx.MapAnimationOptions(duration: 800),
+      mbx.MapAnimationOptions(duration: durationMs),
     ).catchError((_) {
       // Map channel torn down — ignore silently.
     });
@@ -247,9 +404,11 @@ class _SplitwayMapState extends State<SplitwayMap> {
           ),
         if (showStyleButton)
           Positioned(
-            top: 8,
+            // Sits just below the Mapbox compass (anchored top-right,
+            // ~40dp tall with an 8dp top margin).
+            top: 56,
             right: 8,
-            child: SafeArea(child: _buildStyleButton(context)),
+            child: _buildStyleButton(context),
           ),
       ],
     );
@@ -322,9 +481,9 @@ class _SplitwayMapState extends State<SplitwayMap> {
     }
 
     final routeChanged = oldWidget.route != widget.route;
+    final userLocationChanged = oldWidget.userLocation != widget.userLocation;
     final annotationsChanged = routeChanged ||
         oldWidget.telemetry.length != widget.telemetry.length ||
-        oldWidget.userLocation != widget.userLocation ||
         oldWidget.draftPath.length != widget.draftPath.length ||
         oldWidget.draftWaypoints.length != widget.draftWaypoints.length ||
         oldWidget.draftSectorPoints.length != widget.draftSectorPoints.length ||
@@ -336,6 +495,10 @@ class _SplitwayMapState extends State<SplitwayMap> {
         oldWidget.speedHeatmapUnit != widget.speedHeatmapUnit;
 
     if (annotationsChanged) _renderAnnotations();
+
+    // User-location updates are handled by the dedicated marker animation so
+    // the dot glides smoothly instead of teleporting on every GPS sample.
+    if (userLocationChanged) _animateUserMarkerTo(widget.userLocation);
 
     // Fly to fit whenever the user selects a different route.
     if (routeChanged) _flyToFitRoute();
@@ -700,22 +863,11 @@ class _SplitwayMapState extends State<SplitwayMap> {
     }
 
     if (!mounted) return;
-    // User location dot.
-    final userLoc = widget.userLocation;
-    if (userLoc != null) {
-      try {
-        await circleMgr.create(mbx.CircleAnnotationOptions(
-          geometry: mbx.Point(
-              coordinates: mbx.Position(userLoc.longitude, userLoc.latitude)),
-          circleColor: 0xFF2196F3,
-          circleRadius: 10,
-          circleStrokeColor: 0xFFFFFFFF,
-          circleStrokeWidth: 3,
-        ));
-      } on PlatformException {
-        return;
-      }
-    }
+    // The user-location dot is managed separately so it can glide smoothly
+    // between GPS samples. The full render above wiped it (via deleteAll),
+    // so re-create it now at the current animated position.
+    _userCircleAnnotation = null;
+    await _ensureUserMarker();
   }
 
   mbx.LineString _toLineString(List<GeoPoint> points) {

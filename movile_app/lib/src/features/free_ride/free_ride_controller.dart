@@ -6,16 +6,23 @@ import 'package:splitway_core/splitway_core.dart';
 
 import '../../data/repositories/local_draft_repository.dart';
 import '../../services/geocoding/reverse_geocoding_service.dart';
+import '../../services/sensors/device_heading_service.dart';
 import '../../services/tracking/background_tracking_service.dart';
 import '../../services/tracking/location_service.dart';
 
-enum FreeRideStage { idle, recording, finished }
+enum FreeRideStage { idle, recording, paused, finished }
 
 class FreeRideController extends ChangeNotifier {
-  FreeRideController(this._repo, {this.geocodingService});
+  FreeRideController(
+    this._repo, {
+    this.geocodingService,
+    DeviceHeadingService? headingService,
+  }) : _headingService = headingService ?? DeviceHeadingService();
 
   final LocalDraftRepository _repo;
   final ReverseGeocodingService? geocodingService;
+  final DeviceHeadingService _headingService;
+  StreamSubscription<double>? _headingSub;
 
   FreeRideStage _stage = FreeRideStage.idle;
   FreeRideStage get stage => _stage;
@@ -51,6 +58,18 @@ class FreeRideController extends ChangeNotifier {
 
   int _distanceFilterMeters = 0;
 
+  DateTime? _recordingStartedAt;
+  DateTime? _pausedAt;
+  Duration _accumulatedElapsed = Duration.zero;
+
+  /// Wall-clock elapsed time since recording started, freezing while paused.
+  Duration get currentElapsed {
+    final started = _recordingStartedAt;
+    if (started == null) return _accumulatedElapsed;
+    if (_pausedAt != null) return _accumulatedElapsed;
+    return _accumulatedElapsed + DateTime.now().difference(started);
+  }
+
   Future<void> startRecording({
     int distanceFilterMeters = 0,
     bool backgroundActive = false,
@@ -76,28 +95,81 @@ class FreeRideController extends ChangeNotifier {
     _engine!.start();
     _ingested.clear();
     _stage = FreeRideStage.recording;
+    _recordingStartedAt = DateTime.now();
+    _pausedAt = null;
+    _accumulatedElapsed = Duration.zero;
     notifyListeners();
 
+    _subscribeToGps();
+    _subscribeToHeading();
+
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (_backgroundActive) {
+        final snap = snapshot;
+        final distKm = (snap.totalDistanceMeters / 1000).toStringAsFixed(1);
+        BackgroundTrackingService.updateNotification(
+          distance: '$distKm km',
+          time: _formatElapsed(currentElapsed),
+        );
+      }
+      notifyListeners();
+    });
+  }
+
+  void _subscribeToGps() {
     _gpsSub = LocationService.positionStream(
-      distanceFilterMeters: distanceFilterMeters,
+      distanceFilterMeters: _distanceFilterMeters,
       backgroundMode: _backgroundActive,
     ).listen((point) {
       ingestPoint(point);
     }, onError: (_) {
       // GPS error — keep recording what we have.
     });
+  }
 
-    _ticker = Timer.periodic(const Duration(milliseconds: 500), (_) {
-      if (_backgroundActive) {
-        final snap = snapshot;
-        final distKm = (snap.totalDistanceMeters / 1000).toStringAsFixed(1);
-        BackgroundTrackingService.updateNotification(
-          distance: '$distKm km',
-          time: _formatElapsed(snap.elapsed),
-        );
-      }
+  void _subscribeToHeading() {
+    _headingService.start();
+    _headingSub?.cancel();
+    _headingSub = _headingService.headingStream.listen((_) {
+      // The fused bearing has changed — notify the UI so it can rotate the
+      // map even when no new GPS sample has arrived.
       notifyListeners();
     });
+  }
+
+  void _unsubscribeFromHeading() {
+    _headingSub?.cancel();
+    _headingSub = null;
+    _headingService.stop();
+  }
+
+  /// Pause an in-progress recording. GPS samples are dropped while paused
+  /// and the wall-clock elapsed time freezes.
+  void pauseRecording() {
+    if (_stage != FreeRideStage.recording || _pausedAt != null) return;
+    final now = DateTime.now();
+    final started = _recordingStartedAt;
+    if (started != null) {
+      _accumulatedElapsed += now.difference(started);
+    }
+    _pausedAt = now;
+    _stage = FreeRideStage.paused;
+    _gpsSub?.cancel();
+    _gpsSub = null;
+    _unsubscribeFromHeading();
+    notifyListeners();
+  }
+
+  /// Resume after a pause. GPS subscription restarts and the wall clock
+  /// keeps counting from where it left off.
+  void resumeRecording() {
+    if (_stage != FreeRideStage.paused) return;
+    _pausedAt = null;
+    _recordingStartedAt = DateTime.now();
+    _stage = FreeRideStage.recording;
+    _subscribeToGps();
+    _subscribeToHeading();
+    notifyListeners();
   }
 
   /// Hot-upgrade from foreground-only to background tracking mid-recording.
@@ -135,11 +207,43 @@ class FreeRideController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Latest known heading in degrees (0 = north, clockwise). Combines the
+  /// phone's magnetic compass (so the map rotates when the user turns the
+  /// device) with the GPS course (so the map snaps to direction of travel
+  /// when actually moving). The blend is speed-weighted: at standstill the
+  /// compass wins; above ~4 m/s the GPS course wins.
+  double? get currentBearingDeg {
+    final compass = _headingService.currentHeadingDeg;
+    final gpsCourse = _gpsCourseDeg();
+    final speed = _engine?.snapshot.currentSpeedMps ?? 0.0;
+    return fusedBearingDeg(
+      compassDeg: compass,
+      gpsCourseDeg: gpsCourse,
+      speedMps: speed,
+    );
+  }
+
+  /// GPS-derived course (direction of travel) in degrees, or null when no
+  /// reliable estimate is available. Uses the GPS-reported bearing when
+  /// present; otherwise falls back to the bearing between the last two
+  /// ingested points (only if they're more than 1 m apart, to avoid noise).
+  double? _gpsCourseDeg() {
+    if (_ingested.isEmpty) return null;
+    final last = _ingested.last;
+    final reported = last.bearingDeg;
+    if (reported != null && reported >= 0) return reported;
+    if (_ingested.length < 2) return null;
+    final prev = _ingested[_ingested.length - 2];
+    if (prev.location.distanceTo(last.location) < 1.0) return null;
+    return prev.location.bearingTo(last.location);
+  }
+
   Future<FreeRideRun?> finishRecording() async {
     await _gpsSub?.cancel();
     _gpsSub = null;
     _ticker?.cancel();
     _ticker = null;
+    _unsubscribeFromHeading();
 
     if (_backgroundActive) {
       await BackgroundTrackingService.stopTracking();
@@ -253,6 +357,9 @@ class FreeRideController extends ChangeNotifier {
     _ingested.clear();
     _permissionStatus = null;
     _backgroundActive = false;
+    _recordingStartedAt = null;
+    _pausedAt = null;
+    _accumulatedElapsed = Duration.zero;
     _stage = FreeRideStage.idle;
     notifyListeners();
   }
@@ -268,6 +375,8 @@ class FreeRideController extends ChangeNotifier {
   void dispose() {
     _gpsSub?.cancel();
     _ticker?.cancel();
+    _headingSub?.cancel();
+    _headingService.dispose();
     if (_backgroundActive) {
       BackgroundTrackingService.stopTracking();
     }

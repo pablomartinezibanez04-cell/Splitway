@@ -29,11 +29,14 @@ void main() {
   });
 
   group('SpeedMeasurementService milestones', () {
-    test('zeroTo100 resolved by linear interpolation', () {
+    test('zeroTo100 resolved by linear interpolation, timed from motion', () {
       final svc = SpeedMeasurementService.forTesting(
         targets: {SpeedMetric.zeroTo100},
       );
       svc.start();
+      // First sample already above the motion threshold; the candidate t0
+      // is anchored here. After the next sample (sustained > 100 ms) motion
+      // is confirmed and t0 = 4000 ms.
       svc.debugInjectSample(const SpeedSample(
         tSinceStart: Duration(milliseconds: 4000),
         speedKmh: 90,
@@ -47,11 +50,12 @@ void main() {
         accelMs2: 8,
       ));
       svc.stop();
-      // 100 km/h crossed: 4000 + (100-90)/(110-90) * 500 = 4250 ms
-      expect(svc.results.value[SpeedMetric.zeroTo100], closeTo(4.25, 1e-6));
+      // 100 km/h crossed at 4000 + (100-90)/(110-90) * 500 = 4250 ms,
+      // reported as 4250 - 4000 = 250 ms since motion start.
+      expect(svc.results.value[SpeedMetric.zeroTo100], closeTo(0.25, 1e-6));
     });
 
-    test('sixtyFoot resolved by distance crossing', () {
+    test('sixtyFoot resolved by distance crossing, timed from motion', () {
       final svc = SpeedMeasurementService.forTesting(
         targets: {SpeedMetric.sixtyFoot},
       );
@@ -69,11 +73,13 @@ void main() {
         accelMs2: 5,
       ));
       svc.stop();
-      // 18.29 m crossed: 1500 + (18.29-10)/(30-10) * 1000 = 1914.5 ms
-      expect(svc.results.value[SpeedMetric.sixtyFoot], closeTo(1.9145, 1e-3));
+      // Motion confirmed at t0 = 1500 ms. 18.29 m crossed at
+      // 1500 + (18.29-10)/(30-10) * 1000 = 1914.5 ms, i.e. 414.5 ms since
+      // motion.
+      expect(svc.results.value[SpeedMetric.sixtyFoot], closeTo(0.4145, 1e-3));
     });
 
-    test('quarterMile resolved by distance crossing', () {
+    test('quarterMile resolved by distance crossing, timed from motion', () {
       final svc = SpeedMeasurementService.forTesting(
         targets: {SpeedMetric.quarterMile},
       );
@@ -91,8 +97,66 @@ void main() {
         accelMs2: 4,
       ));
       svc.stop();
-      // 402.336 crossed: 10000 + (402.336-380)/(430-380) * 1000 = 10446.7 ms
-      expect(svc.results.value[SpeedMetric.quarterMile], closeTo(10.4467, 1e-3));
+      // Motion confirmed at t0 = 10000 ms. 402.336 m crossed at
+      // 10000 + (402.336-380)/(430-380) * 1000 = 10446.72 ms, i.e. 446.72 ms
+      // since motion.
+      expect(svc.results.value[SpeedMetric.quarterMile], closeTo(0.4467, 1e-3));
+    });
+
+    test('splits are timed from motion, not from session start', () {
+      // The car sits idle for a full second after "Go!" (reaction delay),
+      // then begins accelerating. The reported 0-100 should reflect time
+      // since the car started moving, not since "Go!".
+      final svc = SpeedMeasurementService.forTesting(
+        targets: {SpeedMetric.zeroTo100, SpeedMetric.reactionTime},
+      );
+      svc.start();
+      // Pre-motion idle samples.
+      svc.debugInjectSample(const SpeedSample(
+        tSinceStart: Duration(milliseconds: 200),
+        speedKmh: 0,
+        distanceM: 0,
+        accelMs2: 0,
+      ));
+      svc.debugInjectSample(const SpeedSample(
+        tSinceStart: Duration(milliseconds: 800),
+        speedKmh: 0,
+        distanceM: 0,
+        accelMs2: 0,
+      ));
+      // Motion begins at t = 1000 ms and is sustained.
+      svc.debugInjectSample(const SpeedSample(
+        tSinceStart: Duration(milliseconds: 1000),
+        speedKmh: 1,
+        distanceM: 0.05,
+        accelMs2: 3,
+      ));
+      svc.debugInjectSample(const SpeedSample(
+        tSinceStart: Duration(milliseconds: 1200),
+        speedKmh: 20,
+        distanceM: 1,
+        accelMs2: 5,
+      ));
+      // 100 km/h reached well after motion start.
+      svc.debugInjectSample(const SpeedSample(
+        tSinceStart: Duration(milliseconds: 5200),
+        speedKmh: 90,
+        distanceM: 80,
+        accelMs2: 5,
+      ));
+      svc.debugInjectSample(const SpeedSample(
+        tSinceStart: Duration(milliseconds: 5700),
+        speedKmh: 110,
+        distanceM: 100,
+        accelMs2: 5,
+      ));
+      svc.stop();
+      // Motion start = 1000 ms (first sample above threshold, sustained by
+      // the next at 1200 ms). 100 km/h crossed at 5200 + 10/20 * 500 = 5450
+      // ms, reported as 5450 - 1000 = 4450 ms = 4.45 s since motion.
+      expect(svc.results.value[SpeedMetric.zeroTo100], closeTo(4.45, 1e-3));
+      // reactionTime still measures the gap from "Go!" to motion: 1.0 s.
+      expect(svc.results.value[SpeedMetric.reactionTime], closeTo(1.0, 1e-3));
     });
 
     test('reactionTime resolved when sustained speed exceeds threshold', () {

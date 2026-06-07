@@ -18,6 +18,18 @@ class Formatters {
         '${millis.toString().padLeft(3, '0')}';
   }
 
+  /// Formats [d] as `HH:MM:SS`, dropping centiseconds. Used for live
+  /// elapsed-time displays that should tick once per second.
+  static String durationHms(Duration d) {
+    if (d.isNegative) return '--:--:--';
+    final h = d.inHours;
+    final m = d.inMinutes.remainder(60);
+    final s = d.inSeconds.remainder(60);
+    return '${h.toString().padLeft(2, '0')}:'
+        '${m.toString().padLeft(2, '0')}:'
+        '${s.toString().padLeft(2, '0')}';
+  }
+
   /// Speed in m/s → formatted numeric string in km/h (metric) or mph (imperial).
   /// Caller wraps the result with the appropriate unit label.
   static String speedMps(double mps, {UnitSystem unit = UnitSystem.metric}) {
