@@ -1,3 +1,5 @@
+Using workdir C:\Documentos\Personal\Programacion\Splitway
+Initialising login role...
 export type Json =
   | string
   | number
@@ -531,6 +533,24 @@ export type Database = {
       }
     }
     Views: {
+      admin_app_logs_view: {
+        Row: {
+          app_version: string | null
+          context: Json | null
+          device_model: string | null
+          error: string | null
+          id: string | null
+          level: string | null
+          message: string | null
+          platform: string | null
+          stack_trace: string | null
+          tag: string | null
+          timestamp: string | null
+          user_id: string | null
+          user_nickname: string | null
+        }
+        Relationships: []
+      }
       admin_free_rides_view: {
         Row: {
           avg_speed_mps: number | null
@@ -829,3 +849,5 @@ export const Constants = {
     Enums: {},
   },
 } as const
+A new version of Supabase CLI is available: v2.105.0 (currently installed v2.90.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
