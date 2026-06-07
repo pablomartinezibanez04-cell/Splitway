@@ -81,6 +81,29 @@ void main() {
     });
   });
 
+  testWidgets('hides logs tile for non-admin (null profileService)',
+      (tester) async {
+    late ({SplitwayLocalDatabase db, LocalDraftRepository repo}) boot;
+    late AppSettingsController settings;
+    await tester.runAsync(() async {
+      boot = await _openRepo();
+      settings = await AppSettingsController.load();
+    });
+    final ctrl =
+        await LocaleController.load(deviceLocale: const Locale('es'));
+    await tester.pumpWidget(_harness(ctrl, settings, boot.repo));
+    await tester.pumpAndSettle();
+
+    // 'Ver logs' is the Diagnostics → "View logs" tile.
+    expect(find.text('Ver logs'), findsNothing);
+    // The remote-logs switch is for everyone — it must still be visible.
+    expect(find.text('Enviar logs al servidor'), findsOneWidget);
+    await tester.runAsync(() async {
+      await boot.repo.dispose();
+      await boot.db.close();
+    });
+  });
+
   testWidgets('tapping English switches locale and updates UI', (tester) async {
     late ({SplitwayLocalDatabase db, LocalDraftRepository repo}) boot;
     late AppSettingsController settings;

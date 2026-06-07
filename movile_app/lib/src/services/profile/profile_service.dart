@@ -43,6 +43,8 @@ class ProfileService extends ChangeNotifier {
   bool? _isComplete;
   bool? get isComplete => _isComplete;
 
+  bool get isAdmin => _profile?.role.isAdmin ?? false;
+
   Future<void> loadProfile() async {
     _loading = true;
     _error = null;

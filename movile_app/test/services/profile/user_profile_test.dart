@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:splitway_mobile/src/services/profile/user_profile.dart';
+import 'package:splitway_mobile/src/services/profile/user_role.dart';
 
 void main() {
   group('UserProfile', () {
@@ -111,6 +112,52 @@ void main() {
 
       expect(updated.bio, isNull);
       expect(updated.nickname, 'Test');
+    });
+
+    group('role', () {
+      Map<String, dynamic> baseJson({String? role}) => {
+            'id': 'abc',
+            'nickname': 'Rider',
+            'avatar_url': null,
+            'bio': null,
+            'nickname_changed_at': '2026-05-01T10:00:00Z',
+            'created_at': '2026-05-01T10:00:00Z',
+            'updated_at': '2026-05-01T10:00:00Z',
+            if (role != null) 'role': role,
+          };
+
+      test('fromJson defaults missing role to user', () {
+        final profile = UserProfile.fromJson(baseJson());
+        expect(profile.role, UserRole.user);
+        expect(profile.role.isAdmin, isFalse);
+      });
+
+      test('fromJson reads admin role', () {
+        final profile = UserProfile.fromJson(baseJson(role: 'admin'));
+        expect(profile.role, UserRole.admin);
+        expect(profile.role.isAdmin, isTrue);
+      });
+
+      test('fromJson reads superadmin role', () {
+        final profile = UserProfile.fromJson(baseJson(role: 'superadmin'));
+        expect(profile.role, UserRole.superadmin);
+        expect(profile.role.isAdmin, isTrue);
+      });
+
+      test('fromJson maps unknown role to user', () {
+        final profile = UserProfile.fromJson(baseJson(role: 'pirate'));
+        expect(profile.role, UserRole.user);
+      });
+
+      test('copyWith updates role', () {
+        final p = UserProfile(
+          id: 'a',
+          nickname: 'n',
+          nicknameChangedAt: DateTime.now(),
+        );
+        expect(p.copyWith(role: UserRole.admin).role, UserRole.admin);
+        expect(p.copyWith().role, UserRole.user);
+      });
     });
 
     test('copyWith preserves bio when not passed', () {
