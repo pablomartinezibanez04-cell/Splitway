@@ -29,10 +29,10 @@ void main() {
       expect(back.isPartial, false);
     });
 
-    test('defaultName uses vehicle name + timestamp', () {
+    test('defaultName uses vehicle name only', () {
       final ts = DateTime.parse('2026-05-22T14:08:09.000');
       final name = SpeedSession.defaultName('Civic Type R', ts);
-      expect(name, 'Civic Type R-2026-05-22_14-08-09');
+      expect(name, 'Civic Type R');
     });
   });
 }

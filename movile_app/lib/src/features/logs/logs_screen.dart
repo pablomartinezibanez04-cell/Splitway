@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:share_plus/share_plus.dart' show SharePlus, ShareParams, XFile;
 import 'package:splitway_mobile/l10n/app_localizations.dart';
 
 import '../../services/logging/log_entry.dart';
@@ -115,7 +115,7 @@ class _LogsScreenState extends State<LogsScreen> {
     final file = File(p.join(dir.path, 'splitway-logs.txt'));
     final text = _entries.map(_format).join('\n---\n');
     await file.writeAsString(text);
-    await Share.shareXFiles([XFile(file.path)]);
+    await SharePlus.instance.share(ShareParams(files: [XFile(file.path)]));
   }
 
   Future<void> _clearAll() async {

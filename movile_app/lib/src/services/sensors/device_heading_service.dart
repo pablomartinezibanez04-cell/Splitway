@@ -36,9 +36,19 @@ class DeviceHeadingService {
 
   double? _lastHeadingDeg;
 
-  /// Most recent smoothed heading, or null if the sensors haven't both
+  /// Last heading actually emitted to the stream / returned by
+  /// [currentHeadingDeg]. Updated only when the smoothed heading diverges
+  /// from this value by at least [_kEmissionThresholdDeg].
+  double? _lastEmittedDeg;
+
+  /// Minimum angular change (degrees) from the last emitted heading before
+  /// a new value is pushed to the stream. Prevents vibration-induced
+  /// micro-drift from accumulating into visible map rotation.
+  static const double _kEmissionThresholdDeg = 1.5;
+
+  /// Most recent stable heading, or null if the sensors haven't both
   /// emitted yet.
-  double? get currentHeadingDeg => _lastHeadingDeg;
+  double? get currentHeadingDeg => _lastEmittedDeg;
 
   // Latest raw samples.
   double _ax = 0, _ay = 0, _az = 0;
@@ -46,6 +56,14 @@ class DeviceHeadingService {
   bool _hasAccel = false;
   bool _hasMag = false;
   bool _running = false;
+
+  // Exponentially averaged gravity vector. Filters out high-frequency
+  // vibration (e.g. car engine on a phone mount) that would otherwise
+  // cause the computed "horizontal" plane — and thus the heading — to
+  // wobble and slowly drift.
+  double _gx = 0, _gy = 0, _gz = 0;
+  bool _hasGravity = false;
+  static const double _kGravitySmoothing = 0.025;
 
   /// Subscribe to the sensors. Safe to call repeatedly — subsequent calls
   /// are a no-op while already running.
@@ -59,6 +77,16 @@ class DeviceHeadingService {
       _ay = e.y;
       _az = e.z;
       _hasAccel = true;
+      if (!_hasGravity) {
+        _gx = _ax;
+        _gy = _ay;
+        _gz = _az;
+        _hasGravity = true;
+      } else {
+        _gx += _kGravitySmoothing * (_ax - _gx);
+        _gy += _kGravitySmoothing * (_ay - _gy);
+        _gz += _kGravitySmoothing * (_az - _gz);
+      }
       _emit();
     }, onError: (_) {});
     _magSub = magnetometerEventStream(
@@ -81,6 +109,8 @@ class DeviceHeadingService {
     _magSub = null;
     _hasAccel = false;
     _hasMag = false;
+    _hasGravity = false;
+    _lastEmittedDeg = null;
   }
 
   void dispose() {
@@ -94,17 +124,26 @@ class DeviceHeadingService {
     if (raw == null) return;
     final smoothed = _smooth(raw);
     _lastHeadingDeg = smoothed;
-    if (!_controller.isClosed) _controller.add(smoothed);
+    final emitted = _lastEmittedDeg;
+    if (emitted == null ||
+        angularDifferenceDeg(smoothed, emitted).abs() >=
+            _kEmissionThresholdDeg) {
+      _lastEmittedDeg = smoothed;
+      if (!_controller.isClosed) _controller.add(smoothed);
+    }
   }
 
   /// Computes the magnetic azimuth in degrees from the latest raw samples.
   /// Returns null when the readings are degenerate (zero gravity / no
   /// magnetic field), which happens during free-fall or strong interference.
   double? _computeHeading() {
+    // Use the averaged gravity vector instead of the raw accelerometer to
+    // filter out high-frequency vibration (car engine, rough road, etc.).
+    final ax = _gx, ay = _gy, az = _gz;
     // East = magnetic × gravity. In device frame this vector points east.
-    final hx = _my * _az - _mz * _ay;
-    final hy = _mz * _ax - _mx * _az;
-    final hz = _mx * _ay - _my * _ax;
+    final hx = _my * az - _mz * ay;
+    final hy = _mz * ax - _mx * az;
+    final hz = _mx * ay - _my * ax;
     final normH = math.sqrt(hx * hx + hy * hy + hz * hz);
     if (normH < 0.1) return null;
     final hxN = hx / normH;
@@ -112,10 +151,10 @@ class DeviceHeadingService {
     // North = gravity × East. Lies in the horizontal plane, pointing north.
     // We only need the device-Y component of North to compute the azimuth,
     // so we skip the device-X / device-Z components of the cross product.
-    final normA = math.sqrt(_ax * _ax + _ay * _ay + _az * _az);
+    final normA = math.sqrt(ax * ax + ay * ay + az * az);
     if (normA < 0.1) return null;
-    final axN = _ax / normA;
-    final azN = _az / normA;
+    final axN = ax / normA;
+    final azN = az / normA;
     final myN = azN * hxN - axN * (hz / normH);
     // Azimuth = atan2(east_y, north_y) — the rotation around world Z that
     // maps the device's +Y axis (top of screen) onto the horizontal plane.

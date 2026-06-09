@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'src/app.dart';
 import 'src/config/app_config.dart';
+import 'src/services/auth/auth_service.dart';
 import 'src/data/local/splitway_local_database.dart';
 import 'src/data/repositories/local_draft_repository.dart';
 import 'src/services/locale/locale_controller.dart';
@@ -85,6 +86,7 @@ Future<void> main() async {
         await AppLogger.instance.error('supabase', 'Supabase.initialize failed',
             error: e, stackTrace: st);
       }
+      await AuthService.initGoogleSignIn();
     }
 
     // Wire the remote uploader now that Supabase has had a chance to init.

@@ -102,6 +102,12 @@ class AuthService extends ChangeNotifier {
   // Google OAuth
   // ---------------------------------------------------------------------------
 
+  /// Initializes the [GoogleSignIn] singleton. Must be called once at app
+  /// startup before any sign-in attempt.
+  static Future<void> initGoogleSignIn() async {
+    await GoogleSignIn.instance.initialize(serverClientId: _webClientId);
+  }
+
   Future<bool> signInWithGoogle() async {
     _loading = true;
     _errorCode = null;
@@ -109,25 +115,25 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final googleSignIn = GoogleSignIn(
-        serverClientId: _webClientId,
-      );
       // Force the account picker every time. Without this, google_sign_in
       // silently returns the last-used Google account on subsequent calls,
       // which surprises users who expect to choose which account to use
       // and looks like the consent step was skipped.
-      await googleSignIn.signOut();
-      final googleUser = await googleSignIn.signIn();
-      if (googleUser == null) {
+      await GoogleSignIn.instance.signOut();
+      final GoogleSignInAccount googleUser;
+      try {
+        googleUser = await GoogleSignIn.instance.authenticate();
+      } on GoogleSignInException {
         // User cancelled the sign-in flow.
         _loading = false;
         notifyListeners();
         return false;
       }
 
-      final googleAuth = await googleUser.authentication;
-      final idToken = googleAuth.idToken;
-      final accessToken = googleAuth.accessToken;
+      final idToken = googleUser.authentication.idToken;
+      // accessToken is no longer part of authentication in google_sign_in v7;
+      // Supabase's signInWithIdToken only requires idToken.
+      const String? accessToken = null;
 
       if (idToken == null) {
         _errorCode = AuthErrorCode.googleTokenUnavailable;

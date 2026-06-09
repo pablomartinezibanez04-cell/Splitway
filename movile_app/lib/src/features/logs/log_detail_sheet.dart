@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:share_plus/share_plus.dart' show SharePlus, ShareParams;
 import 'package:splitway_mobile/l10n/app_localizations.dart';
 
 import '../../services/logging/log_entry.dart';
@@ -70,7 +70,7 @@ class LogDetailSheet extends StatelessWidget {
                 IconButton(
                   icon: const Icon(Icons.share),
                   tooltip: l.logsShareTooltip,
-                  onPressed: () => Share.share(text),
+                  onPressed: () => SharePlus.instance.share(ShareParams(text: text)),
                 ),
                 const Spacer(),
                 IconButton(

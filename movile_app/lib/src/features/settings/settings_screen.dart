@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:share_plus/share_plus.dart' show SharePlus, ShareParams, XFile;
 import 'package:splitway_mobile/l10n/app_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -431,9 +431,11 @@ class SettingsScreen extends StatelessWidget {
     final file = File('${dir.path}/splitway_history.csv');
     await file.writeAsString(buffer.toString());
 
-    await Share.shareXFiles(
-      [XFile(file.path, mimeType: 'text/csv')],
-      subject: 'Splitway history export',
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(file.path, mimeType: 'text/csv')],
+        subject: 'Splitway history export',
+      ),
     );
   }
 

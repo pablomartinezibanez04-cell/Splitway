@@ -293,6 +293,7 @@ class _SplitwayMapState extends State<SplitwayMap>
   /// Coalesces overlapping calls so the Pigeon channel isn't flooded if the
   /// animation ticks faster than the platform side can apply updates.
   Future<void> _ensureUserMarker() async {
+    if (_isRendering) return;
     if (_userMarkerUpdateInFlight) {
       _userMarkerUpdatePending = true;
       return;
@@ -722,6 +723,7 @@ class _SplitwayMapState extends State<SplitwayMap>
       // Map channel torn down (e.g. widget disposed mid-render). Bail out.
       return;
     }
+    _userCircleAnnotation = null;
     if (!mounted) return;
 
     // Speed heatmap takes over the route+telemetry rendering when active.
@@ -863,11 +865,8 @@ class _SplitwayMapState extends State<SplitwayMap>
     }
 
     if (!mounted) return;
-    // The user-location dot is managed separately so it can glide smoothly
-    // between GPS samples. The full render above wiped it (via deleteAll),
-    // so re-create it now at the current animated position.
-    _userCircleAnnotation = null;
-    await _ensureUserMarker();
+    _userMarkerUpdatePending = false;
+    await _ensureUserMarkerCore();
   }
 
   mbx.LineString _toLineString(List<GeoPoint> points) {
