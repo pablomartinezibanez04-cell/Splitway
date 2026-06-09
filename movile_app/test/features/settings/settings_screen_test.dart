@@ -94,10 +94,22 @@ void main() {
     await tester.pumpWidget(_harness(ctrl, settings, boot.repo));
     await tester.pumpAndSettle();
 
-    // 'Ver logs' is the Diagnostics → "View logs" tile.
+    // Scroll the Diagnostics section into view. The remote-logs switch is
+    // the anchor: it must be visible regardless of role, so finding it
+    // proves the section was reached. The 'Ver logs' tile sits right
+    // above it and would also be materialized if it existed.
+    await tester.dragUntilVisible(
+      find.text('Subir logs al servidor'),
+      find.byType(ListView),
+      const Offset(0, -200),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Subir logs al servidor'), findsOneWidget);
+    // Gate verification: with no profileService (anon = user), the in-app
+    // logs entry must not be in the tree.
     expect(find.text('Ver logs'), findsNothing);
-    // The remote-logs switch is for everyone — it must still be visible.
-    expect(find.text('Enviar logs al servidor'), findsOneWidget);
+
     await tester.runAsync(() async {
       await boot.repo.dispose();
       await boot.db.close();

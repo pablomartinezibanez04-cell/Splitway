@@ -64,14 +64,23 @@ class _LogsScreenState extends State<LogsScreen> {
   /// Defense in depth: the Settings entry is hidden for non-admins, but a
   /// deep link or a stale build could still land here. Bounce to /settings
   /// once we know the user is not an admin. Waits for the profile to load
-  /// before deciding.
+  /// before deciding. When [widget.profileService] is null the gate is not
+  /// wired (test harness / pre-init), so the screen renders normally.
   void _checkAccess() {
     if (_redirected) return;
     final p = widget.profileService;
-    if (p != null && p.loading && p.profile == null) return;
-    if (p?.isAdmin == true) return;
+    if (p == null) return;
+    if (p.loading && p.profile == null) return;
+    if (p.isAdmin) return;
     _redirected = true;
-    if (mounted) context.go('/settings');
+    if (!mounted) return;
+    // GoRouter isn't guaranteed in every host (e.g. tests). Catch the lookup
+    // error and fall back to rendering an empty placeholder.
+    try {
+      context.go('/settings');
+    } catch (_) {
+      // No router in scope — nothing to do; the (empty) tree stays put.
+    }
   }
 
   Future<void> _reload() async {

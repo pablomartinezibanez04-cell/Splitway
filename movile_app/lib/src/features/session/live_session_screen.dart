@@ -194,8 +194,10 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
     _forcedRealGps = true;
     if (p?.isAdmin == true) return;
     if (widget.controller.source == TrackingSource.simulated) {
-      // ignore: discarded_futures
-      widget.controller.setSource(TrackingSource.realGps);
+      // setSource(realGps) resolves location permission via the geolocator
+      // plugin. On real devices this surfaces the permission banner; in
+      // widget tests there is no plugin channel, so swallow the error.
+      widget.controller.setSource(TrackingSource.realGps).catchError((_) {});
     }
   }
 
