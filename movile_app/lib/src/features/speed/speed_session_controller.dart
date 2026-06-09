@@ -47,7 +47,7 @@ class SpeedSessionController extends ChangeNotifier {
   DateTime? finishedAt;
 
   StreamSubscription<FalseStartDetected>? _falseStartSub;
-  Timer? _countdownTimer;
+  final List<Timer> _countdownTimers = [];
   bool _resultsListenerAttached = false;
   bool _disposed = false;
 
@@ -71,20 +71,30 @@ class SpeedSessionController extends ChangeNotifier {
   }
 
   void _startCountdown() {
-    _countdownTimer?.cancel();
-    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (_disposed) return;
-      if (countdownValue > 0) {
+    _cancelCountdownTimers();
+    final origin = DateTime.now();
+    for (var i = 0; i < countdownSeconds; i++) {
+      final step = i;
+      final target = origin.add(Duration(seconds: step + 1));
+      final delay = target.difference(DateTime.now());
+      _countdownTimers.add(Timer(delay, () {
+        if (_disposed) return;
         beep.tick();
-        countdownValue--;
+        countdownValue = countdownSeconds - step - 1;
         notifyListeners();
-      }
-      if (countdownValue == 0) {
-        _countdownTimer?.cancel();
-        beep.go();
-        _go();
-      }
-    });
+        if (countdownValue == 0) {
+          beep.go();
+          _go();
+        }
+      }));
+    }
+  }
+
+  void _cancelCountdownTimers() {
+    for (final t in _countdownTimers) {
+      t.cancel();
+    }
+    _countdownTimers.clear();
   }
 
   Future<void> _go() async {
@@ -121,7 +131,7 @@ class SpeedSessionController extends ChangeNotifier {
 
   Future<void> _onFalseStart() async {
     if (_disposed) return;
-    _countdownTimer?.cancel();
+    _cancelCountdownTimers();
     await service.liveStop();
     beep.falseStart();
     phase = SpeedScreenPhase.falseStart;
@@ -161,7 +171,7 @@ class SpeedSessionController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
-    _countdownTimer?.cancel();
+    _cancelCountdownTimers();
     _falseStartSub?.cancel();
     if (_resultsListenerAttached) {
       service.results.removeListener(_maybeFinish);

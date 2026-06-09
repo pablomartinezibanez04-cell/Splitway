@@ -1,5 +1,3 @@
-import 'package:intl/intl.dart';
-
 import 'speed_metric.dart';
 
 class SpeedSession {
@@ -34,8 +32,7 @@ class SpeedSession {
   final DateTime? deletedAt;
 
   static String defaultName(String vehicleName, DateTime ts) {
-    final fmt = DateFormat('yyyy-MM-dd_HH-mm-ss');
-    return '$vehicleName-${fmt.format(ts)}';
+    return vehicleName;
   }
 
   SpeedSession copyWith({
