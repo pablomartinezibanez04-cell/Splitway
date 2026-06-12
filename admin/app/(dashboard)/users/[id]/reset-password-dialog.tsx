@@ -51,7 +51,8 @@ export function ResetPasswordDialog({
         </AlertDialogHeader>
         <form action={formAction}>
           <input type="hidden" name="userId" value={userId} />
-          <input type="hidden" name="email" value={userEmail} />
+          {/* email is resolved server-side from userId — not trusted from
+              the form (see actions.ts / audit SEC-5). */}
           <AlertDialogFooter>
             <AlertDialogCancel type="button">Cancelar</AlertDialogCancel>
             <AlertDialogAction type="submit" disabled={isPending}>

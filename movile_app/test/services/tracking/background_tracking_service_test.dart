@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:splitway_mobile/src/services/tracking/background_tracking_service.dart';
 
@@ -5,6 +7,26 @@ void main() {
   group('BackgroundTrackingService', () {
     setUp(() {
       BackgroundTrackingService.resetForTest();
+    });
+
+    test('concurrent startTracking only invokes the starter once', () async {
+      var calls = 0;
+      final gate = Completer<bool>();
+      BackgroundTrackingService.startOverrideForTest =
+          ({required String title, required String body}) {
+        calls++;
+        return gate.future;
+      };
+
+      final f1 = BackgroundTrackingService.startTracking(title: 't', body: 'b');
+      final f2 = BackgroundTrackingService.startTracking(title: 't', body: 'b');
+
+      gate.complete(true);
+      await Future.wait([f1, f2]);
+
+      expect(calls, 1,
+          reason: 'a second concurrent start must not re-invoke the service');
+      expect(BackgroundTrackingService.isRunning, isTrue);
     });
 
     test('isRunning is false initially', () {

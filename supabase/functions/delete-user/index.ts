@@ -1,15 +1,11 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { corsHeaders } from '../_shared/cors.ts'
 
 /** Storage buckets that store files under `{user_id}/…` */
 const USER_BUCKETS = ['avatars', 'vehicle-photos', 'route-thumbnails']
 
 /**
- * List all objects in `bucket` under the folder `userId/` and delete them.
+ * Recursively delete every object under `bucket/userId/…`.
  * Uses the admin client (service role) so RLS is bypassed.
  * Silently ignores errors (bucket may not exist, folder may be empty).
  */
@@ -19,40 +15,41 @@ async function purgeUserStorage(
   userId: string,
 ): Promise<void> {
   try {
-    const { data: objects } = await adminClient.storage
-      .from(bucket)
-      .list(userId)
-
-    if (objects && objects.length > 0) {
-      const paths = objects.map((o) => `${userId}/${o.name}`)
-      await adminClient.storage.from(bucket).remove(paths)
-    }
-
-    // Handle nested folders (e.g. vehicle-photos/{uid}/{vehicleId}/…)
-    // The first list only returns immediate children; folders appear as
-    // items with `metadata: null`.  Iterate one level deeper.
-    const { data: nested } = await adminClient.storage
-      .from(bucket)
-      .list(userId)
-
-    if (nested) {
-      for (const item of nested) {
-        if (item.metadata === null) {
-          // It's a sub-folder — list & delete its contents
-          const subPath = `${userId}/${item.name}`
-          const { data: subObjects } = await adminClient.storage
-            .from(bucket)
-            .list(subPath)
-
-          if (subObjects && subObjects.length > 0) {
-            const subPaths = subObjects.map((o) => `${subPath}/${o.name}`)
-            await adminClient.storage.from(bucket).remove(subPaths)
-          }
-        }
-      }
-    }
+    await purgeFolder(adminClient, bucket, userId)
   } catch {
     // Bucket may not exist or be empty — not a fatal error.
+  }
+}
+
+/**
+ * Lists `bucket/prefix` once, removes the files at this level, then recurses
+ * into any sub-folders to arbitrary depth (e.g. vehicle-photos/{uid}/{vid}/…).
+ * Supabase Storage returns folder placeholders as entries with a null `id`.
+ */
+async function purgeFolder(
+  adminClient: ReturnType<typeof createClient>,
+  bucket: string,
+  prefix: string,
+): Promise<void> {
+  const { data: entries } = await adminClient.storage.from(bucket).list(prefix)
+  if (!entries || entries.length === 0) return
+
+  const files: string[] = []
+  const folders: string[] = []
+  for (const entry of entries) {
+    const path = `${prefix}/${entry.name}`
+    if (entry.id === null || entry.metadata === null) {
+      folders.push(path)
+    } else {
+      files.push(path)
+    }
+  }
+
+  if (files.length > 0) {
+    await adminClient.storage.from(bucket).remove(files)
+  }
+  for (const folder of folders) {
+    await purgeFolder(adminClient, bucket, folder)
   }
 }
 

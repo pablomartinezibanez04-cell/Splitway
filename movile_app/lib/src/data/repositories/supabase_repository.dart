@@ -48,36 +48,34 @@ class SupabaseRepository implements OfficialRoutesRemote {
       }
     }
 
-    await logSupabase('upsertRoute', () => _client.from('route_templates').upsert({
-      'id': route.id,
-      'owner_id': _uid,
-      'name': route.name,
-      'description': route.description,
-      'path_json': route.path.map((p) => p.toJson()).toList(),
-      'start_finish_gate_json': route.startFinishGate.toJson(),
-      'difficulty': route.difficulty.id,
-      'location_label': route.locationLabel,
-      'created_at': route.createdAt.toUtc().toIso8601String(),
-      'updated_at': DateTime.now().toUtc().toIso8601String(),
-      'thumbnail_url': route.thumbnailUrl,
-      'elevation_range_m': route.elevationRangeMeters,
-      'is_official': route.isOfficial,
-    }));
-
-    // Delete old sectors and re-insert
-    await logSupabase('upsertRoute.deleteSectors',
-        () => _client.from('sectors').delete().eq('route_id', route.id));
-    if (route.sectors.isNotEmpty) {
-      await logSupabase('upsertRoute.insertSectors', () => _client.from('sectors').insert(
-        route.sectors.map((s) => {
-          'id': s.id,
-          'route_id': route.id,
-          'order_index': s.order,
-          'label': s.label,
-          'gate_json': s.gate.toJson(),
-        }).toList(),
-      ));
-    }
+    // Atomic upsert of the route AND its sectors in a single transaction
+    // (RPC) so a mid-sync failure can never leave the route with zero
+    // sectors. owner_id is derived server-side from auth.uid().
+    await logSupabase(
+      'upsertRoute',
+      () => _client.rpc('upsert_route_with_sectors', params: {
+        'p_id': route.id,
+        'p_name': route.name,
+        'p_description': route.description,
+        'p_path_json': route.path.map((p) => p.toJson()).toList(),
+        'p_start_finish_gate_json': route.startFinishGate.toJson(),
+        'p_difficulty': route.difficulty.id,
+        'p_location_label': route.locationLabel,
+        'p_created_at': route.createdAt.toUtc().toIso8601String(),
+        'p_updated_at': DateTime.now().toUtc().toIso8601String(),
+        'p_thumbnail_url': route.thumbnailUrl,
+        'p_elevation_range_m': route.elevationRangeMeters,
+        'p_is_official': route.isOfficial,
+        'p_sectors': route.sectors
+            .map((s) => {
+                  'id': s.id,
+                  'order_index': s.order,
+                  'label': s.label,
+                  'gate_json': s.gate.toJson(),
+                })
+            .toList(),
+      }),
+    );
 
     return route;
   }
@@ -139,9 +137,7 @@ class SupabaseRepository implements OfficialRoutesRemote {
   /// Deletes a route from the cloud and its thumbnail from storage.
   Future<void> deleteRoute(String id) async {
     try {
-      await _client.storage
-          .from('route-thumbnails')
-          .remove(['$_uid/$id.png']);
+      await _client.storage.from('route-thumbnails').remove(['$_uid/$id.png']);
     } catch (e, st) {
       AppLogger.maybeInstance?.warning(
         'supabase',
@@ -158,32 +154,34 @@ class SupabaseRepository implements OfficialRoutesRemote {
 
   /// Upserts a session run (metadata + telemetry) to Supabase atomically.
   Future<void> upsertSession(SessionRun session) async {
-    await logSupabase('upsertSession', () => _client.rpc('upsert_session_with_telemetry', params: {
-      'p_id': session.id,
-      'p_route_id': session.routeTemplateId,
-      'p_started_at': session.startedAt.toUtc().toIso8601String(),
-      'p_ended_at': session.endedAt?.toUtc().toIso8601String(),
-      'p_status': session.status.id,
-      'p_lap_summaries': session.laps.map((l) => l.toJson()).toList(),
-      'p_sector_summaries':
-          session.sectorSummaries.map((s) => s.toJson()).toList(),
-      'p_total_distance_m': session.totalDistanceMeters,
-      'p_max_speed_mps': session.maxSpeedMps,
-      'p_avg_speed_mps': session.avgSpeedMps,
-      'p_updated_at': DateTime.now().toUtc().toIso8601String(),
-      'p_points': session.points
-          .map((p) => {
-                'ts': p.timestamp.toUtc().toIso8601String(),
-                'lat': p.location.latitude,
-                'lng': p.location.longitude,
-                'speed_mps': p.speedMps,
-                'accuracy_m': p.accuracyMeters,
-                'bearing_deg': p.bearingDeg,
-                'altitude_m': p.altitudeMeters,
-              })
-          .toList(),
-      'p_vehicle_id': session.vehicleId,
-    }));
+    await logSupabase(
+        'upsertSession',
+        () => _client.rpc('upsert_session_with_telemetry', params: {
+              'p_id': session.id,
+              'p_route_id': session.routeTemplateId,
+              'p_started_at': session.startedAt.toUtc().toIso8601String(),
+              'p_ended_at': session.endedAt?.toUtc().toIso8601String(),
+              'p_status': session.status.id,
+              'p_lap_summaries': session.laps.map((l) => l.toJson()).toList(),
+              'p_sector_summaries':
+                  session.sectorSummaries.map((s) => s.toJson()).toList(),
+              'p_total_distance_m': session.totalDistanceMeters,
+              'p_max_speed_mps': session.maxSpeedMps,
+              'p_avg_speed_mps': session.avgSpeedMps,
+              'p_updated_at': DateTime.now().toUtc().toIso8601String(),
+              'p_points': session.points
+                  .map((p) => {
+                        'ts': p.timestamp.toUtc().toIso8601String(),
+                        'lat': p.location.latitude,
+                        'lng': p.location.longitude,
+                        'speed_mps': p.speedMps,
+                        'accuracy_m': p.accuracyMeters,
+                        'bearing_deg': p.bearingDeg,
+                        'altitude_m': p.altitudeMeters,
+                      })
+                  .toList(),
+              'p_vehicle_id': session.vehicleId,
+            }));
   }
 
   /// Fetches all sessions belonging to the current user.
@@ -223,11 +221,7 @@ class SupabaseRepository implements OfficialRoutesRemote {
   }) async {
     final rows = await logSupabase(
       'fetchSession',
-      () => _client
-          .from('session_runs')
-          .select()
-          .eq('id', id)
-          .limit(1),
+      () => _client.from('session_runs').select().eq('id', id).limit(1),
     );
     if (rows.isEmpty) return null;
     List<TelemetryPoint> points = const [];
@@ -255,31 +249,33 @@ class SupabaseRepository implements OfficialRoutesRemote {
 
   /// Upserts a free ride run (metadata + telemetry) to Supabase atomically.
   Future<void> upsertFreeRide(FreeRideRun ride) async {
-    await logSupabase('upsertFreeRide', () => _client.rpc('upsert_free_ride_with_telemetry', params: {
-      'p_id': ride.id,
-      'p_started_at': ride.startedAt.toUtc().toIso8601String(),
-      'p_ended_at': ride.endedAt?.toUtc().toIso8601String(),
-      'p_status': ride.status.id,
-      'p_total_distance_m': ride.totalDistanceMeters,
-      'p_max_speed_mps': ride.maxSpeedMps,
-      'p_avg_speed_mps': ride.avgSpeedMps,
-      'p_name': ride.name,
-      'p_description': ride.description,
-      'p_location_label': ride.locationLabel,
-      'p_updated_at': DateTime.now().toUtc().toIso8601String(),
-      'p_vehicle_id': ride.vehicleId,
-      'p_points': ride.points
-          .map((p) => {
-                'ts': p.timestamp.toUtc().toIso8601String(),
-                'lat': p.location.latitude,
-                'lng': p.location.longitude,
-                'speed_mps': p.speedMps,
-                'accuracy_m': p.accuracyMeters,
-                'bearing_deg': p.bearingDeg,
-                'altitude_m': p.altitudeMeters,
-              })
-          .toList(),
-    }));
+    await logSupabase(
+        'upsertFreeRide',
+        () => _client.rpc('upsert_free_ride_with_telemetry', params: {
+              'p_id': ride.id,
+              'p_started_at': ride.startedAt.toUtc().toIso8601String(),
+              'p_ended_at': ride.endedAt?.toUtc().toIso8601String(),
+              'p_status': ride.status.id,
+              'p_total_distance_m': ride.totalDistanceMeters,
+              'p_max_speed_mps': ride.maxSpeedMps,
+              'p_avg_speed_mps': ride.avgSpeedMps,
+              'p_name': ride.name,
+              'p_description': ride.description,
+              'p_location_label': ride.locationLabel,
+              'p_updated_at': DateTime.now().toUtc().toIso8601String(),
+              'p_vehicle_id': ride.vehicleId,
+              'p_points': ride.points
+                  .map((p) => {
+                        'ts': p.timestamp.toUtc().toIso8601String(),
+                        'lat': p.location.latitude,
+                        'lng': p.location.longitude,
+                        'speed_mps': p.speedMps,
+                        'accuracy_m': p.accuracyMeters,
+                        'bearing_deg': p.bearingDeg,
+                        'altitude_m': p.altitudeMeters,
+                      })
+                  .toList(),
+            }));
   }
 
   /// Fetches all free rides belonging to the current user (without telemetry).
@@ -301,11 +297,7 @@ class SupabaseRepository implements OfficialRoutesRemote {
   }) async {
     final rows = await logSupabase(
       'fetchFreeRide',
-      () => _client
-          .from('free_rides')
-          .select()
-          .eq('id', id)
-          .limit(1),
+      () => _client.from('free_rides').select().eq('id', id).limit(1),
     );
     if (rows.isEmpty) return null;
     List<TelemetryPoint> points = const [];
@@ -367,16 +359,19 @@ class SupabaseRepository implements OfficialRoutesRemote {
   RouteTemplate _parseRoute(
       Map<String, dynamic> row, List<Map<String, dynamic>> sectorRows) {
     final pathJson = row['path_json'];
-    final List<dynamic> pathList =
-        pathJson is String ? jsonDecode(pathJson) as List<dynamic> : pathJson as List<dynamic>;
+    final List<dynamic> pathList = pathJson is String
+        ? jsonDecode(pathJson) as List<dynamic>
+        : pathJson as List<dynamic>;
     final gateJson = row['start_finish_gate_json'];
-    final Map<String, dynamic> gateMap =
-        gateJson is String ? jsonDecode(gateJson) as Map<String, dynamic> : Map<String, dynamic>.from(gateJson as Map);
+    final Map<String, dynamic> gateMap = gateJson is String
+        ? jsonDecode(gateJson) as Map<String, dynamic>
+        : Map<String, dynamic>.from(gateJson as Map);
 
     final sectors = sectorRows.map((s) {
       final sGate = s['gate_json'];
-      final Map<String, dynamic> sGateMap =
-          sGate is String ? jsonDecode(sGate) as Map<String, dynamic> : Map<String, dynamic>.from(sGate as Map);
+      final Map<String, dynamic> sGateMap = sGate is String
+          ? jsonDecode(sGate) as Map<String, dynamic>
+          : Map<String, dynamic>.from(sGate as Map);
       return SectorDefinition(
         id: s['id'] as String,
         order: s['order_index'] as int,
@@ -409,11 +404,13 @@ class SupabaseRepository implements OfficialRoutesRemote {
   SessionRun _parseSession(
       Map<String, dynamic> row, List<TelemetryPoint> points) {
     final lapsJson = row['lap_summaries_json'];
-    final List<dynamic> lapsList =
-        lapsJson is String ? jsonDecode(lapsJson) as List<dynamic> : lapsJson as List<dynamic>;
+    final List<dynamic> lapsList = lapsJson is String
+        ? jsonDecode(lapsJson) as List<dynamic>
+        : lapsJson as List<dynamic>;
     final sectorsJson = row['sector_summaries_json'];
-    final List<dynamic> sectorsList =
-        sectorsJson is String ? jsonDecode(sectorsJson) as List<dynamic> : sectorsJson as List<dynamic>;
+    final List<dynamic> sectorsList = sectorsJson is String
+        ? jsonDecode(sectorsJson) as List<dynamic>
+        : sectorsJson as List<dynamic>;
 
     return SessionRun(
       id: row['id'] as String,

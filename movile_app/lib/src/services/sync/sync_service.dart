@@ -8,6 +8,7 @@ import '../../data/repositories/local_draft_repository.dart';
 import '../../data/repositories/speed_repository.dart';
 import '../../data/repositories/supabase_repository.dart';
 import '../logging/app_logger.dart';
+import 'sync_planner.dart';
 
 /// Bidirectional sync between [LocalDraftRepository] (SQLite) and
 /// [SupabaseRepository] (Postgres + RLS).
@@ -87,8 +88,7 @@ class SyncService extends ChangeNotifier {
 
   void _onConnectivityChanged(List<ConnectivityResult> results) {
     final wasConnected = _isConnected;
-    _isConnected =
-        results.any((r) => r != ConnectivityResult.none);
+    _isConnected = results.any((r) => r != ConnectivityResult.none);
 
     if (_isConnected && !wasConnected) {
       // Back online — sync immediately.
@@ -163,8 +163,13 @@ class SyncService extends ChangeNotifier {
         continue;
       }
       final remoteUpdated = remoteRouteTs[route.id];
-      final needsPush = remoteUpdated == null ||
-          route.createdAt.isAfter(remoteUpdated);
+      // Last-write-wins by updated_at (falling back to createdAt for legacy
+      // rows without an updatedAt). Using updatedAt — not createdAt — is what
+      // lets edits to an already-synced route propagate to other devices.
+      final needsPush = SyncPlanner.shouldPush(
+        localUpdatedAt: route.updatedAt ?? route.createdAt,
+        remoteUpdatedAt: remoteUpdated,
+      );
       final needsThumbnail = route.thumbnailUrl == null;
       if (needsPush || needsThumbnail) {
         final updated = await remote.upsertRoute(route);
@@ -186,21 +191,38 @@ class SyncService extends ChangeNotifier {
     // Supabase and were not pushed in this cycle (which would mean they
     // are newly created, not remotely deleted). Official routes are owned
     // by OfficialRoutesService and intentionally bypass this loop.
-    for (final route in localRoutes) {
-      if (route.isOfficial) continue;
-      if (pushedRouteIds.contains(route.id)) continue;
-      if (!remoteRouteTs.containsKey(route.id)) {
-        await local.deleteRoute(route.id);
+    //
+    // Guard against a transient empty fetch wiping local data: if the remote
+    // set is empty while we still hold local routes, skip deletions.
+    final nonOfficialLocalCount =
+        localRoutes.where((r) => !r.isOfficial).length;
+    if (SyncPlanner.shouldApplyReconciliationDeletions(
+      remoteCount: remoteRouteTs.length,
+      localCount: nonOfficialLocalCount,
+    )) {
+      for (final route in localRoutes) {
+        if (route.isOfficial) continue;
+        if (pushedRouteIds.contains(route.id)) continue;
+        if (!remoteRouteTs.containsKey(route.id)) {
+          await local.deleteRoute(route.id);
+        }
       }
     }
 
-    // Pull remote → local (anything in Supabase not on this device).
-    // Supabase RLS already scopes results to the current user, so any route
-    // returned here either came from another device or a failed prior sync.
-    final localRouteIds = {for (final r in localRoutes) r.id};
+    // Pull remote → local: save routes missing locally OR whose remote copy
+    // is newer than the local one (so edits made on another device land
+    // here). Routes pushed this cycle are skipped — local is authoritative
+    // for those. Supabase RLS scopes results to the current user.
+    final localRouteById = {for (final r in localRoutes) r.id: r};
     final remoteRoutes = await remote.fetchAllRoutes();
     for (final route in remoteRoutes) {
-      if (!localRouteIds.contains(route.id)) {
+      if (pushedRouteIds.contains(route.id)) continue;
+      final localRoute = localRouteById[route.id];
+      final shouldPull = SyncPlanner.shouldPull(
+        localUpdatedAt: localRoute?.updatedAt ?? localRoute?.createdAt,
+        remoteUpdatedAt: route.updatedAt ?? route.createdAt,
+      );
+      if (shouldPull) {
         await local.saveRouteTemplate(route);
         transferred++;
       }
@@ -216,8 +238,11 @@ class SyncService extends ChangeNotifier {
     // Re-load each session WITH points only when we actually need to push.
     for (final session in localSessions) {
       final remoteUpdated = remoteSessionTs[session.id];
-      if (remoteUpdated == null ||
-          (session.endedAt?.isAfter(remoteUpdated) ?? false)) {
+      // Sessions are versioned by endedAt (no separate updatedAt column).
+      if (SyncPlanner.shouldPush(
+        localUpdatedAt: session.endedAt,
+        remoteUpdatedAt: remoteUpdated,
+      )) {
         final full = await local.getSessionRun(session.id);
         if (full != null) {
           await remote.upsertSession(full);
@@ -247,8 +272,10 @@ class SyncService extends ChangeNotifier {
     // Push local → remote
     for (final ride in localFreeRides) {
       final remoteUpdated = remoteFreeRideTs[ride.id];
-      if (remoteUpdated == null ||
-          (ride.endedAt?.isAfter(remoteUpdated) ?? false)) {
+      if (SyncPlanner.shouldPush(
+        localUpdatedAt: ride.endedAt,
+        remoteUpdatedAt: remoteUpdated,
+      )) {
         // Re-load with telemetry for push
         final full = await local.getFreeRideRun(ride.id);
         if (full != null) {
@@ -262,8 +289,7 @@ class SyncService extends ChangeNotifier {
     final localFreeRideIds = {for (final r in localFreeRides) r.id};
     for (final remoteId in remoteFreeRideTs.keys) {
       if (!localFreeRideIds.contains(remoteId)) {
-        final ride =
-            await remote.fetchFreeRide(remoteId, includePoints: true);
+        final ride = await remote.fetchFreeRide(remoteId, includePoints: true);
         if (ride != null) {
           await local.saveFreeRideRun(ride);
           transferred++;

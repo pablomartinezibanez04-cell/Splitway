@@ -1,9 +1,40 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:sensors_plus/sensors_plus.dart';
 import 'package:splitway_mobile/src/services/speed/speed_measurement_service.dart';
 import 'package:splitway_mobile/src/services/speed/speed_metric.dart';
 import 'package:splitway_mobile/src/services/speed/speed_sample.dart';
 
 void main() {
+  group('SpeedMeasurementService lifecycle', () {
+    test('dispose cancels GPS and accelerometer subscriptions', () async {
+      final gps = StreamController<Position>();
+      final accel = StreamController<AccelerometerEvent>();
+      final svc = SpeedMeasurementService.forTesting(
+        targets: {SpeedMetric.topSpeed},
+        gpsStreamOverride: gps.stream,
+        accelStreamOverride: accel.stream,
+      );
+
+      await svc.liveArm();
+      expect(gps.hasListener, isTrue);
+      expect(accel.hasListener, isTrue);
+
+      svc.dispose();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(gps.hasListener, isFalse,
+          reason: 'dispose() must cancel the GPS subscription');
+      expect(accel.hasListener, isFalse,
+          reason: 'dispose() must cancel the accelerometer subscription');
+
+      await gps.close();
+      await accel.close();
+    });
+  });
+
   group('SpeedMeasurementService (skeleton)', () {
     test('starts with all targets null and updates topSpeed', () {
       final svc = SpeedMeasurementService.forTesting(
@@ -221,7 +252,8 @@ void main() {
   });
 
   group('SpeedMeasurementService false start', () {
-    test('emits FalseStartDetected when speed sustained over threshold', () async {
+    test('emits FalseStartDetected when speed sustained over threshold',
+        () async {
       final svc = SpeedMeasurementService.forTesting(
         targets: {SpeedMetric.zeroTo100},
       );
