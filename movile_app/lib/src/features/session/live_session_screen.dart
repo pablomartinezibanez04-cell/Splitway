@@ -77,6 +77,12 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
   final FlyToNotifier _flyToNotifier = FlyToNotifier();
   Timer? _uiTicker;
 
+  /// Non-admin users don't see the telemetry source picker. We auto-switch
+  /// the controller from its `simulated` default to real GPS once, after we
+  /// know they're not an admin. Flag prevents the toggle from re-firing if
+  /// the user later changes back (which they can't, but defense in depth).
+  bool _forcedRealGps = false;
+
   /// Minimum heading change (degrees) that triggers a new flyTo while the
   /// session is running. Filters out compass micro-jitter.
   static const double _kBearingChangeThresholdDeg = 3.0;
@@ -87,7 +93,12 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
     WidgetsBinding.instance.addObserver(this);
     widget.controller.addListener(_onChange);
     widget.authService?.addListener(_onChange);
+    widget.profileService?.addListener(_onProfileChanged);
     widget.settingsController.addListener(_onSettingsChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _maybeForceRealGpsForNonAdmin();
+    });
     // 1 Hz tick so the lap-elapsed display keeps ticking between GPS samples.
     _uiTicker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
@@ -111,6 +122,7 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
     WidgetsBinding.instance.removeObserver(this);
     widget.controller.removeListener(_onChange);
     widget.authService?.removeListener(_onChange);
+    widget.profileService?.removeListener(_onProfileChanged);
     widget.settingsController.removeListener(_onSettingsChanged);
     WakelockPlus.disable().catchError((_) {});
     _uiTicker?.cancel();
@@ -164,6 +176,29 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
   void _onSettingsChanged() {
     _updateWakelock();
     setState(() {});
+  }
+
+  void _onProfileChanged() {
+    _maybeForceRealGpsForNonAdmin();
+    if (mounted) setState(() {});
+  }
+
+  /// If the user is not an admin, switch the controller off `simulated` once
+  /// the profile has loaded. Admins keep the toggle; signed-out / signed-in
+  /// non-admins go straight to real GPS.
+  void _maybeForceRealGpsForNonAdmin() {
+    if (_forcedRealGps) return;
+    final p = widget.profileService;
+    // Profile still loading — wait for the next notify.
+    if (p != null && p.loading) return;
+    _forcedRealGps = true;
+    if (p?.isAdmin == true) return;
+    if (widget.controller.source == TrackingSource.simulated) {
+      // setSource(realGps) resolves location permission via the geolocator
+      // plugin. On real devices this surfaces the permission banner; in
+      // widget tests there is no plugin channel, so swallow the error.
+      widget.controller.setSource(TrackingSource.realGps).catchError((_) {});
+    }
   }
 
   void _onNewEvents() {
@@ -272,25 +307,27 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
               ),
             ),
           const SizedBox(height: 16),
-          Text(l.sessionTelemetrySource,
-              style: Theme.of(context).textTheme.titleSmall),
-          const SizedBox(height: 8),
-          SegmentedButton<TrackingSource>(
-            segments: [
-              ButtonSegment(
-                value: TrackingSource.simulated,
-                label: Text(l.sessionSourceSimulated),
-                icon: const Icon(Icons.science_outlined),
-              ),
-              ButtonSegment(
-                value: TrackingSource.realGps,
-                label: Text(l.sessionSourceRealGps),
-                icon: const Icon(Icons.gps_fixed),
-              ),
-            ],
-            selected: {ctrl.source},
-            onSelectionChanged: (s) => ctrl.setSource(s.first),
-          ),
+          if (widget.profileService?.isAdmin == true) ...[
+            Text(l.sessionTelemetrySource,
+                style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 8),
+            SegmentedButton<TrackingSource>(
+              segments: [
+                ButtonSegment(
+                  value: TrackingSource.simulated,
+                  label: Text(l.sessionSourceSimulated),
+                  icon: const Icon(Icons.science_outlined),
+                ),
+                ButtonSegment(
+                  value: TrackingSource.realGps,
+                  label: Text(l.sessionSourceRealGps),
+                  icon: const Icon(Icons.gps_fixed),
+                ),
+              ],
+              selected: {ctrl.source},
+              onSelectionChanged: (s) => ctrl.setSource(s.first),
+            ),
+          ],
           if (ctrl.permissionStatus != null) ...[
             const SizedBox(height: 8),
             _PermissionBanner(status: ctrl.permissionStatus!),

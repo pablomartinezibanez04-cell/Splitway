@@ -74,4 +74,24 @@ void main() {
     }
     expect(sink.entries.length, lessThanOrEqualTo(10));
   });
+
+  test('truncates oversized message, error and stack to caps', () async {
+    final longMsg = 'm' * (AppLogger.maxMessageLength + 500);
+    final longErr = 'e' * (AppLogger.maxErrorLength + 500);
+    final longStack = 's' * (AppLogger.maxStackLength + 500);
+
+    await logger.error(
+      'app',
+      longMsg,
+      error: longErr,
+      stackTrace: StackTrace.fromString(longStack),
+    );
+
+    final e = sink.entries.first;
+    expect(e.message.length, lessThanOrEqualTo(AppLogger.maxMessageLength));
+    expect(e.error!.length, lessThanOrEqualTo(AppLogger.maxErrorLength));
+    expect(e.stackTrace!.length, lessThanOrEqualTo(AppLogger.maxStackLength));
+    // The tail is replaced by a marker so it's obvious it was cut.
+    expect(e.message, endsWith('…[truncated]'));
+  });
 }

@@ -9,6 +9,12 @@ class LogSanitizer {
     'authorization',
     'refresh_token',
     'access_token',
+    'secret',
+    'jwt',
+    'cookie',
+    'set-cookie',
+    'session',
+    'email',
   };
 
   // Matches `access_token=...`, `apikey=...`, `api_key=...` query/form values.
@@ -34,7 +40,9 @@ class LogSanitizer {
   }
 
   /// Returns a new map where blacklisted keys are redacted and string values
-  /// are run through [sanitizeText].
+  /// are run through [sanitizeText]. Recurses into nested maps and lists so
+  /// secrets buried in structured context (e.g. `{'response': {'token': …}}`)
+  /// are redacted too.
   static Map<String, dynamic>? sanitizeContext(Map<String, dynamic>? input) {
     if (input == null) return null;
     final out = <String, dynamic>{};
@@ -44,13 +52,29 @@ class LogSanitizer {
         out[entry.key] = _redacted;
         continue;
       }
-      final value = entry.value;
-      if (value is String) {
-        out[entry.key] = sanitizeText(value);
-      } else {
-        out[entry.key] = value;
-      }
+      out[entry.key] = _sanitizeValue(entry.value);
     }
     return out;
+  }
+
+  /// Recursively sanitizes an arbitrary context value: strings via
+  /// [sanitizeText], maps via [sanitizeContext], lists element-by-element,
+  /// and any other type passed through unchanged.
+  static dynamic _sanitizeValue(dynamic value) {
+    if (value is String) {
+      return sanitizeText(value);
+    }
+    if (value is Map<String, dynamic>) {
+      return sanitizeContext(value);
+    }
+    if (value is Map) {
+      return sanitizeContext(value.map(
+        (k, v) => MapEntry(k.toString(), v),
+      ));
+    }
+    if (value is List) {
+      return value.map(_sanitizeValue).toList();
+    }
+    return value;
   }
 }

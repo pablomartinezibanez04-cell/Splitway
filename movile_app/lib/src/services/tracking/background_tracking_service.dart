@@ -9,11 +9,21 @@ class BackgroundTrackingService {
   static bool _running = false;
   static bool get isRunning => _running;
 
+  /// Guards [startTracking] against re-entrancy across its `await`: a second
+  /// call while a start is in flight must not invoke the service again.
+  static bool _starting = false;
+
   static DateTime? _lastUpdate;
   static const _throttleDuration = Duration(seconds: 2);
 
   @visibleForTesting
   static VoidCallback? onUpdateForTest;
+
+  /// Test seam for [startTracking]: when set, the service starter is replaced
+  /// by this function (regardless of platform) so concurrency can be asserted.
+  @visibleForTesting
+  static Future<bool> Function({required String title, required String body})?
+      startOverrideForTest;
 
   static void init() {
     if (!Platform.isAndroid) return;
@@ -40,36 +50,50 @@ class BackgroundTrackingService {
     required String body,
   }) async {
     if (_running) return true;
-    if (!Platform.isAndroid) {
-      _running = true;
-      return true;
-    }
+    // Re-entrancy guard: set synchronously before the first `await` so a
+    // second near-simultaneous call short-circuits instead of starting the
+    // service twice.
+    if (_starting) return true;
+    _starting = true;
     try {
-      final result = await FlutterForegroundTask.startService(
-        serviceId: 256,
-        notificationTitle: title,
-        notificationText: body,
-        callback: _taskCallback,
-      );
-      if (result is ServiceRequestSuccess) {
+      final override = startOverrideForTest;
+      if (override != null) {
+        _running = await override(title: title, body: body);
+        return _running;
+      }
+      if (!Platform.isAndroid) {
         _running = true;
-      } else if (result is ServiceRequestFailure &&
-          result.error is ServiceAlreadyStartedException) {
-        // Service survived a hot-reload or app kill without a clean stop.
-        // Adopt the orphaned service and reset its notification content.
-        _running = true;
-        FlutterForegroundTask.updateService(
+        return true;
+      }
+      try {
+        final result = await FlutterForegroundTask.startService(
+          serviceId: 256,
           notificationTitle: title,
           notificationText: body,
+          callback: _taskCallback,
         );
-      } else {
-        debugPrint(
-            'BackgroundTrackingService.startTracking failed: ${(result as ServiceRequestFailure).error}');
+        if (result is ServiceRequestSuccess) {
+          _running = true;
+        } else if (result is ServiceRequestFailure &&
+            result.error is ServiceAlreadyStartedException) {
+          // Service survived a hot-reload or app kill without a clean stop.
+          // Adopt the orphaned service and reset its notification content.
+          _running = true;
+          FlutterForegroundTask.updateService(
+            notificationTitle: title,
+            notificationText: body,
+          );
+        } else {
+          debugPrint(
+              'BackgroundTrackingService.startTracking failed: ${(result as ServiceRequestFailure).error}');
+        }
+        return _running;
+      } catch (e) {
+        debugPrint('BackgroundTrackingService.startTracking failed: $e');
+        return false;
       }
-      return _running;
-    } catch (e) {
-      debugPrint('BackgroundTrackingService.startTracking failed: $e');
-      return false;
+    } finally {
+      _starting = false;
     }
   }
 
@@ -112,8 +136,10 @@ class BackgroundTrackingService {
   @visibleForTesting
   static void resetForTest() {
     _running = false;
+    _starting = false;
     _lastUpdate = null;
     onUpdateForTest = null;
+    startOverrideForTest = null;
   }
 
   @visibleForTesting

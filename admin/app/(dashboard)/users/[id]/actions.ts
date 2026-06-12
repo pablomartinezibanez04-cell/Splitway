@@ -6,7 +6,7 @@ import "server-only";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { adminClient } from "@/lib/supabase/admin";
-import { requireAdmin } from "@/lib/auth";
+import { requireAdmin, authorizeTargetAction } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
 
 // ---------- edit profile ----------
@@ -33,6 +33,9 @@ export async function editUserProfile(
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
   }
+
+  const denied = await authorizeTargetAction(parsed.data.userId, admin.role);
+  if (denied.error) return denied;
 
   const supabase = adminClient();
   const { data: before } = await supabase
@@ -94,6 +97,9 @@ export async function banUser(
     return { error: "No puedes banearte a ti mismo." };
   }
 
+  const denied = await authorizeTargetAction(parsed.data.userId, admin.role);
+  if (denied.error) return denied;
+
   const supabase = adminClient();
   const { error } = await supabase.auth.admin.updateUserById(
     parsed.data.userId,
@@ -152,9 +158,11 @@ export async function unbanUser(
 
 // ---------- reset password ----------
 
+// The email is NOT trusted from the form — it is resolved server-side from
+// the userId (audit SEC-5) so a recovery link can never be triggered for an
+// arbitrary address that doesn't belong to the target user.
 const resetSchema = z.object({
   userId: z.string().uuid(),
-  email: z.string().email(),
 });
 
 export type ResetState = { error?: string; ok?: boolean };
@@ -167,19 +175,33 @@ export async function resetUserPassword(
 
   const parsed = resetSchema.safeParse({
     userId: formData.get("userId"),
-    email: formData.get("email"),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
   }
 
+  const denied = await authorizeTargetAction(parsed.data.userId, admin.role);
+  if (denied.error) return denied;
+
   const supabase = adminClient();
+
+  // Resolve the email from the user id via the service-role RPC instead of
+  // trusting a form field, so the recovery email can only ever go to the
+  // address actually registered for this user.
+  const { data: targetEmail, error: lookupErr } = await supabase.rpc(
+    "find_email_by_user_id",
+    { p_user_id: parsed.data.userId },
+  );
+  if (lookupErr || !targetEmail) {
+    return { error: "No se pudo determinar el email del usuario." };
+  }
+
   // generateLink with type=recovery sends the password-reset email via
   // Supabase's configured SMTP. The link itself we discard — Supabase
   // emails it to the user as part of the flow.
   const { error } = await supabase.auth.admin.generateLink({
     type: "recovery",
-    email: parsed.data.email,
+    email: targetEmail,
   });
   if (error) return { error: "No se pudo enviar el email de reseteo." };
 
@@ -190,7 +212,7 @@ export async function resetUserPassword(
     targetId: parsed.data.userId,
     details: {
       actorEmail: admin.email,
-      targetEmail: parsed.data.email,
+      targetEmail,
     },
   });
 

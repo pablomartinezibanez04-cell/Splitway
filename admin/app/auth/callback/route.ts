@@ -10,19 +10,41 @@ import { createClient } from "@/lib/supabase/server";
  * to `/`. The proxy (middleware) will pick it up from there and handle
  * the role gate and onboarding redirect.
  */
-export async function GET(request: NextRequest) {
+/**
+ * Resolves the origin to redirect back to after the OAuth exchange.
+ *
+ * `request.url` may use the container's bind address (e.g. 0.0.0.0 in Docker
+ * dev) instead of the host the browser actually requested, so we honor
+ * X-Forwarded-* headers. Because those headers are attacker-controllable when
+ * a proxy doesn't strip client-supplied values, we validate the resulting
+ * host against `ADMIN_ALLOWED_REDIRECT_HOSTS` (comma-separated) when set —
+ * this closes the post-login open-redirect (audit SEC-4). When the allowlist
+ * is unset (local dev) behavior is unchanged.
+ */
+function resolveOrigin(request: NextRequest): string {
   const requestUrl = new URL(request.url);
-
-  // `request.url` may use the container's bind address (e.g. 0.0.0.0 in
-  // Docker dev) instead of the host the browser actually requested.
-  // Honor X-Forwarded-* headers when behind a proxy, then fall back to
-  // the Host header, then to request.url as last resort. Redirecting to
-  // `http://0.0.0.0:3000/...` produces ERR_ADDRESS_INVALID in browsers.
   const forwardedHost = request.headers.get("x-forwarded-host");
   const forwardedProto = request.headers.get("x-forwarded-proto");
   const host = forwardedHost ?? request.headers.get("host") ?? requestUrl.host;
   const proto = forwardedProto ?? requestUrl.protocol.replace(":", "");
-  const origin = `${proto}://${host}`;
+
+  const allowlist = (process.env.ADMIN_ALLOWED_REDIRECT_HOSTS ?? "")
+    .split(",")
+    .map((h) => h.trim().toLowerCase())
+    .filter(Boolean);
+
+  if (allowlist.length > 0 && !allowlist.includes(host.toLowerCase())) {
+    // Forwarded host is not trusted — fall back to the first allowed host
+    // instead of redirecting to an attacker-controlled domain.
+    return `${proto}://${allowlist[0]}`;
+  }
+
+  return `${proto}://${host}`;
+}
+
+export async function GET(request: NextRequest) {
+  const requestUrl = new URL(request.url);
+  const origin = resolveOrigin(request);
 
   const code = requestUrl.searchParams.get("code");
   const errorDescription = requestUrl.searchParams.get("error_description");

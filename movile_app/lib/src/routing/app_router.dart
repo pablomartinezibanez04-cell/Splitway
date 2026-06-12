@@ -151,6 +151,7 @@ class AppRouter {
           authService: authService,
           repository: repository,
           garageService: garageService,
+          profileService: profileService,
         ),
       ),
 
@@ -164,7 +165,11 @@ class AppRouter {
               body: Center(child: Text('Logger not initialized')),
             );
           }
-          return LogsScreen(sink: sink, uploader: uploader);
+          return LogsScreen(
+            sink: sink,
+            uploader: uploader,
+            profileService: profileService,
+          );
         },
       ),
 

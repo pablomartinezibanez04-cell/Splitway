@@ -1,3 +1,5 @@
+import 'user_role.dart';
+
 class UserProfile {
   const UserProfile({
     required this.id,
@@ -6,6 +8,7 @@ class UserProfile {
     this.bio,
     this.dateOfBirth,
     required this.nicknameChangedAt,
+    this.role = UserRole.user,
   });
 
   final String id;
@@ -14,6 +17,7 @@ class UserProfile {
   final String? bio;
   final DateTime? dateOfBirth;
   final DateTime nicknameChangedAt;
+  final UserRole role;
 
   static const _cooldown = Duration(days: 3);
 
@@ -41,6 +45,7 @@ class UserProfile {
       bio: json['bio'] as String?,
       dateOfBirth: dob != null ? DateTime.parse(dob) : null,
       nicknameChangedAt: DateTime.parse(json['nickname_changed_at'] as String),
+      role: UserRole.fromString(json['role'] as String?),
     );
   }
 
@@ -50,6 +55,7 @@ class UserProfile {
     Object? bio = _sentinel,
     Object? dateOfBirth = _sentinel,
     DateTime? nicknameChangedAt,
+    UserRole? role,
   }) {
     return UserProfile(
       id: id,
@@ -60,6 +66,7 @@ class UserProfile {
           ? this.dateOfBirth
           : dateOfBirth as DateTime?,
       nicknameChangedAt: nicknameChangedAt ?? this.nicknameChangedAt,
+      role: role ?? this.role,
     );
   }
 

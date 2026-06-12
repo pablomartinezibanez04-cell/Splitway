@@ -28,6 +28,10 @@ void main() {
 
   setUp(() async {
     repo = await _makeRepo();
+    // The repository guardrail (LocalDraftRepository.saveRouteTemplate)
+    // refuses to persist a non-official route when userId is null; tests
+    // that exercise saveDraft must simulate a signed-in user.
+    repo.userId = 'test-user';
     ctrl = RouteEditorController(repo);
     ctrl.startDrawing(name: 'Test', difficulty: RouteDifficulty.medium);
     // Build a minimal draft path (3 collinear-ish points going east).
@@ -300,6 +304,7 @@ void main() {
     test('closed circuit detection works with mixed path', () async {
       // Clear and create a closed route: tap → freehand → tap back near start.
       final freshRepo = await _makeRepo();
+      freshRepo.userId = 'test-user';
       final freshCtrl = RouteEditorController(freshRepo);
       freshCtrl.startDrawing(name: 'Loop', difficulty: RouteDifficulty.easy);
 

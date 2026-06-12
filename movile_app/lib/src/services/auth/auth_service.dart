@@ -81,9 +81,7 @@ class AuthService extends ChangeNotifier {
         if (!_localCleanupDone) {
           _localCleanupDone = true;
           unawaited(
-            _client.auth
-                .signOut(scope: SignOutScope.local)
-                .catchError((_) {}),
+            _client.auth.signOut(scope: SignOutScope.local).catchError((_) {}),
           );
         }
       case AuthChangeEvent.signedIn:
@@ -133,7 +131,6 @@ class AuthService extends ChangeNotifier {
       final idToken = googleUser.authentication.idToken;
       // accessToken is no longer part of authentication in google_sign_in v7;
       // Supabase's signInWithIdToken only requires idToken.
-      const String? accessToken = null;
 
       if (idToken == null) {
         _errorCode = AuthErrorCode.googleTokenUnavailable;
@@ -146,7 +143,6 @@ class AuthService extends ChangeNotifier {
         await _client.auth.signInWithIdToken(
           provider: OAuthProvider.google,
           idToken: idToken,
-          accessToken: accessToken,
         );
       } on AuthException catch (e, st) {
         AppLogger.maybeInstance?.warning(

@@ -3,13 +3,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, Home, Map, Settings, Users } from "lucide-react";
+import { Activity, FileText, Home, Map, Settings, Users } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/", label: "Inicio", icon: Home },
   { href: "/users", label: "Usuarios", icon: Users },
   { href: "/routes", label: "Rutas", icon: Map },
   { href: "/sessions", label: "Sesiones", icon: Activity },
+  { href: "/logs", label: "Logs", icon: FileText },
   { href: "/settings", label: "Configuración", icon: Settings },
 ] as const;
 

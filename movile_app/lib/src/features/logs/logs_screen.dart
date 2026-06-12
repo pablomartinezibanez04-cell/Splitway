@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart' show SharePlus, ShareParams, XFile;
@@ -10,6 +11,7 @@ import '../../services/logging/log_entry.dart';
 import '../../services/logging/log_level.dart';
 import '../../services/logging/log_uploader.dart';
 import '../../services/logging/sinks/local_sink.dart';
+import '../../services/profile/profile_service.dart';
 import 'log_detail_sheet.dart';
 import 'widgets/log_filter_bar.dart';
 import 'widgets/log_list_tile.dart';
@@ -19,10 +21,12 @@ class LogsScreen extends StatefulWidget {
     super.key,
     required this.sink,
     required this.uploader,
+    this.profileService,
   });
 
   final LocalSink sink;
   final LogUploader uploader;
+  final ProfileService? profileService;
 
   @override
   State<LogsScreen> createState() => _LogsScreenState();
@@ -34,11 +38,49 @@ class _LogsScreenState extends State<LogsScreen> {
   String _search = '';
   List<LogEntry> _entries = const [];
   int _pending = 0;
+  bool _redirected = false;
 
   @override
   void initState() {
     super.initState();
+    widget.profileService?.addListener(_onProfileChanged);
     _reload();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _checkAccess();
+    });
+  }
+
+  @override
+  void dispose() {
+    widget.profileService?.removeListener(_onProfileChanged);
+    super.dispose();
+  }
+
+  void _onProfileChanged() {
+    if (mounted) _checkAccess();
+  }
+
+  /// Defense in depth: the Settings entry is hidden for non-admins, but a
+  /// deep link or a stale build could still land here. Bounce to /settings
+  /// once we know the user is not an admin. Waits for the profile to load
+  /// before deciding. When [widget.profileService] is null the gate is not
+  /// wired (test harness / pre-init), so the screen renders normally.
+  void _checkAccess() {
+    if (_redirected) return;
+    final p = widget.profileService;
+    if (p == null) return;
+    if (p.loading && p.profile == null) return;
+    if (p.isAdmin) return;
+    _redirected = true;
+    if (!mounted) return;
+    // GoRouter isn't guaranteed in every host (e.g. tests). Catch the lookup
+    // error and fall back to rendering an empty placeholder.
+    try {
+      context.go('/settings');
+    } catch (_) {
+      // No router in scope — nothing to do; the (empty) tree stays put.
+    }
   }
 
   Future<void> _reload() async {

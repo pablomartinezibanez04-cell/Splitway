@@ -4,8 +4,7 @@ import 'package:splitway_mobile/src/services/logging/log_sanitizer.dart';
 void main() {
   group('LogSanitizer', () {
     test('redacts access_token query param in URLs', () {
-      const input =
-          'https://api.mapbox.com/geocode?access_token=pk.abc123&q=x';
+      const input = 'https://api.mapbox.com/geocode?access_token=pk.abc123&q=x';
       final out = LogSanitizer.sanitizeText(input);
       expect(out, isNot(contains('pk.abc123')));
       expect(out, contains('access_token=***REDACTED***'));
@@ -56,6 +55,57 @@ void main() {
 
     test('sanitizeContext returns null when input is null', () {
       expect(LogSanitizer.sanitizeContext(null), isNull);
+    });
+
+    test('sanitizeContext recurses into nested maps', () {
+      final out = LogSanitizer.sanitizeContext({
+        'response': {
+          'access_token': 'pk.nested-secret',
+          'nested': {'password': 'hunter2'},
+        },
+      });
+      final response = out!['response'] as Map<String, dynamic>;
+      expect(response['access_token'], '***REDACTED***');
+      final nested = response['nested'] as Map<String, dynamic>;
+      expect(nested['password'], '***REDACTED***');
+    });
+
+    test('sanitizeContext recurses into lists of maps', () {
+      final out = LogSanitizer.sanitizeContext({
+        'items': [
+          {'token': 'abc'},
+          {'safe': 1},
+        ],
+      });
+      final items = out!['items'] as List<dynamic>;
+      expect((items[0] as Map)['token'], '***REDACTED***');
+      expect((items[1] as Map)['safe'], 1);
+    });
+
+    test('sanitizeContext sanitizes string values inside nested lists', () {
+      final out = LogSanitizer.sanitizeContext({
+        'urls': ['https://api.test?access_token=secret&foo=1'],
+      });
+      final urls = out!['urls'] as List<dynamic>;
+      expect(urls[0], contains('access_token=***REDACTED***'));
+      expect(urls[0], contains('foo=1'));
+    });
+
+    test('sanitizeContext redacts additional sensitive keys', () {
+      final out = LogSanitizer.sanitizeContext({
+        'secret': 's',
+        'jwt': 'j',
+        'cookie': 'c',
+        'set-cookie': 'sc',
+        'session': 'sess',
+        'email': 'user@example.com',
+      });
+      expect(out!['secret'], '***REDACTED***');
+      expect(out['jwt'], '***REDACTED***');
+      expect(out['cookie'], '***REDACTED***');
+      expect(out['set-cookie'], '***REDACTED***');
+      expect(out['session'], '***REDACTED***');
+      expect(out['email'], '***REDACTED***');
     });
   });
 }

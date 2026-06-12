@@ -12,14 +12,20 @@
 //   MAPBOX_SERVER_TOKEN — a Mapbox secret token with Map Matching scope.
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders } from "../_shared/cors.ts";
 
 const MAPBOX_BASE = "https://api.mapbox.com/matching/v5/mapbox";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+// Per-user rate limit for the (paid) Mapbox Map Matching proxy.
+const RATE_LIMIT_MAX = 60; // requests…
+const RATE_LIMIT_WINDOW_SECONDS = 60; // …per minute, per user.
+
+const json = (body: unknown, status: number) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 
 interface RequestBody {
   coordinates: [number, number][];
@@ -35,13 +41,45 @@ serve(async (req: Request) => {
   }
 
   try {
-    // Verify the caller is authenticated via Supabase JWT.
+    // 1. Require an Authorization header AND validate the JWT — presence
+    //    alone is not enough (audit SEC-1). Reject anything that isn't a
+    //    real, current Supabase user token.
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "Missing Authorization header" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return json({ error: "Missing Authorization header" }, 401);
+    }
+
+    const anonClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+    );
+    const { data: { user }, error: authError } = await anonClient.auth.getUser(
+      authHeader.replace("Bearer ", ""),
+    );
+    if (authError || !user) {
+      return json({ error: "Unauthorized" }, 401);
+    }
+
+    // 2. Per-user rate limit, enforced server-side via a SECURITY DEFINER
+    //    RPC so a single user can't run up the Mapbox bill.
+    const adminClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      { auth: { persistSession: false } },
+    );
+    const { data: allowed, error: quotaError } = await adminClient.rpc(
+      "consume_mapbox_quota",
+      {
+        p_user_id: user.id,
+        p_max: RATE_LIMIT_MAX,
+        p_window_seconds: RATE_LIMIT_WINDOW_SECONDS,
+      },
+    );
+    if (quotaError) {
+      return json({ error: "Rate-limit check failed" }, 500);
+    }
+    if (allowed === false) {
+      return json({ error: "Rate limit exceeded. Try again shortly." }, 429);
     }
 
     const mapboxToken = Deno.env.get("MAPBOX_SERVER_TOKEN");

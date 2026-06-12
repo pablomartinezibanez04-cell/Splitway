@@ -11,6 +11,7 @@ import '../../data/repositories/local_draft_repository.dart';
 import '../../services/auth/auth_service.dart';
 import '../../services/garage/garage_service.dart';
 import '../../services/locale/locale_controller.dart';
+import '../../services/profile/profile_service.dart';
 import '../../services/settings/app_settings_controller.dart';
 
 /// Wraps a CSV cell value in double-quotes and escapes internal double-quotes.
@@ -24,6 +25,7 @@ class SettingsScreen extends StatelessWidget {
     this.authService,
     required this.repository,
     this.garageService,
+    this.profileService,
   });
 
   final LocaleController localeController;
@@ -31,6 +33,7 @@ class SettingsScreen extends StatelessWidget {
   final AuthService? authService;
   final LocalDraftRepository repository;
   final GarageService? garageService;
+  final ProfileService? profileService;
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +54,11 @@ class SettingsScreen extends StatelessWidget {
         ),
       ),
       body: ListenableBuilder(
-        listenable: Listenable.merge([localeController, settingsController]),
+        listenable: Listenable.merge([
+          localeController,
+          settingsController,
+          if (profileService != null) profileService!,
+        ]),
         builder: (context, _) => ListView(
           padding: const EdgeInsets.symmetric(vertical: 12),
           children: [
@@ -286,13 +293,14 @@ class SettingsScreen extends StatelessWidget {
 
             // ── Diagnostics ─────────────────────────────────────────────
             _SectionHeader(l.settingsDiagnosticsSection),
-            ListTile(
-              leading: const Icon(Icons.bug_report_outlined),
-              title: Text(l.settingsDiagnosticsLogsLabel),
-              subtitle: Text(l.settingsDiagnosticsLogsDesc),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => context.push('/settings/logs'),
-            ),
+            if (profileService?.isAdmin == true)
+              ListTile(
+                leading: const Icon(Icons.bug_report_outlined),
+                title: Text(l.settingsDiagnosticsLogsLabel),
+                subtitle: Text(l.settingsDiagnosticsLogsDesc),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/settings/logs'),
+              ),
             SwitchListTile(
               title: Text(l.settingsDiagnosticsRemoteLogsLabel),
               subtitle: Text(l.settingsDiagnosticsRemoteLogsDesc),

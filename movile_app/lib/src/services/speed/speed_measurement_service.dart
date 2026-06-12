@@ -20,13 +20,28 @@ class FalseStartDetected {
 /// [liveStop]; tests use [SpeedMeasurementService.forTesting] together
 /// with [debugInjectSample] to drive the state machine deterministically.
 class SpeedMeasurementService {
-  SpeedMeasurementService({required this.targets}) : _isTestMode = false;
+  SpeedMeasurementService({required this.targets})
+      : _isTestMode = false,
+        _gpsStreamOverride = null,
+        _accelStreamOverride = null;
 
-  SpeedMeasurementService.forTesting({required this.targets})
-      : _isTestMode = true;
+  SpeedMeasurementService.forTesting({
+    required this.targets,
+    Stream<Position>? gpsStreamOverride,
+    Stream<AccelerometerEvent>? accelStreamOverride,
+  })  : _isTestMode = true,
+        _gpsStreamOverride = gpsStreamOverride,
+        _accelStreamOverride = accelStreamOverride;
 
   final Set<SpeedMetric> targets;
   final bool _isTestMode;
+
+  /// Test seams: when provided, [_subscribeSensors] listens to these instead
+  /// of the real plugin streams so subscription lifecycle can be asserted.
+  final Stream<Position>? _gpsStreamOverride;
+  final Stream<AccelerometerEvent>? _accelStreamOverride;
+
+  bool _disposed = false;
 
   static const double _sixtyFeetMeters = 18.29;
   static const double _eighthMileMeters = 201.168;
@@ -97,16 +112,19 @@ class SpeedMeasurementService {
     await _gpsSub?.cancel();
     await _accelSub?.cancel();
 
-    _gpsSub = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.bestForNavigation,
-        distanceFilter: 0,
-      ),
-    ).listen((p) {
+    final gpsStream = _gpsStreamOverride ??
+        Geolocator.getPositionStream(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.bestForNavigation,
+            distanceFilter: 0,
+          ),
+        );
+    _gpsSub = gpsStream.listen((p) {
       if (p.speed >= 0) _liveSpeedKmh = p.speed * 3.6;
     });
 
-    _accelSub = accelerometerEventStream().listen((e) {
+    _accelSub =
+        (_accelStreamOverride ?? accelerometerEventStream()).listen((e) {
       final now = DateTime.now();
       final last = _lastImuTickAt ?? now;
       final dt = now.difference(last).inMicroseconds / 1e6;
@@ -114,15 +132,13 @@ class SpeedMeasurementService {
       if (dt <= 0 || dt > 0.5) return;
       // Magnitude of total acceleration vector minus gravity. Shaking the
       // phone produces values >> 1 m/s²; resting it gives ~0.
-      final magnitude =
-          math.sqrt(e.x * e.x + e.y * e.y + e.z * e.z);
+      final magnitude = math.sqrt(e.x * e.x + e.y * e.y + e.z * e.z);
       _liveAccelMs2 = math.max(0, magnitude - 9.81);
       // Integrate distance from current (GPS-resolved) speed.
       final gpsSpeedMs = _liveSpeedKmh / 3.6;
       _liveDistanceM += gpsSpeedMs * dt;
       _onSample(SpeedSample(
-        tSinceStart:
-            Duration(microseconds: _sessionClock.elapsedMicroseconds),
+        tSinceStart: Duration(microseconds: _sessionClock.elapsedMicroseconds),
         speedKmh: _liveSpeedKmh,
         distanceM: _liveDistanceM,
         accelMs2: _liveAccelMs2,
@@ -131,8 +147,18 @@ class SpeedMeasurementService {
   }
 
   Future<void> disposeAsync() async {
+    if (_disposed) return;
+    _disposed = true;
     await _gpsSub?.cancel();
     await _accelSub?.cancel();
+    _closeNotifiers();
+  }
+
+  /// Shared teardown for [dispose]/[disposeAsync]: drops the (already
+  /// cancelled) subscription handles and closes the notifiers/stream.
+  void _closeNotifiers() {
+    _gpsSub = null;
+    _accelSub = null;
     _falseStart.close();
     results.dispose();
     phase.dispose();
@@ -165,11 +191,15 @@ class SpeedMeasurementService {
   }
 
   void dispose() {
-    _falseStart.close();
-    results.dispose();
-    phase.dispose();
-    instantaneousKmh.dispose();
-    elapsed.dispose();
+    if (_disposed) return;
+    _disposed = true;
+    // Cancel sensor subscriptions so they don't fire callbacks against the
+    // now-disposed ValueNotifiers (and keep draining battery). cancel() is
+    // async; fire-and-forget is fine because the listener is detached
+    // synchronously and we guard _onSample with _disposed anyway.
+    unawaited(_gpsSub?.cancel());
+    unawaited(_accelSub?.cancel());
+    _closeNotifiers();
   }
 
   @visibleForTesting
@@ -183,6 +213,7 @@ class SpeedMeasurementService {
   }
 
   void _onSample(SpeedSample s) {
+    if (_disposed) return;
     instantaneousKmh.value = s.speedKmh;
     switch (phase.value) {
       case SpeedPhase.armed:
@@ -200,8 +231,8 @@ class SpeedMeasurementService {
   }
 
   void _checkFalseStart(SpeedSample s) {
-    final exceeded = s.speedKmh >= _falseStartSpeedKmh ||
-        s.accelMs2 >= _falseStartAccelMs2;
+    final exceeded =
+        s.speedKmh >= _falseStartSpeedKmh || s.accelMs2 >= _falseStartAccelMs2;
     if (!exceeded) {
       _falseStartCandidateTime = null;
       return;
@@ -225,8 +256,8 @@ class SpeedMeasurementService {
     // Always run motion detection — it provides the t0 for every timed split,
     // regardless of whether reactionTime is one of the selected targets.
     if (_motionStartTime == null) {
-      final motion = s.speedKmh >= _reactionSpeedKmh ||
-          s.accelMs2 >= _reactionAccelMs2;
+      final motion =
+          s.speedKmh >= _reactionSpeedKmh || s.accelMs2 >= _reactionAccelMs2;
       if (motion) {
         _reactionCandidateTime ??= s.tSinceStart;
         final sustained = s.tSinceStart - _reactionCandidateTime!;
@@ -279,10 +310,10 @@ class SpeedMeasurementService {
     if (!targets.contains(metric)) return;
     if (out[metric] != null) return;
     if (prev.distanceM < thresholdM && curr.distanceM >= thresholdM) {
-      final ratio = (thresholdM - prev.distanceM) /
-          (curr.distanceM - prev.distanceM);
-      final dtMicros = curr.tSinceStart.inMicroseconds -
-          prev.tSinceStart.inMicroseconds;
+      final ratio =
+          (thresholdM - prev.distanceM) / (curr.distanceM - prev.distanceM);
+      final dtMicros =
+          curr.tSinceStart.inMicroseconds - prev.tSinceStart.inMicroseconds;
       final tMicros = prev.tSinceStart.inMicroseconds + ratio * dtMicros;
       out[metric] = (tMicros - motionStart.inMicroseconds) / 1e6;
     }
@@ -299,10 +330,10 @@ class SpeedMeasurementService {
     if (!targets.contains(metric)) return;
     if (out[metric] != null) return;
     if (prev.speedKmh < thresholdKmh && curr.speedKmh >= thresholdKmh) {
-      final ratio = (thresholdKmh - prev.speedKmh) /
-          (curr.speedKmh - prev.speedKmh);
-      final dtMicros = curr.tSinceStart.inMicroseconds -
-          prev.tSinceStart.inMicroseconds;
+      final ratio =
+          (thresholdKmh - prev.speedKmh) / (curr.speedKmh - prev.speedKmh);
+      final dtMicros =
+          curr.tSinceStart.inMicroseconds - prev.tSinceStart.inMicroseconds;
       final tMicros = prev.tSinceStart.inMicroseconds + ratio * dtMicros;
       out[metric] = (tMicros - motionStart.inMicroseconds) / 1e6;
     }
