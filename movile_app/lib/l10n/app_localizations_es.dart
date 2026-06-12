@@ -185,19 +185,16 @@ class AppLocalizationsEs extends AppLocalizations {
   String get authErrorGoogleToken => 'No se pudo obtener el token de Google.';
 
   @override
-  String get authErrorEmailAlreadyRegistered =>
-      'Este email ya está registrado. Inicia sesión.';
+  String get authErrorEmailAlreadyRegistered => 'Este email ya está registrado. Inicia sesión.';
 
   @override
   String get authErrorInvalidCredentials => 'Email o contraseña incorrectos.';
 
   @override
-  String get authErrorEmailNotConfirmed =>
-      'Confirma tu email antes de iniciar sesión.';
+  String get authErrorEmailNotConfirmed => 'Confirma tu email antes de iniciar sesión.';
 
   @override
-  String get authErrorPasswordTooShort =>
-      'La contraseña debe tener al menos 6 caracteres.';
+  String get authErrorPasswordTooShort => 'La contraseña debe tener al menos 6 caracteres.';
 
   @override
   String get authErrorNoConnection => 'Sin conexión. Inténtalo de nuevo.';
@@ -223,8 +220,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get loginForgotPasswordTitle => 'Restablecer contraseña';
 
   @override
-  String get loginForgotPasswordBody =>
-      'Introduce tu email y te enviaremos un enlace para restablecer tu contraseña.';
+  String get loginForgotPasswordBody => 'Introduce tu email y te enviaremos un enlace para restablecer tu contraseña.';
 
   @override
   String get loginForgotPasswordButton => 'Enviar enlace';
@@ -235,8 +231,7 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get loginForgotPasswordError =>
-      'No se pudo enviar el email. Inténtalo de nuevo.';
+  String get loginForgotPasswordError => 'No se pudo enviar el email. Inténtalo de nuevo.';
 
   @override
   String get profileTitle => 'Perfil';
@@ -245,15 +240,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get profileAvatarUpdated => 'Avatar actualizado';
 
   @override
-  String get profileErrorUnexpected =>
-      'No se pudo actualizar el avatar. Inténtalo de nuevo.';
+  String get profileErrorUnexpected => 'No se pudo actualizar el avatar. Inténtalo de nuevo.';
 
   @override
   String get profileNicknameUpdated => 'Apodo actualizado';
 
   @override
-  String get profileErrorCooldown =>
-      'El apodo solo se puede cambiar tras el tiempo de espera.';
+  String get profileErrorCooldown => 'El apodo solo se puede cambiar tras el tiempo de espera.';
 
   @override
   String get profileBioUpdated => 'Biografía actualizada';
@@ -317,8 +310,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get onboardingTitle => 'Completa tu perfil';
 
   @override
-  String get onboardingDescription =>
-      'Necesitamos algunos datos para terminar de configurar tu cuenta. La contraseña te permitirá iniciar sesión también con email.';
+  String get onboardingDescription => 'Necesitamos algunos datos para terminar de configurar tu cuenta. La contraseña te permitirá iniciar sesión también con email.';
 
   @override
   String get onboardingSubmit => 'Guardar y continuar';
@@ -330,8 +322,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get onboardingDobInvalid => 'Debes tener al menos 13 años.';
 
   @override
-  String get onboardingProfileFailed =>
-      'No se pudo guardar el perfil. Inténtalo de nuevo.';
+  String get onboardingProfileFailed => 'No se pudo guardar el perfil. Inténtalo de nuevo.';
 
   @override
   String get onboardingPasswordFailed => 'No se pudo establecer la contraseña.';
@@ -352,8 +343,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get editorNoRoutesTitle => 'Aún no tienes rutas';
 
   @override
-  String get editorNoRoutesMessage =>
-      'Crea tu primera ruta para empezar a cronometrar.';
+  String get editorNoRoutesMessage => 'Crea tu primera ruta para empezar a cronometrar.';
 
   @override
   String get editorSectorsLabel => 'Sectores';
@@ -403,12 +393,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get editorCancelDrawingTitle => 'Cancelar dibujo';
 
   @override
-  String get editorCancelDrawingWarning =>
-      'Se descartarán los puntos sin guardar.';
+  String get editorCancelDrawingWarning => 'Se descartarán los puntos sin guardar.';
 
   @override
-  String get editorNoMapboxToken =>
-      'Sin Mapbox token configurado. El mapa interactivo está desactivado; para probar el dibujo, añade un token y reinicia.';
+  String get editorNoMapboxToken => 'Sin Mapbox token configurado. El mapa interactivo está desactivado; para probar el dibujo, añade un token y reinicia.';
 
   @override
   String get editorSegmentPath => 'Trazado';
@@ -494,8 +482,7 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get editorSnapFailedMessage =>
-      'No se pudo conectar con el servidor para ajustar la ruta a las carreteras. Se muestran segmentos rectos hasta que la conexión se restablezca.';
+  String get editorSnapFailedMessage => 'No se pudo conectar con el servidor para ajustar la ruta a las carreteras. Se muestran segmentos rectos hasta que la conexión se restablezca.';
 
   @override
   String get editorDrawingModeTooltip => 'Modo de dibujo';
@@ -537,8 +524,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get historyNoSessionsTitle => 'Aún no has grabado ninguna sesión';
 
   @override
-  String get historyNoSessionsMessage =>
-      'Ve a la pestaña Sesión, elige una ruta y pulsa \"Comenzar\".';
+  String get historyNoSessionsMessage => 'Ve a la pestaña Sesión, elige una ruta y pulsa \"Comenzar\".';
 
   @override
   String get historyDeletedRoute => 'Ruta eliminada';
@@ -576,8 +562,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get historySectorsLabel => 'Sectores';
 
   @override
-  String get historySectorsEmpty =>
-      'No hay sectores registrados en esta sesión';
+  String get historySectorsEmpty => 'No hay sectores registrados en esta sesión';
 
   @override
   String historySectorSubtitle(int lapNum, String speed) {
@@ -600,8 +585,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get sessionNoRoutesTitle => 'No hay rutas para correr';
 
   @override
-  String get sessionNoRoutesMessage =>
-      'Crea una ruta primero en la pestaña Editor para poder grabar una sesión.';
+  String get sessionNoRoutesMessage => 'Crea una ruta primero en la pestaña Editor para poder grabar una sesión.';
 
   @override
   String get sessionSelectRoute => 'Selecciona una ruta';
@@ -619,12 +603,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get sessionStartButton => 'Comenzar grabación';
 
   @override
-  String get sessionSimulatedHint =>
-      'Pulsa \"Simular punto\" para avanzar, o \"Auto vuelta\" para correr una vuelta automáticamente.';
+  String get sessionSimulatedHint => 'Pulsa \"Simular punto\" para avanzar, o \"Auto vuelta\" para correr una vuelta automáticamente.';
 
   @override
-  String get sessionRealGpsHint =>
-      'Asegúrate de tener la ubicación activada. Los puntos se capturan cada segundo.';
+  String get sessionRealGpsHint => 'Asegúrate de tener la ubicación activada. Los puntos se capturan cada segundo.';
 
   @override
   String get sessionSavedSnackBar => 'Sesión guardada';
@@ -690,16 +672,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get sessionPermissionGranted => 'Permiso de ubicación concedido.';
 
   @override
-  String get sessionPermissionDenied =>
-      'Permiso de ubicación denegado. Acepta el diálogo del sistema o cambia a \"Simulada\".';
+  String get sessionPermissionDenied => 'Permiso de ubicación denegado. Acepta el diálogo del sistema o cambia a \"Simulada\".';
 
   @override
-  String get sessionPermissionPermanentlyDenied =>
-      'Permiso bloqueado permanentemente. Actívalo manualmente en los ajustes del sistema.';
+  String get sessionPermissionPermanentlyDenied => 'Permiso bloqueado permanentemente. Actívalo manualmente en los ajustes del sistema.';
 
   @override
-  String get sessionServicesDisabled =>
-      'Servicios de ubicación desactivados. Enciéndelos en los ajustes del sistema.';
+  String get sessionServicesDisabled => 'Servicios de ubicación desactivados. Enciéndelos en los ajustes del sistema.';
 
   @override
   String sessionGpsStatus(int count) {
@@ -829,22 +808,19 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsKeepScreenAwakeLabel => 'Mantener pantalla encendida';
 
   @override
-  String get settingsKeepScreenAwakeDesc =>
-      'Evita que la pantalla se apague durante una sesión activa o free ride.';
+  String get settingsKeepScreenAwakeDesc => 'Evita que la pantalla se apague durante una sesión activa o free ride.';
 
   @override
   String get settingsHapticFeedbackLabel => 'Vibración háptica';
 
   @override
-  String get settingsHapticFeedbackDesc =>
-      'Vibra al cruzar una puerta de sector o la línea de meta.';
+  String get settingsHapticFeedbackDesc => 'Vibra al cruzar una puerta de sector o la línea de meta.';
 
   @override
   String get settingsAudioAlertsLabel => 'Alertas de audio';
 
   @override
-  String get settingsAudioAlertsDesc =>
-      'Reproduce un pitido corto en cada cruce de sector y vuelta.';
+  String get settingsAudioAlertsDesc => 'Reproduce un pitido corto en cada cruce de sector y vuelta.';
 
   @override
   String get settingsGpsSamplingLabel => 'Frecuencia GPS';
@@ -895,8 +871,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsDeleteAccountConfirmTitle => '¿Eliminar cuenta?';
 
   @override
-  String get settingsDeleteAccountConfirmBody =>
-      'Todos tus datos serán eliminados permanentemente. Esta acción no se puede deshacer.';
+  String get settingsDeleteAccountConfirmBody => 'Todos tus datos serán eliminados permanentemente. Esta acción no se puede deshacer.';
 
   @override
   String get settingsDeleteAccountConfirmButton => 'Eliminar mi cuenta';
@@ -905,8 +880,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsDeleteAccountSuccess => 'Cuenta eliminada. ¡Hasta pronto!';
 
   @override
-  String get settingsDeleteAccountError =>
-      'No se pudo eliminar la cuenta. Inténtalo de nuevo.';
+  String get settingsDeleteAccountError => 'No se pudo eliminar la cuenta. Inténtalo de nuevo.';
 
   @override
   String get settingsChangePasswordCurrentLabel => 'Contraseña actual';
@@ -924,8 +898,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsChangePasswordSuccess => 'Contraseña actualizada';
 
   @override
-  String get settingsChangePasswordError =>
-      'No se pudo actualizar la contraseña. Inténtalo de nuevo.';
+  String get settingsChangePasswordError => 'No se pudo actualizar la contraseña. Inténtalo de nuevo.';
 
   @override
   String get settingsChangePasswordMismatch => 'Las contraseñas no coinciden';
@@ -940,23 +913,19 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsExportHistoryLabel => 'Exportar historial';
 
   @override
-  String get settingsExportHistoryDesc =>
-      'Descarga todas las sesiones y free rides como archivo CSV.';
+  String get settingsExportHistoryDesc => 'Descarga todas las sesiones y free rides como archivo CSV.';
 
   @override
   String get settingsClearCacheLabel => 'Borrar datos locales';
 
   @override
-  String get settingsClearCacheDesc =>
-      'Elimina todas las rutas y sesiones guardadas localmente. Los datos en la nube no se ven afectados.';
+  String get settingsClearCacheDesc => 'Elimina todas las rutas y sesiones guardadas localmente. Los datos en la nube no se ven afectados.';
 
   @override
-  String get settingsClearCacheConfirmTitle =>
-      '¿Borrar todos los datos locales?';
+  String get settingsClearCacheConfirmTitle => '¿Borrar todos los datos locales?';
 
   @override
-  String get settingsClearCacheConfirmBody =>
-      'Tus rutas y sesiones se eliminarán de este dispositivo. Si tienes sync activado, permanecerán en la nube.';
+  String get settingsClearCacheConfirmBody => 'Tus rutas y sesiones se eliminarán de este dispositivo. Si tienes sync activado, permanecerán en la nube.';
 
   @override
   String get settingsClearCacheConfirmButton => 'Borrar datos';
@@ -974,15 +943,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsDiagnosticsLogsLabel => 'Ver logs';
 
   @override
-  String get settingsDiagnosticsLogsDesc =>
-      'Errores y advertencias de Mapbox, Supabase y la app';
+  String get settingsDiagnosticsLogsDesc => 'Errores y advertencias de Mapbox, Supabase y la app';
 
   @override
   String get settingsDiagnosticsRemoteLogsLabel => 'Subir logs al servidor';
 
   @override
-  String get settingsDiagnosticsRemoteLogsDesc =>
-      'Permite revisar los logs desde el dashboard de Supabase';
+  String get settingsDiagnosticsRemoteLogsDesc => 'Permite revisar los logs desde el dashboard de Supabase';
 
   @override
   String get logsScreenTitle => 'Diagnóstico';
@@ -1037,8 +1004,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get freeRideIdleTitle => 'Ruta sin destino';
 
   @override
-  String get freeRideIdleMessage =>
-      'Graba tu recorrido en tiempo real sin una ruta predefinida. Se registran velocidad, distancia y posición automáticamente.';
+  String get freeRideIdleMessage => 'Graba tu recorrido en tiempo real sin una ruta predefinida. Se registran velocidad, distancia y posición automáticamente.';
 
   @override
   String get freeRideStartButton => 'Comenzar grabación';
@@ -1108,8 +1074,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get historyNoEntriesTitle => 'Aún no hay actividad';
 
   @override
-  String get historyNoEntriesMessage =>
-      'Haz un recorrido libre o graba una sesión en una ruta.';
+  String get historyNoEntriesMessage => 'Haz un recorrido libre o graba una sesión en una ruta.';
 
   @override
   String get historyFreeRideLabel => 'Recorrido libre';
@@ -1243,8 +1208,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get garageNoVehiclesTitle => 'No hay vehículos';
 
   @override
-  String get garageNoVehiclesMessage =>
-      'Añade tu primer coche, moto o kart para registrar con qué vehículo corres cada sesión.';
+  String get garageNoVehiclesMessage => 'Añade tu primer coche, moto o kart para registrar con qué vehículo corres cada sesión.';
 
   @override
   String get garageAddVehicleButton => 'Añadir vehículo';
@@ -1391,8 +1355,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get backgroundNotificationTitle => 'Splitway · Grabando ruta';
 
   @override
-  String get backgroundDeniedBanner =>
-      'La grabación se detendrá si sales de la app. Concede permiso \"Siempre\" para grabar en segundo plano.';
+  String get backgroundDeniedBanner => 'La grabación se detendrá si sales de la app. Concede permiso \"Siempre\" para grabar en segundo plano.';
 
   @override
   String get backgroundOpenSettings => 'Abrir ajustes';
@@ -1401,8 +1364,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get backgroundDialogTitle => 'Grabación en segundo plano';
 
   @override
-  String get backgroundDialogBody =>
-      'Para que la ruta siga grabándose con la pantalla apagada o al cambiar de app, necesitas permitir el acceso a la ubicación \"Siempre\".\n\nVe a Ajustes > Permisos > Ubicación y selecciona \"Permitir siempre\".';
+  String get backgroundDialogBody => 'Para que la ruta siga grabándose con la pantalla apagada o al cambiar de app, necesitas permitir el acceso a la ubicación \"Siempre\".\n\nVe a Ajustes > Permisos > Ubicación y selecciona \"Permitir siempre\".';
 
   @override
   String get backgroundDialogOpenSettings => 'Abrir ajustes';
@@ -1414,8 +1376,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get notificationDialogTitle => 'Activar notificaciones';
 
   @override
-  String get notificationDialogBody =>
-      'Splitway usa notificaciones para mantenerte informado durante la grabación de rutas: tiempo transcurrido, distancia y estado del seguimiento, incluso con la app en segundo plano.';
+  String get notificationDialogBody => 'Splitway usa notificaciones para mantenerte informado durante la grabación de rutas: tiempo transcurrido, distancia y estado del seguimiento, incluso con la app en segundo plano.';
 
   @override
   String get notificationDialogAllow => 'Permitir notificaciones';
@@ -1602,8 +1563,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get statsEmptyTitle => 'Aún no hay datos';
 
   @override
-  String get statsEmptyMessage =>
-      'Registra una sesión, un free ride o un test de velocidad para ver tus estadísticas aquí.';
+  String get statsEmptyMessage => 'Registra una sesión, un free ride o un test de velocidad para ver tus estadísticas aquí.';
 
   @override
   String get statsOverviewSection => 'Resumen';
