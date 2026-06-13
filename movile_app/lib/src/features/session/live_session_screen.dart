@@ -21,6 +21,7 @@ import '../../services/tracking/location_service.dart';
 import '../../shared/formatters.dart';
 import '../../shared/widgets/empty_state.dart';
 import '../../shared/widgets/gps_signal_badge.dart';
+import '../../shared/widgets/sector_chip.dart';
 import '../../shared/widgets/splitway_map.dart';
 import '../home/home_shell.dart';
 import 'live_session_controller.dart';
@@ -531,15 +532,20 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _MetricsRow(
+                      _LapIndicators(
                         snapshot: snapshot,
+                        isClosed: route.isClosed,
                         settingsController: widget.settingsController,
                       ),
-                      const SizedBox(height: 8),
-                      _LastEventTile(
-                        snapshot: snapshot,
-                        settingsController: widget.settingsController,
-                      ),
+                      if (route.sectors.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        _LiveSectorChips(
+                          route: route,
+                          sectorSummaries: tracker.sectorSummaries,
+                          currentLap: snapshot.currentLap,
+                          historicalRecords: ctrl.historicalSectorRecords,
+                        ),
+                      ],
                       if (ctrl.source == TrackingSource.simulated) ...[
                         const SizedBox(height: 8),
                         _SimulationToggle(
@@ -718,43 +724,57 @@ class _SessionRecordingActions extends StatelessWidget {
   }
 }
 
-class _MetricsRow extends StatelessWidget {
-  const _MetricsRow({
+/// Big lap-time indicators shown in the live panel. On closed circuits it shows
+/// the current lap time (left) and the session best lap (right). On open routes
+/// (no laps) it shows a single centered elapsed chronometer.
+class _LapIndicators extends StatelessWidget {
+  const _LapIndicators({
     required this.snapshot,
+    required this.isClosed,
     required this.settingsController,
   });
 
   final TrackingSnapshot snapshot;
+  final bool isClosed;
   final AppSettingsController settingsController;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+
+    final elapsed = Formatters.durationHms(snapshot.currentLapElapsed);
+    if (!isClosed) {
+      return _BigIndicator(
+        label: l.sessionElapsedLabel,
+        value: elapsed,
+        emphasized: true,
+      );
+    }
+
+    final best = snapshot.bestLap;
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: _CompactMetric(
+          child: _BigIndicator(
             label: l.sessionCurrentLapLabel,
-            value: snapshot.currentLap == 0
-                ? l.sessionNoLapYet
-                : l.sessionLapNumber(snapshot.currentLap),
+            value: elapsed,
+            emphasized: true,
           ),
         ),
+        const SizedBox(width: 12),
         Expanded(
-          child: _CompactMetric(
-            label: l.sessionLapTimeLabel,
-            value: Formatters.durationHms(snapshot.currentLapElapsed),
-          ),
-        ),
-        Expanded(
-          child: _CompactMetric(
+          child: _BigIndicator(
             label: l.sessionBestLapLabel,
-            value: snapshot.bestLap == null
+            value: best == null
                 ? l.sessionNoLapYet
                 : Formatters.duration(
-                    snapshot.bestLap!,
+                    best,
                     dotSeparator: settingsController.timeFormatDot,
                   ),
+            emphasized: false,
+            color: best == null ? null : theme.colorScheme.primary,
           ),
         ),
       ],
@@ -762,59 +782,91 @@ class _MetricsRow extends StatelessWidget {
   }
 }
 
-class _CompactMetric extends StatelessWidget {
-  const _CompactMetric({required this.label, required this.value});
+class _BigIndicator extends StatelessWidget {
+  const _BigIndicator({
+    required this.label,
+    required this.value,
+    required this.emphasized,
+    this.color,
+  });
 
   final String label;
   final String value;
+  final bool emphasized;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Text(label,
-            style: theme.textTheme.labelSmall
-                ?.copyWith(color: theme.colorScheme.outline)),
+        Text(
+          label.toUpperCase(),
+          style: theme.textTheme.labelSmall
+              ?.copyWith(color: theme.colorScheme.outline),
+        ),
         const SizedBox(height: 4),
-        Text(value, style: theme.textTheme.titleMedium),
+        Text(
+          value,
+          style: (emphasized
+                  ? theme.textTheme.headlineMedium
+                  : theme.textTheme.headlineSmall)
+              ?.copyWith(
+            color: color,
+            fontWeight: FontWeight.bold,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
       ],
     );
   }
 }
 
-class _LastEventTile extends StatelessWidget {
-  const _LastEventTile({
-    required this.snapshot,
-    required this.settingsController,
+/// Row of F1-style sector chips for the current lap. Each sector is grey until
+/// it is crossed in the current lap, then coloured by [sectorChipTier].
+class _LiveSectorChips extends StatelessWidget {
+  const _LiveSectorChips({
+    required this.route,
+    required this.sectorSummaries,
+    required this.currentLap,
+    required this.historicalRecords,
   });
 
-  final TrackingSnapshot snapshot;
-  final AppSettingsController settingsController;
+  final RouteTemplate route;
+  final List<SectorSummary> sectorSummaries;
+  final int currentLap;
+  final Map<String, Duration> historicalRecords;
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final last = snapshot.lastCrossedSectorId;
-    if (last == null) {
-      return Text(
-        snapshot.status == TrackingStatus.awaitingStart
-            ? l.sessionAwaitingStart
-            : l.sessionCrossingSectors,
-        style: Theme.of(context).textTheme.bodyMedium,
-      );
+    final sectors = [...route.sectors]
+      ..sort((a, b) => a.order.compareTo(b.order));
+
+    // Times for each sector in the current lap (null = not crossed yet).
+    final lapTimes = <String, Duration>{};
+    // All recorded times per sector across the whole session.
+    final sessionTimes = <String, List<Duration>>{};
+    for (final s in sectorSummaries) {
+      sessionTimes.putIfAbsent(s.sectorId, () => []).add(s.duration);
+      if (s.lapNumber == currentLap) lapTimes[s.sectorId] = s.duration;
     }
+
     return Row(
       children: [
-        const Icon(Icons.flag_circle_outlined, size: 18),
-        const SizedBox(width: 6),
-        Text(l.sessionLastSector(last)),
-        const Spacer(),
-        if (snapshot.lastSectorTime != null)
-          Text(Formatters.duration(
-            snapshot.lastSectorTime!,
-            dotSeparator: settingsController.timeFormatDot,
-          )),
+        for (var i = 0; i < sectors.length; i++) ...[
+          if (i > 0) const SizedBox(width: 8),
+          Expanded(
+            child: SectorChip(
+              sectorNumber: i + 1,
+              tier: sectorChipTier(
+                lapTime: lapTimes[sectors[i].id],
+                sessionCrossings: sessionTimes[sectors[i].id] ?? const [],
+                historicalRecord: historicalRecords[sectors[i].id],
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }

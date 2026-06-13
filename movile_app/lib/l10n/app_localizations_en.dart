@@ -568,6 +568,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get historyLapsLabel => 'Laps';
 
   @override
+  String historyLapItem(int n) {
+    return 'Lap $n';
+  }
+
+  @override
   String get historyLapsEmpty => 'No laps recorded in this session';
 
   @override
@@ -659,6 +664,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sessionBestLapLabel => 'Best lap';
+
+  @override
+  String get sessionElapsedLabel => 'Time';
 
   @override
   String get sessionAwaitingStart => 'Waiting for first finish-line crossing…';

@@ -98,6 +98,10 @@ class TrackingEngine {
   static const _recoveryDuration = Duration(seconds: 3);
   DateTime? _recoveringUntil;
 
+  /// All sector crossings recorded so far this session, across every lap.
+  /// Ordered by crossing time. Read-only view for live/historical coloring.
+  List<SectorSummary> get sectorSummaries => List.unmodifiable(_sectorSummaries);
+
   TrackingSnapshot get snapshot {
     final lapElapsed = _lapStartedAt == null
         ? Duration.zero

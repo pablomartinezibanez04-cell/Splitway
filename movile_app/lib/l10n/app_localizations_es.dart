@@ -570,6 +570,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get historyLapsLabel => 'Vueltas';
 
   @override
+  String historyLapItem(int n) {
+    return 'Vuelta $n';
+  }
+
+  @override
   String get historyLapsEmpty => 'No hay vueltas registradas en esta sesión';
 
   @override
@@ -662,6 +667,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get sessionBestLapLabel => 'Mejor vuelta';
+
+  @override
+  String get sessionElapsedLabel => 'Tiempo';
 
   @override
   String get sessionAwaitingStart => 'Esperando primer cruce de meta…';

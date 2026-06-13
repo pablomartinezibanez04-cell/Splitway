@@ -19,6 +19,7 @@ import '../../services/speed/speed_metric.dart';
 import '../../services/speed/speed_session.dart';
 import '../../shared/formatters.dart';
 import '../../shared/widgets/empty_state.dart';
+import '../../shared/widgets/sector_chip.dart';
 import '../../shared/widgets/speed_heatmap_map_card.dart';
 import '../../shared/widgets/speed_heatmap_toggle_button.dart';
 import '../garage/vehicle_detail_screen.dart';
@@ -1317,6 +1318,13 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   bool _loading = true;
   bool _heatmap = false;
 
+  /// Lap currently shown in the per-lap detail. Defaults to the best lap.
+  int? _selectedLapNumber;
+
+  /// Best recorded time per sector across all of the user's sessions on the
+  /// route (includes this session). Drives the "purple" record colour.
+  Map<String, Duration> _historicalRecords = const {};
+
   @override
   void initState() {
     super.initState();
@@ -1328,12 +1336,123 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     final route = session == null
         ? null
         : await widget.repository.getRouteTemplate(session.routeTemplateId);
+
+    var records = <String, Duration>{};
+    if (session != null) {
+      final sessions =
+          await widget.repository.getSessionsByRoute(session.routeTemplateId);
+      for (final s in sessions) {
+        for (final sec in s.sectorSummaries) {
+          final cur = records[sec.sectorId];
+          if (cur == null || sec.duration < cur) {
+            records[sec.sectorId] = sec.duration;
+          }
+        }
+      }
+    }
+
     if (!mounted) return;
     setState(() {
       _session = session;
       _route = route;
+      _historicalRecords = records;
+      _selectedLapNumber = session?.bestLap?.lapNumber ??
+          (session != null && session.laps.isNotEmpty
+              ? session.laps.first.lapNumber
+              : null);
       _loading = false;
     });
+  }
+
+  /// Max recorded speed (m/s) over the telemetry points that fall within the
+  /// lap's time window.
+  double _lapMaxSpeedMps(SessionRun session, LapSummary lap) {
+    var max = 0.0;
+    for (final p in session.points) {
+      final t = p.timestamp;
+      if (t.isBefore(lap.startedAt) || t.isAfter(lap.endedAt)) continue;
+      final s = p.speedMps;
+      if (s != null && s > max) max = s;
+    }
+    return max;
+  }
+
+  /// Per-lap detail: lap selector, big lap time, per-lap summary and coloured
+  /// sector chips for the selected lap.
+  List<Widget> _buildLapDetail(BuildContext context, AppLocalizations l) {
+    final session = _session!;
+    final route = _route!;
+    final laps = session.laps;
+    final dot = widget.settingsController?.timeFormatDot ?? true;
+
+    final selected = laps.firstWhere(
+      (lp) => lp.lapNumber == _selectedLapNumber,
+      orElse: () => laps.first,
+    );
+
+    final sectors = [...route.sectors]
+      ..sort((a, b) => a.order.compareTo(b.order));
+
+    final sessionTimes = <String, List<Duration>>{};
+    final lapSectorTimes = <String, Duration>{};
+    for (final sec in session.sectorSummaries) {
+      sessionTimes.putIfAbsent(sec.sectorId, () => []).add(sec.duration);
+      if (sec.lapNumber == selected.lapNumber) {
+        lapSectorTimes[sec.sectorId] = sec.duration;
+      }
+    }
+
+    return [
+      _LapSelector(
+        laps: laps,
+        selectedLapNumber: selected.lapNumber,
+        dotSeparator: dot,
+        onChanged: (n) => setState(() => _selectedLapNumber = n),
+      ),
+      const SizedBox(height: 16),
+      Center(
+        child: Text(
+          Formatters.duration(selected.duration, dotSeparator: dot),
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+        ),
+      ),
+      const SizedBox(height: 16),
+      _LapSummaryRow(
+        distanceMeters: selected.distanceMeters,
+        avgSpeedMps: selected.avgSpeedMps,
+        maxSpeedMps: _lapMaxSpeedMps(session, selected),
+        settingsController: widget.settingsController,
+      ),
+      if (sectors.isNotEmpty) ...[
+        const SizedBox(height: 16),
+        Text(l.historySectorsLabel,
+            style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            for (var i = 0; i < sectors.length; i++) ...[
+              if (i > 0) const SizedBox(width: 8),
+              Expanded(
+                child: SectorChip(
+                  sectorNumber: i + 1,
+                  time: lapSectorTimes[sectors[i].id],
+                  dotSeparator: dot,
+                  tier: sectorChipTier(
+                    lapTime: lapSectorTimes[sectors[i].id],
+                    sessionCrossings:
+                        sessionTimes[sectors[i].id] ?? const [],
+                    historicalRecord: _historicalRecords[sectors[i].id],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ],
+    ];
   }
 
   @override
@@ -1459,93 +1578,188 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    _SummaryRow(
-                      session: _session!,
-                      settingsController: widget.settingsController,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(l.historyLapsLabel,
-                        style: Theme.of(context).textTheme.titleMedium),
-                    if (_session!.laps.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                        child: Text(
-                          l.historyLapsEmpty,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      )
-                    else
-                      for (final lap in _session!.laps)
-                        ListTile(
-                          leading: CircleAvatar(child: Text('${lap.lapNumber}')),
-                          title: Text(Formatters.duration(
-                            lap.duration,
-                            dotSeparator: widget.settingsController?.timeFormatDot ?? true,
-                          )),
-                          subtitle: Text(() {
-                              final dist = _distanceLabel(
-                                l,
-                                lap.distanceMeters,
-                                widget.settingsController,
-                              );
-                              final speed = _speedLabel(
-                                l,
-                                lap.avgSpeedMps,
-                                widget.settingsController,
-                              );
-                              return '$dist · $speed';
-                            }()),
-                          trailing: lap.completed
-                              ? const Icon(Icons.check_circle, color: Colors.green)
-                              : const Icon(Icons.timer_off, color: Colors.orange),
-                        ),
-                    const SizedBox(height: 16),
-                    Text(l.historySectorsLabel,
-                        style: Theme.of(context).textTheme.titleMedium),
-                    if (_session!.sectorSummaries.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                        child: Text(
-                          l.historySectorsEmpty,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      )
-                    else
-                      for (final sec in _session!.sectorSummaries)
-                        ListTile(
-                          leading: const Icon(Icons.flag_outlined),
-                          title: Text(_route!.sectors
-                              .firstWhere(
-                                (s) => s.id == sec.sectorId,
-                                orElse: () => SectorDefinition(
-                                  id: sec.sectorId,
-                                  order: 0,
-                                  label: sec.sectorId,
-                                  gate: _route!.startFinishGate,
-                                ),
-                              )
-                              .label),
-                          subtitle: Text(
-                            l.historySectorSubtitle(
-                              sec.lapNumber,
-                              _speedLabel(
-                                l,
-                                sec.avgSpeedMps,
-                                widget.settingsController,
-                              ),
+                    if (_session!.laps.isNotEmpty)
+                      ..._buildLapDetail(context, l)
+                    else ...[
+                      _SummaryRow(
+                        session: _session!,
+                        settingsController: widget.settingsController,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(l.historySectorsLabel,
+                          style: Theme.of(context).textTheme.titleMedium),
+                      if (_session!.sectorSummaries.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 12, horizontal: 16),
+                          child: Text(
+                            l.historySectorsEmpty,
+                            style:
+                                Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
                           ),
-                          trailing: Text(Formatters.duration(
-                            sec.duration,
-                            dotSeparator: widget.settingsController?.timeFormatDot ?? true,
-                          )),
-                        ),
+                        )
+                      else
+                        for (final sec in _session!.sectorSummaries)
+                          ListTile(
+                            leading: const Icon(Icons.flag_outlined),
+                            title: Text(_route!.sectors
+                                .firstWhere(
+                                  (s) => s.id == sec.sectorId,
+                                  orElse: () => SectorDefinition(
+                                    id: sec.sectorId,
+                                    order: 0,
+                                    label: sec.sectorId,
+                                    gate: _route!.startFinishGate,
+                                  ),
+                                )
+                                .label),
+                            subtitle: Text(
+                              l.historySectorSubtitle(
+                                sec.lapNumber,
+                                _speedLabel(
+                                  l,
+                                  sec.avgSpeedMps,
+                                  widget.settingsController,
+                                ),
+                              ),
+                            ),
+                            trailing: Text(Formatters.duration(
+                              sec.duration,
+                              dotSeparator:
+                                  widget.settingsController?.timeFormatDot ?? true,
+                            )),
+                          ),
+                    ],
                   ],
                 ),
+    );
+  }
+}
+
+/// Dropdown to pick which lap of the session is shown. The collapsed button
+/// shows a single line ("Lap N — time"); the open menu lists every lap with
+/// its time as a subtitle.
+class _LapSelector extends StatelessWidget {
+  const _LapSelector({
+    required this.laps,
+    required this.selectedLapNumber,
+    required this.dotSeparator,
+    required this.onChanged,
+  });
+
+  final List<LapSummary> laps;
+  final int selectedLapNumber;
+  final bool dotSeparator;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    return InputDecorator(
+      decoration: InputDecoration(
+        labelText: l.historyLapsLabel,
+        border:
+            OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<int>(
+          isExpanded: true,
+          value: selectedLapNumber,
+          itemHeight: null,
+          onChanged: (v) {
+            if (v != null) onChanged(v);
+          },
+          selectedItemBuilder: (context) => [
+            for (final lap in laps)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '${l.historyLapItem(lap.lapNumber)} · '
+                  '${Formatters.duration(lap.duration, dotSeparator: dotSeparator)}',
+                  style: theme.textTheme.titleMedium,
+                ),
+              ),
+          ],
+          items: [
+            for (final lap in laps)
+              DropdownMenuItem<int>(
+                value: lap.lapNumber,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(l.historyLapItem(lap.lapNumber),
+                          style: theme.textTheme.bodyLarge),
+                      Text(
+                        Formatters.duration(lap.duration,
+                            dotSeparator: dotSeparator),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Three-card summary row (distance / max speed / avg speed) for a single lap.
+class _LapSummaryRow extends StatelessWidget {
+  const _LapSummaryRow({
+    required this.distanceMeters,
+    required this.avgSpeedMps,
+    required this.maxSpeedMps,
+    this.settingsController,
+  });
+
+  final double distanceMeters;
+  final double avgSpeedMps;
+  final double maxSpeedMps;
+  final AppSettingsController? settingsController;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final entries = [
+      (l.historyDistanceLabel,
+          _distanceLabel(l, distanceMeters, settingsController)),
+      (l.historyMaxSpeedLabel,
+          _speedLabel(l, maxSpeedMps, settingsController)),
+      (l.historyAvgSpeedLabel,
+          _speedLabel(l, avgSpeedMps, settingsController)),
+    ];
+    return Row(
+      children: [
+        for (final e in entries)
+          Expanded(
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Column(
+                  children: [
+                    Text(e.$1,
+                        style: Theme.of(context).textTheme.labelSmall),
+                    const SizedBox(height: 4),
+                    Text(e.$2,
+                        style: Theme.of(context).textTheme.titleMedium),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

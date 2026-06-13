@@ -1058,6 +1058,12 @@ abstract class AppLocalizations {
   /// **'Laps'**
   String get historyLapsLabel;
 
+  /// No description provided for @historyLapItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Lap {n}'**
+  String historyLapItem(int n);
+
   /// No description provided for @historyLapsEmpty.
   ///
   /// In en, this message translates to:
@@ -1225,6 +1231,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Best lap'**
   String get sessionBestLapLabel;
+
+  /// No description provided for @sessionElapsedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Time'**
+  String get sessionElapsedLabel;
 
   /// No description provided for @sessionAwaitingStart.
   ///

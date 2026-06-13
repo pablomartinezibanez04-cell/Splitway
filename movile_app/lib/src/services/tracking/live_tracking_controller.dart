@@ -29,6 +29,9 @@ class LiveTrackingController extends ChangeNotifier {
   final List<TelemetryPoint> _ingested = [];
   List<TelemetryPoint> get ingested => List.unmodifiable(_ingested);
 
+  /// All sector crossings recorded so far this session, across every lap.
+  List<SectorSummary> get sectorSummaries => _engine.sectorSummaries;
+
   StreamSubscription<TrackingEvent>? _eventSub;
   Timer? _ticker;
 

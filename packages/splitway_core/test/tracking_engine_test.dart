@@ -84,6 +84,30 @@ void main() {
     await engine.dispose();
   });
 
+  test('sectorSummaries getter exposes crossings as they accumulate',
+      () async {
+    final route = _buildTestRoute();
+    final base = DateTime.parse('2026-04-29T10:00:00Z');
+    final engine =
+        TrackingEngine(route: route, sessionId: 'sess-sec', clock: () => base);
+
+    expect(engine.sectorSummaries, isEmpty);
+
+    engine.start();
+    engine.ingest(_p(-0.0005, 0, base));
+    engine.ingest(_p(0.0005, 0.0008, base.add(const Duration(seconds: 1))));
+    engine.ingest(_p(0.0015, 0.0008, base.add(const Duration(seconds: 4))));
+    engine.ingest(_p(0.001, 0.0025, base.add(const Duration(seconds: 7))));
+
+    final summaries = engine.sectorSummaries;
+    expect(summaries.length, 2);
+    expect(summaries[0].sectorId, 'sec-1');
+    expect(summaries[0].lapNumber, 1);
+    expect(summaries[1].sectorId, 'sec-2');
+
+    await engine.dispose();
+  });
+
   test('engine ignores points before start() is called', () {
     final route = _buildTestRoute();
     final base = DateTime.parse('2026-04-29T10:00:00Z');

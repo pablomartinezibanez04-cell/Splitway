@@ -51,6 +51,12 @@ class LiveSessionController extends ChangeNotifier {
   bool _backgroundActive = false;
   bool get backgroundActive => _backgroundActive;
 
+  /// Best recorded time per sector across the user's previous sessions on the
+  /// selected route. Loaded when a session starts; drives the "purple"
+  /// (all-time circuit record) sector colour. Empty when there is no history.
+  Map<String, Duration> _historicalSectorRecords = const {};
+  Map<String, Duration> get historicalSectorRecords => _historicalSectorRecords;
+
   void selectVehicle(String? vehicleId) {
     _selectedVehicleId = vehicleId;
     notifyListeners();
@@ -162,6 +168,7 @@ class LiveSessionController extends ChangeNotifier {
     if (route == null) return;
     _distanceFilterMeters = distanceFilterMeters;
     _useCompassHeading = useCompassHeading;
+    _historicalSectorRecords = await _loadHistoricalSectorRecords(route.id);
     _tracker?.dispose();
     _tracker = LiveTrackingController(route: route)
       ..addListener(_onTrackerChange)
@@ -182,6 +189,28 @@ class LiveSessionController extends ChangeNotifier {
       }
 
       _subscribeToGps();
+    }
+  }
+
+  /// Computes the best (minimum) recorded duration per sector across all of the
+  /// user's previous sessions on [routeId]. Degrades to an empty map on error
+  /// so a failed lookup never blocks starting a session.
+  Future<Map<String, Duration>> _loadHistoricalSectorRecords(
+      String routeId) async {
+    try {
+      final sessions = await _repo.getSessionsByRoute(routeId);
+      final records = <String, Duration>{};
+      for (final session in sessions) {
+        for (final sector in session.sectorSummaries) {
+          final current = records[sector.sectorId];
+          if (current == null || sector.duration < current) {
+            records[sector.sectorId] = sector.duration;
+          }
+        }
+      }
+      return records;
+    } catch (_) {
+      return const {};
     }
   }
 
@@ -352,6 +381,7 @@ class LiveSessionController extends ChangeNotifier {
     _autoScript = const [];
     _result = null;
     _backgroundActive = false;
+    _historicalSectorRecords = const {};
     _stage = _selected == null
         ? LiveSessionStage.selecting
         : LiveSessionStage.ready;
