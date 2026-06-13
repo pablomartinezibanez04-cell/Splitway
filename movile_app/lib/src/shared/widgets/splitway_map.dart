@@ -225,7 +225,7 @@ class _SplitwayMapState extends State<SplitwayMap>
   }
 
   Future<Uint8List> _buildArrowImage(double dpr) async {
-    const logical = 34.0; // ~70% larger than the 20pt circle diameter.
+    const logical = 90.0; // ~70% larger than the 20pt circle diameter.
     final px = logical * dpr;
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
@@ -266,8 +266,10 @@ class _SplitwayMapState extends State<SplitwayMap>
         setState(() => _mapStyle = parsed.first);
         final map = _map;
         if (map != null) {
+          await _removeManagers(map);
           await map.loadStyleURI(_mapStyle.uri);
-          await _recreateManagers();
+          if (!mounted) return;
+          await _createManagers(map);
           await _renderAnnotations();
         }
       }
@@ -277,21 +279,37 @@ class _SplitwayMapState extends State<SplitwayMap>
   Future<void> _switchStyle(MapStyle style) async {
     if (style == _mapStyle) return;
     setState(() => _mapStyle = style);
-    SharedPreferences.getInstance().then((p) => p.setString(_kMapStyleKey, style.name));
+    unawaited(SharedPreferences.getInstance()
+        .then((p) => p.setString(_kMapStyleKey, style.name)));
     final map = _map;
     if (map == null) return;
+    // Tear down the annotation managers *before* the style reload. Once
+    // loadStyleURI runs, the native counterparts of these managers are gone,
+    // and removing them afterwards would crash with "No manager found with
+    // id: N" (an uncatchable native exception thrown inside getManager).
+    await _removeManagers(map);
     await map.loadStyleURI(style.uri);
-    await _recreateManagers();
+    if (!mounted) return;
+    await _createManagers(map);
     await _renderAnnotations();
   }
 
-  Future<void> _recreateManagers() async {
-    final map = _map;
-    if (map == null) return;
-    // Remove old managers so their annotations don't persist as static
-    // duplicates after a style change.
+  /// Removes the current annotation managers while their native counterparts
+  /// are still valid (i.e. before any style reload). References are nulled
+  /// *synchronously* up front so concurrent animation ticks / renders bail out
+  /// via their null-manager guards instead of touching managers mid-removal.
+  Future<void> _removeManagers(mbx.MapboxMap map) async {
     final oldLine = _lineManager;
     final oldCircle = _circleManager;
+    final oldArrow = _arrowManager;
+    _lineManager = null;
+    _circleManager = null;
+    _arrowManager = null;
+    // The old user-marker handles belonged to the removed managers — drop
+    // them so the next render recreates them on the new managers.
+    _userCircleAnnotation = null;
+    _userArrowAnnotation = null;
+    _telemetryTipAnnotation = null;
     if (oldLine != null) {
       try {
         await map.annotations.removeAnnotationManager(oldLine);
@@ -302,21 +320,24 @@ class _SplitwayMapState extends State<SplitwayMap>
         await map.annotations.removeAnnotationManager(oldCircle);
       } on PlatformException catch (_) {}
     }
-    final oldArrow = _arrowManager;
     if (oldArrow != null) {
       try {
         await map.annotations.removeAnnotationManager(oldArrow);
       } on PlatformException catch (_) {}
     }
-    _lineManager = await map.annotations.createPolylineAnnotationManager();
-    _circleManager = await map.annotations.createCircleAnnotationManager();
-    _arrowManager = null;
+  }
+
+  /// Creates fresh annotation managers on the currently-loaded style. Call
+  /// only after a style has finished loading.
+  Future<void> _createManagers(mbx.MapboxMap map) async {
+    try {
+      _lineManager = await map.annotations.createPolylineAnnotationManager();
+      _circleManager = await map.annotations.createCircleAnnotationManager();
+    } on PlatformException {
+      // Channel torn down — leave managers null; a later render retries.
+      return;
+    }
     await _createArrowManager(map);
-    // The old user-marker handles belonged to the removed managers — drop
-    // them so the next render recreates them on the new managers.
-    _userCircleAnnotation = null;
-    _userArrowAnnotation = null;
-    _telemetryTipAnnotation = null;
   }
 
   @override
