@@ -12,6 +12,7 @@ import '../../config/app_config.dart';
 import '../../routing/app_router.dart';
 import '../../services/auth/auth_service.dart';
 import '../../services/garage/garage_service.dart';
+import '../../services/garage/vehicle.dart';
 import '../../services/profile/profile_service.dart';
 import '../../services/sensors/device_heading_service.dart';
 import '../../services/settings/app_settings_controller.dart';
@@ -143,6 +144,17 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
     }
   }
 
+  /// True when the selected vehicle is motorized — the camera then follows
+  /// the GPS course only, ignoring the phone compass/accelerometer.
+  bool get _selectedVehicleIsMotorized {
+    final id = widget.controller.selectedVehicleId;
+    if (id == null) return false;
+    for (final v in widget.garageService?.vehicles ?? const <Vehicle>[]) {
+      if (v.id == id) return v.type.isMotorized;
+    }
+    return false;
+  }
+
   void _onChange() {
     _updateWakelock();
     _onNewEvents();
@@ -162,6 +174,7 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
         _flyToNotifier.flyTo(
           ingested.last.location,
           bearing: bearing,
+          pitch: kNavigationCameraPitchDeg,
           animationDuration: pointChanged
               ? const Duration(milliseconds: 850)
               : const Duration(milliseconds: 300),
@@ -379,6 +392,7 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
                       distanceFilterMeters:
                           widget.settingsController.gpsSamplingDistanceFilter,
                       backgroundActive: hasBackground,
+                      useCompassHeading: !_selectedVehicleIsMotorized,
                     );
                   },
             icon: const Icon(Icons.play_arrow),
@@ -386,7 +400,10 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
           ),
           const SizedBox(height: 8),
           Text(
-            ctrl.source == TrackingSource.simulated
+            // Non-admins are forced onto real GPS asynchronously; never show
+            // them the simulated hint, even while the switch is in flight.
+            ctrl.source == TrackingSource.simulated &&
+                    widget.profileService?.isAdmin == true
                 ? l.sessionSimulatedHint
                 : l.sessionRealGpsHint,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -431,6 +448,7 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
             userLocation: tracker.ingested.isNotEmpty
                 ? tracker.ingested.last.location
                 : null,
+            userBearing: ctrl.currentBearingDeg,
             flyToNotifier: _flyToNotifier,
           ),
         ),

@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart' hide Image;
 import 'package:flutter/services.dart' show PlatformException;
@@ -40,6 +42,10 @@ enum MapStyle {
 
 const _kMapStyleKey = 'splitway_map_style';
 
+/// Camera tilt used while recording so the map shows what's ahead instead of
+/// a top-down view, mirroring Google Maps' navigation perspective.
+const double kNavigationCameraPitchDeg = 45.0;
+
 /// A notifier that always fires, even when set to the same value.
 /// [ValueNotifier] silently ignores duplicate values, which breaks
 /// "center on me" buttons that re-fly to the current position.
@@ -50,16 +56,21 @@ class FlyToNotifier extends ChangeNotifier {
   double? _bearing;
   double? get bearing => _bearing;
 
+  double? _pitch;
+  double? get pitch => _pitch;
+
   Duration _animationDuration = const Duration(milliseconds: 800);
   Duration get animationDuration => _animationDuration;
 
   void flyTo(
     GeoPoint point, {
     double? bearing,
+    double? pitch,
     Duration animationDuration = const Duration(milliseconds: 800),
   }) {
     _target = point;
     _bearing = bearing;
+    _pitch = pitch;
     _animationDuration = animationDuration;
     notifyListeners();
   }
@@ -83,6 +94,7 @@ class SplitwayMap extends StatefulWidget {
     this.highlightSectorId,
     this.showSectors = false,
     this.userLocation,
+    this.userBearing,
     this.initialCenter,
     this.flyToNotifier,
     this.onTap,
@@ -112,6 +124,10 @@ class SplitwayMap extends StatefulWidget {
   final bool showSectors;
   /// Current user position shown as a blue dot on the map.
   final GeoPoint? userLocation;
+  /// Current heading of the user in degrees (0 = north, clockwise). When
+  /// non-null the user marker is drawn as a directional arrow pointing this
+  /// way; when null it falls back to a plain blue circle (direction unknown).
+  final double? userBearing;
   /// Initial camera center (e.g. user GPS location). Falls back to Madrid if null.
   final GeoPoint? initialCenter;
   /// When this notifier fires, the map flies to the given point.
@@ -167,6 +183,24 @@ class _SplitwayMapState extends State<SplitwayMap>
   bool _userMarkerUpdateInFlight = false;
   bool _userMarkerUpdatePending = false;
 
+  // Directional user marker. When the heading is known the marker switches
+  // from the circle to a rotatable arrow rendered on a dedicated point
+  // manager (symbols can rotate; circles can't).
+  mbx.PointAnnotationManager? _arrowManager;
+  mbx.PointAnnotation? _userArrowAnnotation;
+  double? _userBearing;
+  Uint8List? _arrowImageBytes;
+  double _arrowDpr = 3.0;
+
+  // Smooth growth of the recorded track. The bulk of the line (every
+  // confirmed point except the newest) is drawn once per GPS sample like
+  // before; the final, moving segment is a cheap 2-point "tip" that glides
+  // toward the latest fix at the same pace as the user marker, so the line
+  // extends smoothly instead of snapping forward on each sample.
+  mbx.PolylineAnnotation? _telemetryTipAnnotation;
+  bool _telemetryTipUpdateInFlight = false;
+  bool _telemetryTipUpdatePending = false;
+
   @override
   void initState() {
     super.initState();
@@ -176,7 +210,51 @@ class _SplitwayMapState extends State<SplitwayMap>
       duration: _kUserMarkerGlideDuration,
     )..addListener(_onUserMarkerTick);
     _animatedUserLocation = widget.userLocation;
+    _userBearing = widget.userBearing;
     _loadMapStyle();
+  }
+
+  /// Lazily renders the navigation arrow bitmap once. Drawn at the device
+  /// pixel ratio (and scaled back down via `iconSize`) so it stays crisp on
+  /// high-DPI screens. Same blue/white styling as the circle, slightly
+  /// larger so the direction reads clearly.
+  Future<void> _ensureArrowImage() async {
+    if (_arrowImageBytes != null || !mounted) return;
+    _arrowDpr = MediaQuery.maybeOf(context)?.devicePixelRatio ?? 3.0;
+    _arrowImageBytes = await _buildArrowImage(_arrowDpr);
+  }
+
+  Future<Uint8List> _buildArrowImage(double dpr) async {
+    const logical = 34.0; // ~70% larger than the 20pt circle diameter.
+    final px = logical * dpr;
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    final center = px / 2;
+    final halfW = px * 0.32;
+    final tipY = px * 0.10;
+    final baseY = px * 0.86;
+    final notchY = px * 0.62;
+    // A navigation chevron pointing up (north). `iconRotate` then aims it.
+    final path = Path()
+      ..moveTo(center, tipY)
+      ..lineTo(center + halfW, baseY)
+      ..lineTo(center, notchY)
+      ..lineTo(center - halfW, baseY)
+      ..close();
+    final fill = Paint()
+      ..color = const Color(0xFF2196F3)
+      ..isAntiAlias = true;
+    final stroke = Paint()
+      ..color = const Color(0xFFFFFFFF)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5 * dpr
+      ..strokeJoin = StrokeJoin.round
+      ..isAntiAlias = true;
+    canvas.drawPath(path, fill);
+    canvas.drawPath(path, stroke);
+    final image = await recorder.endRecording().toImage(px.round(), px.round());
+    final data = await image.toByteData(format: ui.ImageByteFormat.png);
+    return data!.buffer.asUint8List();
   }
 
   Future<void> _loadMapStyle() async {
@@ -224,11 +302,21 @@ class _SplitwayMapState extends State<SplitwayMap>
         await map.annotations.removeAnnotationManager(oldCircle);
       } on PlatformException catch (_) {}
     }
+    final oldArrow = _arrowManager;
+    if (oldArrow != null) {
+      try {
+        await map.annotations.removeAnnotationManager(oldArrow);
+      } on PlatformException catch (_) {}
+    }
     _lineManager = await map.annotations.createPolylineAnnotationManager();
     _circleManager = await map.annotations.createCircleAnnotationManager();
-    // The old user-circle handle belonged to the removed manager — drop it
-    // so the next render recreates it on the new manager.
+    _arrowManager = null;
+    await _createArrowManager(map);
+    // The old user-marker handles belonged to the removed managers — drop
+    // them so the next render recreates them on the new managers.
     _userCircleAnnotation = null;
+    _userArrowAnnotation = null;
+    _telemetryTipAnnotation = null;
   }
 
   @override
@@ -255,8 +343,9 @@ class _SplitwayMapState extends State<SplitwayMap>
       latitude: start.latitude + (end.latitude - start.latitude) * t,
       longitude: start.longitude + (end.longitude - start.longitude) * t,
     );
-    // Fire-and-forget: the helper itself coalesces overlapping calls.
+    // Fire-and-forget: each helper coalesces its own overlapping calls.
     unawaited(_ensureUserMarker());
+    unawaited(_ensureTelemetryTip());
   }
 
   /// Starts (or restarts) the glide animation from the currently-visible
@@ -314,23 +403,36 @@ class _SplitwayMapState extends State<SplitwayMap>
     final circleMgr = _circleManager;
     if (circleMgr == null || !mounted) return;
     final pos = _animatedUserLocation;
-    final existing = _userCircleAnnotation;
 
     if (pos == null) {
-      if (existing != null) {
-        try {
-          await circleMgr.delete(existing);
-        } on PlatformException {
-          // Channel torn down — drop the handle silently.
-        }
-        _userCircleAnnotation = null;
-      }
+      await _removeUserCircle();
+      await _removeUserArrow();
       return;
     }
 
     final geometry = mbx.Point(
       coordinates: mbx.Position(pos.longitude, pos.latitude),
     );
+
+    // Show the directional arrow once the heading is known (and the bitmap
+    // is ready); otherwise fall back to the plain circle.
+    final bearing = _userBearing;
+    final useArrow = bearing != null &&
+        _arrowManager != null &&
+        _arrowImageBytes != null;
+
+    if (useArrow) {
+      await _removeUserCircle();
+      await _ensureUserArrow(geometry, bearing);
+    } else {
+      await _removeUserArrow();
+      await _ensureUserCircle(geometry, circleMgr);
+    }
+  }
+
+  Future<void> _ensureUserCircle(
+      mbx.Point geometry, mbx.CircleAnnotationManager circleMgr) async {
+    final existing = _userCircleAnnotation;
     if (existing == null) {
       try {
         _userCircleAnnotation = await circleMgr.create(
@@ -357,11 +459,147 @@ class _SplitwayMapState extends State<SplitwayMap>
     }
   }
 
+  Future<void> _ensureUserArrow(mbx.Point geometry, double bearing) async {
+    final arrowMgr = _arrowManager;
+    final bytes = _arrowImageBytes;
+    if (arrowMgr == null || bytes == null) return;
+    final existing = _userArrowAnnotation;
+    if (existing == null) {
+      try {
+        _userArrowAnnotation = await arrowMgr.create(
+          mbx.PointAnnotationOptions(
+            geometry: geometry,
+            image: bytes,
+            iconRotate: bearing,
+            // Bitmap drawn at the device pixel ratio — scale it back down.
+            iconSize: 1 / _arrowDpr,
+          ),
+        );
+      } on PlatformException {
+        // Channel torn down — retry on the next tick.
+      }
+    } else {
+      existing.geometry = geometry;
+      existing.iconRotate = bearing;
+      try {
+        await arrowMgr.update(existing);
+      } on PlatformException {
+        _userArrowAnnotation = null;
+      }
+    }
+  }
+
+  Future<void> _removeUserCircle() async {
+    final mgr = _circleManager;
+    final existing = _userCircleAnnotation;
+    if (mgr == null || existing == null) return;
+    try {
+      await mgr.delete(existing);
+    } on PlatformException {
+      // Channel torn down — drop the handle silently.
+    }
+    _userCircleAnnotation = null;
+  }
+
+  Future<void> _removeUserArrow() async {
+    final mgr = _arrowManager;
+    final existing = _userArrowAnnotation;
+    if (mgr == null || existing == null) return;
+    try {
+      await mgr.delete(existing);
+    } on PlatformException {
+      // Channel torn down — drop the handle silently.
+    }
+    _userArrowAnnotation = null;
+  }
+
+  /// True while a live position is being tracked (recording), in which case
+  /// the recorded line's final segment is animated separately. Off-recording
+  /// (e.g. the review map) the whole line is drawn statically.
+  bool get _hasLivePosition => _animatedUserLocation != null;
+
+  /// Per-frame in-place update of the growing tip segment so the recorded
+  /// line follows the gliding user marker. Only 2 points are sent, so this is
+  /// cheap even on long tracks. Coalesces overlapping calls and stands down
+  /// while a full re-render is in flight (which rebuilds the static line).
+  Future<void> _ensureTelemetryTip() async {
+    if (_isRendering) return;
+    if (_telemetryTipUpdateInFlight) {
+      _telemetryTipUpdatePending = true;
+      return;
+    }
+    _telemetryTipUpdateInFlight = true;
+    try {
+      await _ensureTelemetryTipCore();
+    } finally {
+      _telemetryTipUpdateInFlight = false;
+      if (_telemetryTipUpdatePending) {
+        _telemetryTipUpdatePending = false;
+        unawaited(_ensureTelemetryTip());
+      }
+    }
+  }
+
+  Future<void> _ensureTelemetryTipCore() async {
+    final lineMgr = _lineManager;
+    if (lineMgr == null || !mounted) return;
+    final tel = widget.telemetry;
+    final animated = _animatedUserLocation;
+    final useHeatmap =
+        widget.showSpeedHeatmap && _hasUsableSpeedTelemetry(tel);
+    final showTip = !useHeatmap && tel.length >= 2 && animated != null;
+    if (!showTip) {
+      await _removeTelemetryTip();
+      return;
+    }
+    // Anchor the tip at the last *confirmed* point and grow toward the
+    // gliding position; the static line ends at the same anchor, so the two
+    // meet seamlessly.
+    final anchor = tel[tel.length - 2].location;
+    final tipGeom = _toLineString([anchor, animated]);
+    final existing = _telemetryTipAnnotation;
+    if (existing == null) {
+      try {
+        _telemetryTipAnnotation = await lineMgr.create(
+          mbx.PolylineAnnotationOptions(
+            geometry: tipGeom,
+            lineColor: 0xFFE65100,
+            lineWidth: 3,
+            lineOpacity: 0.85,
+          ),
+        );
+      } on PlatformException {
+        // Channel torn down — retry on the next tick.
+      }
+    } else {
+      existing.geometry = tipGeom;
+      try {
+        await lineMgr.update(existing);
+      } on PlatformException {
+        // Handle invalidated by a full re-render / style swap — drop it.
+        _telemetryTipAnnotation = null;
+      }
+    }
+  }
+
+  Future<void> _removeTelemetryTip() async {
+    final lineMgr = _lineManager;
+    final existing = _telemetryTipAnnotation;
+    if (lineMgr == null || existing == null) return;
+    try {
+      await lineMgr.delete(existing);
+    } on PlatformException {
+      // Channel torn down — drop the handle silently.
+    }
+    _telemetryTipAnnotation = null;
+  }
+
   void _onFlyToChanged() {
     final notifier = widget.flyToNotifier;
     final target = notifier?.target;
     if (target == null || _map == null || !mounted) return;
     final bearing = notifier?.bearing;
+    final pitch = notifier?.pitch;
     final durationMs = notifier?.animationDuration.inMilliseconds ?? 800;
     _map!.flyTo(
       mbx.CameraOptions(
@@ -370,6 +608,7 @@ class _SplitwayMapState extends State<SplitwayMap>
         ),
         zoom: 17,
         bearing: bearing,
+        pitch: pitch,
       ),
       mbx.MapAnimationOptions(duration: durationMs),
     ).catchError((_) {
@@ -499,7 +738,16 @@ class _SplitwayMapState extends State<SplitwayMap>
 
     // User-location updates are handled by the dedicated marker animation so
     // the dot glides smoothly instead of teleporting on every GPS sample.
-    if (userLocationChanged) _animateUserMarkerTo(widget.userLocation);
+    final userBearingChanged = oldWidget.userBearing != widget.userBearing;
+    _userBearing = widget.userBearing;
+    if (userLocationChanged) {
+      _animateUserMarkerTo(widget.userLocation);
+    } else if (userBearingChanged) {
+      // Heading changed without a new fix (e.g. compass rotation while
+      // stationary) — refresh the marker so the arrow re-aims / the
+      // circle↔arrow swap happens.
+      unawaited(_ensureUserMarker());
+    }
 
     // Fly to fit whenever the user selects a different route.
     if (routeChanged) _flyToFitRoute();
@@ -570,9 +818,28 @@ class _SplitwayMapState extends State<SplitwayMap>
     }
     _lineManager = await map.annotations.createPolylineAnnotationManager();
     _circleManager = await map.annotations.createCircleAnnotationManager();
+    await _createArrowManager(map);
+    await _ensureArrowImage();
     await _updateGesturesForFreehand();
     await _renderAnnotations();
     await _flyToFitRoute();
+  }
+
+  /// Creates the dedicated point manager for the directional user arrow and
+  /// pins its rotation to the map frame so `iconRotate` is interpreted as an
+  /// absolute compass bearing (the arrow points the right way regardless of
+  /// how the camera is rotated).
+  Future<void> _createArrowManager(mbx.MapboxMap map) async {
+    try {
+      final mgr = await map.annotations.createPointAnnotationManager();
+      await mgr.setIconRotationAlignment(mbx.IconRotationAlignment.MAP);
+      await mgr.setIconAllowOverlap(true);
+      await mgr.setIconIgnorePlacement(true);
+      _arrowManager = mgr;
+    } on PlatformException {
+      // Map channel torn down — leave the arrow manager null; the circle
+      // fallback still renders the user position.
+    }
   }
 
   Future<void> _updateGesturesForFreehand() async {
@@ -724,6 +991,7 @@ class _SplitwayMapState extends State<SplitwayMap>
       return;
     }
     _userCircleAnnotation = null;
+    _telemetryTipAnnotation = null;
     if (!mounted) return;
 
     // Speed heatmap takes over the route+telemetry rendering when active.
@@ -788,17 +1056,26 @@ class _SplitwayMapState extends State<SplitwayMap>
 
     if (!mounted) return;
     if (!useHeatmap && widget.telemetry.length >= 2) {
-      try {
-        await lineMgr.create(mbx.PolylineAnnotationOptions(
-          geometry: _toLineString(
-            widget.telemetry.map((t) => t.location).toList(growable: false),
-          ),
-          lineColor: 0xFFE65100,
-          lineWidth: 3,
-          lineOpacity: 0.85,
-        ));
-      } on PlatformException {
-        return;
+      final tel = widget.telemetry;
+      // While recording, the final segment is animated by the tip annotation,
+      // so the static line stops at the last confirmed point. Off-recording
+      // the whole track is drawn statically.
+      final staticPoints = _hasLivePosition
+          ? tel.sublist(0, tel.length - 1)
+          : tel;
+      final staticPath =
+          staticPoints.map((t) => t.location).toList(growable: false);
+      if (staticPath.length >= 2) {
+        try {
+          await lineMgr.create(mbx.PolylineAnnotationOptions(
+            geometry: _toLineString(staticPath),
+            lineColor: 0xFFE65100,
+            lineWidth: 3,
+            lineOpacity: 0.85,
+          ));
+        } on PlatformException {
+          return;
+        }
       }
     }
 
@@ -867,6 +1144,8 @@ class _SplitwayMapState extends State<SplitwayMap>
     if (!mounted) return;
     _userMarkerUpdatePending = false;
     await _ensureUserMarkerCore();
+    _telemetryTipUpdatePending = false;
+    await _ensureTelemetryTipCore();
   }
 
   mbx.LineString _toLineString(List<GeoPoint> points) {

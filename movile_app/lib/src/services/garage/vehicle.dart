@@ -7,6 +7,16 @@ enum VehicleType {
 
   String get id => name;
 
+  /// Motorized vehicles rotate the recording camera with the GPS course
+  /// only: inside a vehicle the phone's compass is unreliable (engine
+  /// vibration, body metal) and its orientation is unrelated to the
+  /// direction of travel.
+  bool get isMotorized => switch (this) {
+        VehicleType.car || VehicleType.motorcycle || VehicleType.goKart =>
+          true,
+        VehicleType.bicycle || VehicleType.other => false,
+      };
+
   static VehicleType fromId(String value) =>
       VehicleType.values.firstWhere(
         (e) => e.id == value,

@@ -73,14 +73,21 @@ class LiveSessionController extends ChangeNotifier {
   Timer? _bgNotificationTicker;
   int _distanceFilterMeters = 0;
 
-  /// Latest known heading in degrees (0 = north, clockwise). Blends the
+  /// When false (recording in a motorized vehicle) the compass /
+  /// accelerometer sensors are never started and the camera bearing comes
+  /// from the GPS course alone.
+  bool _useCompassHeading = true;
+
+  /// Latest known heading in degrees (0 = north, clockwise). In a motorized
+  /// vehicle the GPS course is used directly. Otherwise it blends the
   /// phone's magnetic compass (so the camera rotates when the user turns
   /// the device) with the GPS-derived course (so it snaps to direction of
   /// travel when actually moving). At standstill the compass wins; above
   /// ~4 m/s the GPS course wins.
   double? get currentBearingDeg {
-    final compass = _headingService.currentHeadingDeg;
     final gpsCourse = _gpsCourseDeg();
+    if (!_useCompassHeading) return gpsCourse;
+    final compass = _headingService.currentHeadingDeg;
     final speed = _tracker?.snapshot.lastSpeedMps ?? 0.0;
     return fusedBearingDeg(
       compassDeg: compass,
@@ -149,10 +156,12 @@ class LiveSessionController extends ChangeNotifier {
   Future<void> startSession({
     int distanceFilterMeters = 0,
     bool backgroundActive = false,
+    bool useCompassHeading = true,
   }) async {
     final route = _selected;
     if (route == null) return;
     _distanceFilterMeters = distanceFilterMeters;
+    _useCompassHeading = useCompassHeading;
     _tracker?.dispose();
     _tracker = LiveTrackingController(route: route)
       ..addListener(_onTrackerChange)
@@ -177,6 +186,7 @@ class LiveSessionController extends ChangeNotifier {
   }
 
   void _subscribeToHeading() {
+    if (!_useCompassHeading) return;
     _headingService.start();
     _headingSub?.cancel();
     _headingSub = _headingService.headingStream.listen((_) {

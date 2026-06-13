@@ -39,11 +39,22 @@ class FreeRideController extends ChangeNotifier {
   String? _selectedVehicleId;
   String? get selectedVehicleId => _selectedVehicleId;
 
+  String? _sessionName;
+  String? get sessionName => _sessionName;
+
   bool _backgroundActive = false;
   bool get backgroundActive => _backgroundActive;
 
   void selectVehicle(String? vehicleId) {
     _selectedVehicleId = vehicleId;
+    notifyListeners();
+  }
+
+  /// User-provided name for the ride being recorded. Blank input clears it
+  /// so the ride falls back to the localized default label.
+  void setSessionName(String? name) {
+    final trimmed = name?.trim();
+    _sessionName = (trimmed == null || trimmed.isEmpty) ? null : trimmed;
     notifyListeners();
   }
 
@@ -57,6 +68,11 @@ class FreeRideController extends ChangeNotifier {
       _engine?.snapshot ?? FreeRideSnapshot.initial;
 
   int _distanceFilterMeters = 0;
+
+  /// When false (recording in a motorized vehicle) the compass /
+  /// accelerometer sensors are never started and the camera bearing comes
+  /// from the GPS course alone.
+  bool _useCompassHeading = true;
 
   DateTime? _recordingStartedAt;
   DateTime? _pausedAt;
@@ -73,6 +89,7 @@ class FreeRideController extends ChangeNotifier {
   Future<void> startRecording({
     int distanceFilterMeters = 0,
     bool backgroundActive = false,
+    bool useCompassHeading = true,
   }) async {
     _permissionStatus = await LocationService.ensurePermission();
     if (_permissionStatus != LocationPermissionStatus.granted) {
@@ -82,6 +99,7 @@ class FreeRideController extends ChangeNotifier {
 
     _backgroundActive = backgroundActive;
     _distanceFilterMeters = distanceFilterMeters;
+    _useCompassHeading = useCompassHeading;
 
     if (_backgroundActive) {
       await BackgroundTrackingService.startTracking(
@@ -128,6 +146,7 @@ class FreeRideController extends ChangeNotifier {
   }
 
   void _subscribeToHeading() {
+    if (!_useCompassHeading) return;
     _headingService.start();
     _headingSub?.cancel();
     _headingSub = _headingService.headingStream.listen((_) {
@@ -207,14 +226,16 @@ class FreeRideController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Latest known heading in degrees (0 = north, clockwise). Combines the
+  /// Latest known heading in degrees (0 = north, clockwise). In a motorized
+  /// vehicle the GPS course is used directly. Otherwise it combines the
   /// phone's magnetic compass (so the map rotates when the user turns the
   /// device) with the GPS course (so the map snaps to direction of travel
   /// when actually moving). The blend is speed-weighted: at standstill the
   /// compass wins; above ~4 m/s the GPS course wins.
   double? get currentBearingDeg {
-    final compass = _headingService.currentHeadingDeg;
     final gpsCourse = _gpsCourseDeg();
+    if (!_useCompassHeading) return gpsCourse;
+    final compass = _headingService.currentHeadingDeg;
     final speed = _engine?.snapshot.currentSpeedMps ?? 0.0;
     return fusedBearingDeg(
       compassDeg: compass,
@@ -262,6 +283,7 @@ class FreeRideController extends ChangeNotifier {
     }
 
     final run = raw.copyWith(
+      name: _sessionName,
       vehicleId: _selectedVehicleId,
       locationLabel: locationLabel,
     );
@@ -354,6 +376,7 @@ class FreeRideController extends ChangeNotifier {
   void resetForNewRide() {
     _engine = null;
     _result = null;
+    _sessionName = null;
     _ingested.clear();
     _permissionStatus = null;
     _backgroundActive = false;

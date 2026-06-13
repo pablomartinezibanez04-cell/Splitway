@@ -366,6 +366,8 @@
   "freeRideIdleTitle": "Ruta sin destino",
   "freeRideIdleMessage": "Graba tu recorrido en tiempo real sin una ruta predefinida. Se registran velocidad, distancia y posición automáticamente.",
   "freeRideStartButton": "Comenzar grabación",
+  "freeRideSetupTitle": "Nueva grabación",
+  "freeRideSetupNameLabel": "Nombre (opcional)",
   "freeRideElapsedLabel": "Tiempo",
   "freeRideDistanceLabel": "Distancia",
   "freeRideSpeedLabel": "Velocidad",

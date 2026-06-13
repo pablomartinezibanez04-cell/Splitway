@@ -11,6 +11,7 @@ import '../../config/app_config.dart';
 import '../../routing/app_router.dart';
 import '../../services/auth/auth_service.dart';
 import '../../services/garage/garage_service.dart';
+import '../../services/garage/vehicle.dart';
 import '../../services/profile/profile_service.dart';
 import '../../services/sensors/device_heading_service.dart';
 import '../../services/settings/app_settings_controller.dart';
@@ -119,6 +120,7 @@ class _FreeRideScreenState extends State<FreeRideScreen>
         _flyToNotifier.flyTo(
           points.last.location,
           bearing: bearing,
+          pitch: kNavigationCameraPitchDeg,
           animationDuration: pointChanged
               ? const Duration(milliseconds: 850)
               : const Duration(milliseconds: 300),
@@ -168,11 +170,26 @@ class _FreeRideScreenState extends State<FreeRideScreen>
     }
   }
 
+  /// True when the selected vehicle is motorized — the camera then follows
+  /// the GPS course only, ignoring the phone compass/accelerometer.
+  bool get _selectedVehicleIsMotorized {
+    final id = widget.controller.selectedVehicleId;
+    if (id == null) return false;
+    for (final v in widget.garageService?.vehicles ?? const <Vehicle>[]) {
+      if (v.id == id) return v.type.isMotorized;
+    }
+    return false;
+  }
+
   void _centerOnUser() {
     final ctrl = widget.controller;
     _followUser = true;
     if (ctrl.ingested.isNotEmpty) {
-      _flyToNotifier.flyTo(ctrl.ingested.last.location);
+      _flyToNotifier.flyTo(
+        ctrl.ingested.last.location,
+        bearing: ctrl.currentBearingDeg,
+        pitch: kNavigationCameraPitchDeg,
+      );
     }
   }
 
@@ -254,18 +271,6 @@ class _FreeRideScreenState extends State<FreeRideScreen>
             const SizedBox(height: 16),
             _PermissionBanner(status: ctrl.permissionStatus!),
           ],
-          if (widget.garageService != null &&
-              widget.garageService!.vehicles.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Text(l.vehiclePickerLabel,
-                style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(height: 8),
-            VehiclePickerTile(
-              selectedVehicleId: ctrl.selectedVehicleId,
-              vehicles: widget.garageService!.vehicles,
-              onSelected: ctrl.selectVehicle,
-            ),
-          ],
           const SizedBox(height: 24),
           FilledButton.icon(
             onPressed: () async {
@@ -274,7 +279,11 @@ class _FreeRideScreenState extends State<FreeRideScreen>
                 widget.authService,
                 message: AppLocalizations.of(context).loginBannerDefault,
               );
-              if (!allowed || !mounted) return;
+              if (!allowed || !context.mounted) return;
+
+              // Pre-recording setup: vehicle + optional ride name.
+              final confirmed = await _showStartSetupSheet(context, ctrl);
+              if (!confirmed || !context.mounted) return;
 
               // Check background location permission before starting.
               final bgPermission =
@@ -282,7 +291,7 @@ class _FreeRideScreenState extends State<FreeRideScreen>
               var hasBackground =
                   bgPermission == LocationPermissionStatus.granted;
 
-              if (!hasBackground && mounted) {
+              if (!hasBackground && context.mounted) {
                 final action =
                     await _showBackgroundPermissionDialog(context);
                 if (!mounted) return;
@@ -301,6 +310,7 @@ class _FreeRideScreenState extends State<FreeRideScreen>
                 distanceFilterMeters:
                     widget.settingsController.gpsSamplingDistanceFilter,
                 backgroundActive: hasBackground,
+                useCompassHeading: !_selectedVehicleIsMotorized,
               );
             },
             icon: const Icon(Icons.play_arrow),
@@ -338,6 +348,7 @@ class _FreeRideScreenState extends State<FreeRideScreen>
             userLocation: ctrl.ingested.isNotEmpty
                 ? ctrl.ingested.last.location
                 : null,
+            userBearing: ctrl.currentBearingDeg,
             initialCenter: _initialCenter,
             flyToNotifier: _flyToNotifier,
           ),
@@ -548,6 +559,149 @@ class _FreeRideScreenState extends State<FreeRideScreen>
         ),
       ],
     );
+  }
+
+  /// Pre-recording setup sheet: lets the user pick the vehicle and give the
+  /// ride an optional name (pre-filled with the default label it would get).
+  /// Returns `true` when the user confirmed and recording should start.
+  Future<bool> _showStartSetupSheet(
+    BuildContext context,
+    FreeRideController ctrl,
+  ) async {
+    final l = AppLocalizations.of(context);
+    final nameCtrl = TextEditingController(text: l.historyFreeRideLabel);
+    final vehicles = widget.garageService?.vehicles ?? const <Vehicle>[];
+    var vehicleId = ctrl.selectedVehicleId;
+
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          final cs = Theme.of(ctx).colorScheme;
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom,
+              left: 24,
+              right: 24,
+              top: 16,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: cs.onSurfaceVariant.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: cs.primaryContainer,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(Icons.play_arrow_rounded,
+                          color: cs.onPrimaryContainer, size: 24),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Text(
+                        l.freeRideSetupTitle,
+                        style: Theme.of(ctx)
+                            .textTheme
+                            .headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                if (vehicles.isNotEmpty) ...[
+                  Text(
+                    l.vehiclePickerLabel,
+                    style: Theme.of(ctx)
+                        .textTheme
+                        .titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 8),
+                  VehiclePickerTile(
+                    selectedVehicleId: vehicleId,
+                    vehicles: vehicles,
+                    onSelected: (id) => setSheetState(() => vehicleId = id),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                TextField(
+                  controller: nameCtrl,
+                  decoration: InputDecoration(
+                    labelText: l.freeRideSetupNameLabel,
+                    prefixIcon: const Icon(Icons.label_rounded),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => Navigator.pop(ctx, true),
+                ),
+                const SizedBox(height: 28),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        style: OutlinedButton.styleFrom(
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(l.commonCancel),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: FilledButton.icon(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        icon: const Icon(Icons.play_arrow),
+                        label: Text(l.freeRideStartButton),
+                        style: FilledButton.styleFrom(
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
+    if (confirmed != true) return false;
+    ctrl.selectVehicle(vehicleId);
+    ctrl.setSessionName(nameCtrl.text);
+    return true;
   }
 
   /// Shows a dialog explaining that background location permission is needed
