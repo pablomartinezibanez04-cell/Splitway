@@ -52,6 +52,16 @@ class AuthService extends ChangeNotifier {
   DateTime? _bannedUntil;
   DateTime? get bannedUntil => _bannedUntil;
 
+  /// Optional hook invoked at the very start of [signOut], while the Supabase
+  /// session is still valid, so callers can flush unsynced local data to the
+  /// cloud before the session is torn down (otherwise data recorded since the
+  /// last sync — and later wiped on an account switch — would be lost).
+  ///
+  /// Best-effort: any error it throws is logged and swallowed so a failed or
+  /// offline sync never blocks signing out. Set by [SplitwayApp] alongside the
+  /// sync service and cleared when that service is disposed.
+  Future<void> Function()? beforeSignOut;
+
   void clearPendingConfirmation() {
     _pendingEmailConfirmation = false;
   }
@@ -381,7 +391,26 @@ class AuthService extends ChangeNotifier {
   // Sign out
   // ---------------------------------------------------------------------------
 
-  Future<void> signOut() async {
+  /// Signs the user out. When [flush] is true (the default) the
+  /// [beforeSignOut] hook runs first so local data reaches the cloud before
+  /// the session ends. Pass `flush: false` when the data is intentionally
+  /// being discarded (e.g. account deletion, where pushing it would be moot).
+  Future<void> signOut({bool flush = true}) async {
+    if (flush) {
+      final hook = beforeSignOut;
+      if (hook != null) {
+        try {
+          await hook();
+        } catch (e, st) {
+          AppLogger.maybeInstance?.warning(
+            'auth',
+            'beforeSignOut flush failed',
+            error: e,
+            stackTrace: st,
+          );
+        }
+      }
+    }
     try {
       await _client.auth.signOut();
     } catch (e, st) {

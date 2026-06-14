@@ -361,8 +361,9 @@ class SettingsScreen extends StatelessWidget {
 
       if (response.status != 200) throw Exception('status ${response.status}');
 
-      // Sign out locally (the account is already gone server-side)
-      await authService!.signOut();
+      // Sign out locally (the account is already gone server-side). Skip the
+      // pre-sign-out flush: the data is being deleted, so pushing it is moot.
+      await authService!.signOut(flush: false);
 
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

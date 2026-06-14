@@ -50,6 +50,7 @@ class AppSettingsController extends ChangeNotifier {
   static const _kDismissedOfficialRoutes = 'dismissed_official_routes';
   static const _kMinLogLevel = 'min_log_level';
   static const _kRemoteLogsEnabled = 'remote_logs_enabled';
+  static const _kLastUserId = 'last_signed_in_user_id';
 
   final SharedPreferences _prefs;
 
@@ -78,6 +79,20 @@ class AppSettingsController extends ChangeNotifier {
   bool get remoteLogsEnabled => _remoteLogsEnabled;
   bool get notificationPermissionAsked =>
       _prefs.getBool(_kNotificationPermissionAsked) ?? false;
+
+  /// The id of the last user whose data populated the local database on this
+  /// device. Persisted so an account switch can be detected at the next login
+  /// even after a sign-out (which clears the in-memory owner filter) or an app
+  /// restart. Used by [SplitwayApp] to decide when to wipe stale local data.
+  String? get lastUserId => _prefs.getString(_kLastUserId);
+
+  Future<void> setLastUserId(String? v) async {
+    if (v == null) {
+      await _prefs.remove(_kLastUserId);
+    } else {
+      await _prefs.setString(_kLastUserId, v);
+    }
+  }
 
   Map<String, int> get dismissedOfficialRoutes {
     final raw = _prefs.getString(_kDismissedOfficialRoutes);

@@ -533,6 +533,22 @@ class LocalDraftRepository {
     if (deleted > 0) _changes.add(null);
   }
 
+  /// Removes session runs and free rides with `owner_id IS NULL` (and, via the
+  /// `ON DELETE CASCADE` foreign keys, their telemetry). Such rows are either
+  /// legacy data from installs predating the `owner_id` column, or rows written
+  /// while no user was signed in (e.g. a save that raced a sign-out). Because
+  /// [_ownerFilter] always matches `owner_id IS NULL`, they would otherwise
+  /// leak across accounts on a shared device. Idempotent and safe to call on
+  /// every cold start. Mirrors [purgeLegacyPublicRoutes] for routes.
+  Future<void> purgeOwnerlessSessions() async {
+    var deleted = 0;
+    await _db.transaction((txn) async {
+      deleted += await txn.delete('session_runs', where: 'owner_id IS NULL');
+      deleted += await txn.delete('free_rides', where: 'owner_id IS NULL');
+    });
+    if (deleted > 0) _changes.add(null);
+  }
+
   Future<void> dispose() async {
     await _changes.close();
   }

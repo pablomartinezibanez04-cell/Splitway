@@ -1,3 +1,9 @@
+/// Stable identifier for the implicit final sector — the segment that runs from
+/// the last sector gate to the start/finish line (closed routes) or the last
+/// path point (open routes). N sector gates yield N+1 sectors; this id keys the
+/// extra one. It never collides with editor-generated ids (`'<routeId>-sec-N'`).
+const String kFinalSectorId = '__final__';
+
 class SectorSummary {
   const SectorSummary({
     required this.sectorId,

@@ -445,6 +445,7 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
             useMapbox: widget.config.hasMapbox,
             route: route,
             telemetry: tracker.ingested,
+            showSectors: true,
             highlightSectorId: snapshot.lastCrossedSectorId,
             userLocation: tracker.ingested.isNotEmpty
                 ? tracker.ingested.last.location
@@ -852,17 +853,21 @@ class _LiveSectorChips extends StatelessWidget {
       if (s.lapNumber == currentLap) lapTimes[s.sectorId] = s.duration;
     }
 
+    // N gates → N+1 sectors: append the implicit final sector (last gate →
+    // start/finish), keyed by [kFinalSectorId].
+    final sectorIds = [...sectors.map((s) => s.id), kFinalSectorId];
+
     return Row(
       children: [
-        for (var i = 0; i < sectors.length; i++) ...[
+        for (var i = 0; i < sectorIds.length; i++) ...[
           if (i > 0) const SizedBox(width: 8),
           Expanded(
             child: SectorChip(
               sectorNumber: i + 1,
               tier: sectorChipTier(
-                lapTime: lapTimes[sectors[i].id],
-                sessionCrossings: sessionTimes[sectors[i].id] ?? const [],
-                historicalRecord: historicalRecords[sectors[i].id],
+                lapTime: lapTimes[sectorIds[i]],
+                sessionCrossings: sessionTimes[sectorIds[i]] ?? const [],
+                historicalRecord: historicalRecords[sectorIds[i]],
               ),
             ),
           ),

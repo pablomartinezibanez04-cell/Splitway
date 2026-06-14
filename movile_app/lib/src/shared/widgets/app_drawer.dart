@@ -41,6 +41,53 @@ class AppDrawer extends StatelessWidget {
   }
 }
 
+/// Closes the drawer, shows a blocking progress dialog while [AuthService.signOut]
+/// flushes local data to the cloud, then dismisses it. Keeping the user on a
+/// spinner until the flush finishes is what prevents losing unsynced data on
+/// sign-out (and on a subsequent account switch, which wipes local data).
+Future<void> _signOutWithSync(
+  BuildContext context,
+  AuthService authService,
+) async {
+  final l = AppLocalizations.of(context);
+  final rootNavigator = Navigator.of(context, rootNavigator: true);
+  // Close the drawer first (its context is gone after this).
+  Navigator.of(context).pop();
+
+  showDialog<void>(
+    context: rootNavigator.context,
+    barrierDismissible: false,
+    builder: (_) => PopScope(
+      canPop: false,
+      child: Center(
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                const SizedBox(width: 16),
+                Text(l.drawerSyncSyncing),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  await authService.signOut();
+
+  // Dismiss the progress dialog. The sign-out also redirects the shell to
+  // /routes underneath; popping just removes the dialog route on top.
+  if (rootNavigator.canPop()) rootNavigator.pop();
+}
+
 // =============================================================================
 // Logged-in drawer
 // =============================================================================
@@ -229,10 +276,7 @@ class _LoggedInContent extends StatelessWidget {
                 style: const TextStyle(color: Color(0xFF455A64), fontSize: 10),
               ),
               GestureDetector(
-                onTap: () async {
-                  Navigator.pop(context);
-                  await authService.signOut();
-                },
+                onTap: () => _signOutWithSync(context, authService),
                 child: Text(
                   l.drawerSignOut,
                   style: const TextStyle(color: Color(0xFFEF5350), fontSize: 12),

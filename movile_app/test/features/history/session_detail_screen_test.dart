@@ -192,9 +192,10 @@ void main() {
 
     // Best lap (lap 2, 78 s = 01:18.000) is selected by default.
     expect(find.text('01:18.000'), findsWidgets);
-    // Two sector chips rendered.
+    // Two gates → three sector chips (S1, S2 and the implicit final S3).
     expect(find.text('S1'), findsOneWidget);
     expect(find.text('S2'), findsOneWidget);
+    expect(find.text('S3'), findsOneWidget);
 
     // sec-1 in the best lap (38 s) is the all-time record -> purple chip.
     final s1Chip = tester.widget<SectorChip>(

@@ -84,6 +84,71 @@ void main() {
     expect(ids, {'off-1', 'off-2'});
   });
 
+  test(
+      'purgeOwnerlessSessions removes NULL-owner sessions/free-rides and '
+      'cascades telemetry, keeping owned rows', () async {
+    // A route to satisfy the session_runs.route_id foreign key.
+    await db.raw.insert('route_templates', {
+      'id': 'r1',
+      'name': 'Route r1',
+      'path_json': '[]',
+      'start_finish_gate_json':
+          '{"left":{"latitude":0,"longitude":0},"right":{"latitude":0,"longitude":0}}',
+      'difficulty': 'medium',
+      'created_at': 0,
+      'is_official': 1,
+      'owner_id': null,
+    });
+
+    Map<String, Object?> session(String id, String? owner) => {
+          'id': id,
+          'route_id': 'r1',
+          'started_at': 0,
+          'status': 'completed',
+          'lap_summaries_json': '[]',
+          'sector_summaries_json': '[]',
+          'total_distance_m': 0.0,
+          'max_speed_mps': 0.0,
+          'avg_speed_mps': 0.0,
+          'owner_id': owner,
+        };
+    await db.raw.insert('session_runs', session('s-null', null));
+    await db.raw.insert('session_runs', session('s-owned', 'user-1'));
+    await db.raw.insert('telemetry_points', {
+      'session_id': 's-null',
+      'ts': 0,
+      'lat': 0.0,
+      'lng': 0.0,
+    });
+
+    Map<String, Object?> ride(String id, String? owner) => {
+          'id': id,
+          'started_at': 0,
+          'status': 'completed',
+          'total_distance_m': 0.0,
+          'max_speed_mps': 0.0,
+          'avg_speed_mps': 0.0,
+          'owner_id': owner,
+        };
+    await db.raw.insert('free_rides', ride('fr-null', null));
+    await db.raw.insert('free_rides', ride('fr-owned', 'user-1'));
+
+    final repo = LocalDraftRepository(db);
+    await repo.purgeOwnerlessSessions();
+
+    final sessionIds = (await db.raw.query('session_runs'))
+        .map((r) => r['id'])
+        .toSet();
+    final rideIds =
+        (await db.raw.query('free_rides')).map((r) => r['id']).toSet();
+    final telemetry = await db.raw.query('telemetry_points',
+        where: 'session_id = ?', whereArgs: ['s-null']);
+
+    expect(sessionIds, {'s-owned'});
+    expect(rideIds, {'fr-owned'});
+    expect(telemetry, isEmpty);
+  });
+
   test('purgeLegacyPublicRoutes removes orphan NULL-owner non-official routes',
       () async {
     // Insert a legacy orphan directly (bypassing the guardrail).

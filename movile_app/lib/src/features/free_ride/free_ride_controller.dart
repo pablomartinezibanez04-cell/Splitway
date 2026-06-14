@@ -3,6 +3,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:splitway_core/splitway_core.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../data/repositories/local_draft_repository.dart';
 import '../../services/geocoding/reverse_geocoding_service.dart';
@@ -325,7 +326,7 @@ class FreeRideController extends ChangeNotifier {
     }
 
     final route = RouteTemplate(
-      id: 'rt-${DateTime.now().microsecondsSinceEpoch}',
+      id: const Uuid().v4(),
       name: name,
       description: description,
       path: simplified,
@@ -353,7 +354,7 @@ class FreeRideController extends ChangeNotifier {
     );
 
     final session = SessionRun(
-      id: 'sess-${DateTime.now().microsecondsSinceEpoch}',
+      id: const Uuid().v4(),
       routeTemplateId: route.id,
       startedAt: run.startedAt,
       endedAt: run.endedAt,

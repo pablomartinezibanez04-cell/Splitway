@@ -4,6 +4,8 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 
+import 'legacy_id.dart';
+
 class SplitwayLocalDatabase {
   SplitwayLocalDatabase._(this._db);
 
@@ -11,7 +13,7 @@ class SplitwayLocalDatabase {
 
   Database get raw => _db;
 
-  static const int _schemaVersion = 10;
+  static const int _schemaVersion = 11;
 
   static Future<SplitwayLocalDatabase> open({String? overridePath}) async {
     final path = overridePath ?? await _defaultPath();
@@ -223,6 +225,67 @@ class SplitwayLocalDatabase {
       await db.execute(
         'ALTER TABLE route_templates ADD COLUMN updated_at INTEGER',
       );
+    }
+    if (from < 11 && to >= 11) {
+      await migrateTextIdsToUuid(db);
+    }
+  }
+
+  /// Rewrites legacy text ids (`route-…`, `sess-…`, `route-…-sec-N`, …) to the
+  /// deterministic UUIDs produced by the Supabase migration
+  /// `20260601000004_text_ids_to_uuid.sql`, which promoted these columns to
+  /// native `uuid`. Without this, rows created before the app switched to UUID
+  /// generation fail to upsert with `invalid input syntax for type uuid` (code
+  /// 22P02). Using the same [legacyIdToUuid] transform as the server means a
+  /// row that already synced lands on the exact UUID it has remotely, so it
+  /// reconciles instead of duplicating.
+  ///
+  /// `free_rides` / `free_ride_telemetry` are intentionally untouched: their
+  /// id columns stayed `text` server-side and still accept the `fr-…` ids.
+  ///
+  /// Exposed for the migration test; not part of the public repository API.
+  /// Takes a [DatabaseExecutor] so it runs against either the migration's
+  /// [Database] (onUpgrade) or an explicit [Transaction] (tests) — both must
+  /// be inside a transaction for `defer_foreign_keys` to take effect.
+  static Future<void> migrateTextIdsToUuid(DatabaseExecutor db) async {
+    // Defer FK enforcement to commit so a parent PK can be rewritten before
+    // its children's FKs are (and vice versa) without tripping the
+    // RESTRICT-by-default `ON UPDATE` behavior mid-transaction. Auto-resets
+    // when the surrounding migration transaction ends.
+    await db.execute('PRAGMA defer_foreign_keys = ON');
+
+    // Routes (PK) → cascade the new id into the two FK columns that point at it.
+    for (final row in await db.query('route_templates', columns: ['id'])) {
+      final oldId = row['id']! as String;
+      final newId = legacyIdToUuid(oldId);
+      if (newId == oldId) continue;
+      await db.update('route_templates', {'id': newId},
+          where: 'id = ?', whereArgs: [oldId]);
+      await db.update('sectors', {'route_id': newId},
+          where: 'route_id = ?', whereArgs: [oldId]);
+      await db.update('session_runs', {'route_id': newId},
+          where: 'route_id = ?', whereArgs: [oldId]);
+    }
+
+    // Sector ids (PK) are hashed independently — their own text id, not the
+    // route's — exactly as the server migration did.
+    for (final row in await db.query('sectors', columns: ['id'])) {
+      final oldId = row['id']! as String;
+      final newId = legacyIdToUuid(oldId);
+      if (newId == oldId) continue;
+      await db.update('sectors', {'id': newId},
+          where: 'id = ?', whereArgs: [oldId]);
+    }
+
+    // Sessions (PK) → cascade the new id into telemetry's session_id FK.
+    for (final row in await db.query('session_runs', columns: ['id'])) {
+      final oldId = row['id']! as String;
+      final newId = legacyIdToUuid(oldId);
+      if (newId == oldId) continue;
+      await db.update('session_runs', {'id': newId},
+          where: 'id = ?', whereArgs: [oldId]);
+      await db.update('telemetry_points', {'session_id': newId},
+          where: 'session_id = ?', whereArgs: [oldId]);
     }
   }
 }

@@ -76,7 +76,19 @@ class _SplitwayAppState extends State<SplitwayApp> {
       _authService!.addListener(_onAuthStateChanged);
       _authService!.addListener(_routerRefresh.notify);
       if (client.auth.currentUser != null) {
-        _repository.userId = client.auth.currentUser!.id;
+        final uid = client.auth.currentUser!.id;
+        // Cold start with a restored session: if the last user whose data
+        // populated this device differs from the one now signed in, wipe the
+        // stale local data before showing anything. The subsequent sync pulls
+        // the correct user's rows back. (Same-user restart is preserved.)
+        final lastUid = widget.settingsController.lastUserId;
+        if (lastUid != null && lastUid != uid) {
+          // ignore: unawaited_futures
+          _repository.clearUserData();
+        }
+        _repository.userId = uid;
+        // ignore: unawaited_futures
+        widget.settingsController.setLastUserId(uid);
         _createSyncService(client);
         _createProfileService(client, updateRouter: false);
       }
@@ -102,10 +114,17 @@ class _SplitwayAppState extends State<SplitwayApp> {
     if (isLoggedIn && _syncService == null && widget.config.hasSupabase) {
       final client = Supabase.instance.client;
       final newUid = client.auth.currentUser!.id;
-      final previousUid = _repository.userId;
+      // Read the previous owner from persisted settings, NOT from
+      // `_repository.userId`: the sign-out branch below resets the in-memory
+      // owner to null, so by the time a new user logs in the repository can no
+      // longer tell us who was here before. The persisted id survives sign-out
+      // and app restarts, which is what makes a real account switch detectable.
+      final previousUid = widget.settingsController.lastUserId;
 
       void proceed() {
         _repository.userId = newUid;
+        // ignore: unawaited_futures
+        widget.settingsController.setLastUserId(newUid);
         _createSyncService(client);
         _router.syncService = _syncService;
         if (_profileService == null && widget.config.hasSupabase) {
@@ -132,6 +151,9 @@ class _SplitwayAppState extends State<SplitwayApp> {
       _syncService!.dispose();
       _syncService = null;
       _router.syncService = null;
+      // The flush already ran inside signOut() before this event fired; detach
+      // the now-stale hook so it can't reference the disposed sync service.
+      _authService?.beforeSignOut = null;
       _profileService?.clear();
       _profileService?.dispose();
       _profileService = null;
@@ -169,6 +191,10 @@ class _SplitwayAppState extends State<SplitwayApp> {
       userId: client.auth.currentUser?.id,
     );
     _syncService!.startPeriodicSync();
+    // Flush local data to the cloud right before sign-out, while the session
+    // is still valid, so nothing recorded since the last sync is lost (it
+    // would otherwise be wiped when a different account signs in).
+    _authService?.beforeSignOut = () => _syncService?.sync() ?? Future.value();
   }
 
   void _createProfileService(SupabaseClient client, {bool updateRouter = true}) {

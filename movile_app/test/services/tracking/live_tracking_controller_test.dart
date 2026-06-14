@@ -40,7 +40,43 @@ RouteTemplate _straightRoute({required int pointCount}) {
   );
 }
 
+final _uuidRe = RegExp(
+  r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+);
+
 void main() {
+  group('session id generation', () {
+    test('defaults sessionId to a valid v4 UUID when none is provided', () {
+      final route = _straightRoute(pointCount: 3);
+      final controller = LiveTrackingController(route: route);
+      // Must be a real UUID — Supabase session_runs.id is a native uuid column,
+      // so the old `sess-<micros>` ids were rejected with code 22P02.
+      expect(_uuidRe.hasMatch(controller.sessionId), isTrue,
+          reason: controller.sessionId);
+      controller.dispose();
+    });
+
+    test('preserves an explicitly provided sessionId', () {
+      final route = _straightRoute(pointCount: 3);
+      const explicit = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+      final controller =
+          LiveTrackingController(route: route, sessionId: explicit);
+      expect(controller.sessionId, explicit);
+      controller.dispose();
+    });
+
+    test('engine reuses the same generated id (no double generation)', () {
+      // Regression: a null sessionId used to be generated twice — once for the
+      // field, once for the engine — so the persisted SessionRun.id (from the
+      // engine) silently differed from controller.sessionId.
+      final route = _straightRoute(pointCount: 3);
+      final controller = LiveTrackingController(route: route);
+      final session = controller.finishSession();
+      expect(session.id, controller.sessionId);
+      controller.dispose();
+    });
+  });
+
   group('buildAutoLapScript / _samplePath (indirect)', () {
     final startTime = DateTime(2026, 5, 9, 10);
 

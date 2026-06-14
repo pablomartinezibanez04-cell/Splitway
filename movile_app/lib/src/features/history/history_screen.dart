@@ -1402,6 +1402,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       }
     }
 
+    // N gates → N+1 sectors: append the implicit final sector (last gate →
+    // start/finish), keyed by [kFinalSectorId].
+    final sectorIds = [...sectors.map((s) => s.id), kFinalSectorId];
+
     return [
       _LapSelector(
         laps: laps,
@@ -1433,18 +1437,18 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         const SizedBox(height: 8),
         Row(
           children: [
-            for (var i = 0; i < sectors.length; i++) ...[
+            for (var i = 0; i < sectorIds.length; i++) ...[
               if (i > 0) const SizedBox(width: 8),
               Expanded(
                 child: SectorChip(
                   sectorNumber: i + 1,
-                  time: lapSectorTimes[sectors[i].id],
+                  time: lapSectorTimes[sectorIds[i]],
                   dotSeparator: dot,
                   tier: sectorChipTier(
-                    lapTime: lapSectorTimes[sectors[i].id],
+                    lapTime: lapSectorTimes[sectorIds[i]],
                     sessionCrossings:
-                        sessionTimes[sectors[i].id] ?? const [],
-                    historicalRecord: _historicalRecords[sectors[i].id],
+                        sessionTimes[sectorIds[i]] ?? const [],
+                    historicalRecord: _historicalRecords[sectorIds[i]],
                   ),
                 ),
               ),
@@ -1604,17 +1608,19 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                         for (final sec in _session!.sectorSummaries)
                           ListTile(
                             leading: const Icon(Icons.flag_outlined),
-                            title: Text(_route!.sectors
-                                .firstWhere(
-                                  (s) => s.id == sec.sectorId,
-                                  orElse: () => SectorDefinition(
-                                    id: sec.sectorId,
-                                    order: 0,
-                                    label: sec.sectorId,
-                                    gate: _route!.startFinishGate,
-                                  ),
-                                )
-                                .label),
+                            title: Text(sec.sectorId == kFinalSectorId
+                                ? 'Sector ${_route!.sectors.length + 1}'
+                                : _route!.sectors
+                                    .firstWhere(
+                                      (s) => s.id == sec.sectorId,
+                                      orElse: () => SectorDefinition(
+                                        id: sec.sectorId,
+                                        order: 0,
+                                        label: sec.sectorId,
+                                        gate: _route!.startFinishGate,
+                                      ),
+                                    )
+                                    .label),
                             subtitle: Text(
                               l.historySectorSubtitle(
                                 sec.lapNumber,

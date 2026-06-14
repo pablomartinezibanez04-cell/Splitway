@@ -74,9 +74,16 @@ void main() {
     expect(received, isNotEmpty);
     expect(received.first, isA<TrackingStarted>());
     final sectorEvents = received.whereType<SectorCrossed>().toList();
-    expect(sectorEvents.length, 2);
+    // Two gates → three sectors: the final one (S2 → start/finish) is recorded
+    // when the lap closes.
+    expect(sectorEvents.length, 3);
     expect(sectorEvents[0].sectorId, 'sec-1');
     expect(sectorEvents[1].sectorId, 'sec-2');
+    expect(sectorEvents[2].sectorId, kFinalSectorId);
+    expect(sectorEvents[2].duration, const Duration(seconds: 3));
+    // The final sector is emitted before the lap closes.
+    expect(received.indexOf(sectorEvents[2]),
+        lessThan(received.indexWhere((e) => e is LapClosed)));
     final lapEvents = received.whereType<LapClosed>().toList();
     expect(lapEvents.length, 1);
     expect(lapEvents.first.lap.lapNumber, 1);
@@ -138,7 +145,9 @@ void main() {
     expect(session.status, SessionStatus.completed);
     expect(session.laps.length, greaterThanOrEqualTo(1));
     expect(session.laps.first.completed, isTrue);
-    expect(session.sectorSummaries.length, 2);
+    // sec-1, sec-2 and the implicit final sector.
+    expect(session.sectorSummaries.length, 3);
+    expect(session.sectorSummaries.last.sectorId, kFinalSectorId);
     expect(session.totalDistanceMeters, greaterThan(0));
     await engine.dispose();
   });
@@ -358,8 +367,12 @@ void main() {
       await Future<void>.delayed(Duration.zero);
 
       expect(received.first, isA<TrackingStarted>());
-      expect(received.whereType<SectorCrossed>().length, 1);
-      expect(received.whereType<SectorCrossed>().first.sectorId, 'sec-1');
+      final sectorCrossings = received.whereType<SectorCrossed>().toList();
+      // One gate → two sectors: the final one (S1 → finish) is recorded when
+      // the open route auto-finishes.
+      expect(sectorCrossings.length, 2);
+      expect(sectorCrossings[0].sectorId, 'sec-1');
+      expect(sectorCrossings[1].sectorId, kFinalSectorId);
       // No laps — open route.
       expect(received.whereType<LapClosed>().length, 0);
       // Auto-finished via proximity.
@@ -430,7 +443,9 @@ void main() {
 
       final session = engine.finish();
       expect(session.laps, isEmpty);
-      expect(session.sectorSummaries.length, 1);
+      // sec-1 plus the implicit final sector recorded on auto-finish.
+      expect(session.sectorSummaries.length, 2);
+      expect(session.sectorSummaries.last.sectorId, kFinalSectorId);
       expect(session.status, SessionStatus.completed);
       expect(session.endedAt, isNotNull);
 
@@ -457,6 +472,36 @@ void main() {
     expect(session.laps.length, 1);
     expect(session.laps.first.completed, isTrue);
     expect(session.laps.first.lapNumber, 1);
+    await engine.dispose();
+  });
+
+  test('final sector is not recorded when the last gate was skipped', () async {
+    final route = _buildTestRoute();
+    final base = DateTime.parse('2026-04-29T10:00:00Z');
+    final engine = TrackingEngine(
+        route: route, sessionId: 'sess-skip', clock: () => base);
+    final received = <TrackingEvent>[];
+    engine.events.listen(received.add);
+
+    engine.start();
+    engine.ingest(_p(-0.0005, 0, base));
+    // Cross start gate to open lap 1.
+    engine.ingest(_p(0.0005, 0.0008, base.add(const Duration(seconds: 1))));
+    // Cross sector 1 gate.
+    engine.ingest(_p(0.0015, 0.0008, base.add(const Duration(seconds: 4))));
+    // Cross start gate again WITHOUT crossing sector 2 — closes the lap but
+    // the final sector is incomplete and must not be recorded.
+    engine.ingest(_p(-0.0005, 0, base.add(const Duration(seconds: 7))));
+
+    await Future<void>.delayed(Duration.zero);
+
+    final sectorIds =
+        received.whereType<SectorCrossed>().map((e) => e.sectorId).toList();
+    expect(sectorIds, ['sec-1']);
+    expect(sectorIds, isNot(contains(kFinalSectorId)));
+    expect(engine.sectorSummaries.map((s) => s.sectorId),
+        isNot(contains(kFinalSectorId)));
+    expect(received.whereType<LapClosed>().length, 1);
     await engine.dispose();
   });
 

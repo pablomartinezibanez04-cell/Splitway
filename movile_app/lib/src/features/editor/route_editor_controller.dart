@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:splitway_core/splitway_core.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../data/repositories/local_draft_repository.dart';
 import '../../services/geocoding/reverse_geocoding_service.dart';
@@ -569,7 +570,7 @@ class RouteEditorController extends ChangeNotifier {
         ? elevMax - elevMin
         : null;
 
-    final id = 'route-${DateTime.now().microsecondsSinceEpoch}';
+    final id = const Uuid().v4();
     final route = RouteTemplate(
       id: id,
       name: _draftName.trim(),
@@ -582,7 +583,7 @@ class RouteEditorController extends ChangeNotifier {
       sectors: [
         for (var i = 0; i < _draftSectorGates.length; i++)
           SectorDefinition(
-            id: '$id-sec-${i + 1}',
+            id: const Uuid().v4(),
             order: i,
             label: 'Sector ${i + 1}',
             gate: _draftSectorGates[i],

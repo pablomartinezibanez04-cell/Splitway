@@ -113,6 +113,11 @@ Future<void> main() async {
     // here. Safe to run on every cold start (idempotent no-op when clean).
     final seedRepo = LocalDraftRepository(database);
     await seedRepo.purgeLegacyPublicRoutes();
+    // Also drop sessions / free rides with a NULL owner. Like the orphan
+    // routes above these leak across accounts (the owner filter always matches
+    // NULL), which is what made a previous user's history show up after an
+    // account switch. Idempotent no-op once clean.
+    await seedRepo.purgeOwnerlessSessions();
     await seedRepo.dispose();
 
     final deviceLocale =

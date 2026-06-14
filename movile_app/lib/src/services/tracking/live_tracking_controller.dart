@@ -2,16 +2,19 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:splitway_core/splitway_core.dart';
+import 'package:uuid/uuid.dart';
 
 enum LiveControllerState { idle, recording, finished }
 
 class LiveTrackingController extends ChangeNotifier {
-  LiveTrackingController({required this.route, String? sessionId})
-      : sessionId = sessionId ?? 'sess-${DateTime.now().microsecondsSinceEpoch}',
-        _engine = TrackingEngine(
-          route: route,
-          sessionId: sessionId ?? 'sess-${DateTime.now().microsecondsSinceEpoch}',
-        );
+  LiveTrackingController({required RouteTemplate route, String? sessionId})
+      : this._(route: route, sessionId: sessionId ?? const Uuid().v4());
+
+  // Generate the session id exactly once and share it between the public
+  // field and the engine — otherwise a null sessionId produced two different
+  // ids, and the engine's (which becomes SessionRun.id) silently won.
+  LiveTrackingController._({required this.route, required this.sessionId})
+      : _engine = TrackingEngine(route: route, sessionId: sessionId);
 
   final RouteTemplate route;
   final String sessionId;

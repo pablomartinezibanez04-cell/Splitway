@@ -247,6 +247,10 @@ class TrackingEngine {
       // Open routes have no laps — ignore subsequent start/finish crossings.
       if (!_route.isClosed) return;
 
+      // The lap closes at the start/finish line, which is also the end of the
+      // implicit final sector (last gate → start/finish). Record it before the
+      // lap so SectorCrossed precedes LapClosed.
+      _recordFinalSector(at);
       final closed = _buildLap(endedAt: at, completed: true);
       _laps.add(closed);
       if (_bestLap == null || closed.duration < _bestLap!) {
@@ -265,9 +269,43 @@ class TrackingEngine {
   /// Automatically finishes the session for open routes (e.g. when the rider
   /// reaches the last path point).
   void _finishOpenRoute(DateTime at) {
+    // The last path point ends the implicit final sector (last gate → finish).
+    _recordFinalSector(at);
     _finishedAt = at;
     _status = TrackingStatus.finished;
     _events.add(TrackingFinished(at));
+  }
+
+  /// Records the implicit final sector — the segment from the last sector gate
+  /// to the start/finish line (closed) or last path point (open). Only recorded
+  /// when sectors are defined and every gate has been crossed this lap, so a lap
+  /// that ends mid-sector is not counted.
+  void _recordFinalSector(DateTime at) {
+    if (_orderedSectors.isEmpty) return;
+    if (_nextSectorIndex < _orderedSectors.length) return;
+    final since = _lastSectorAt ?? _lapStartedAt ?? at;
+    final duration = at.difference(since);
+    final avgSpeed = duration.inMilliseconds == 0
+        ? 0.0
+        : _sectorDistanceAccumulator / (duration.inMilliseconds / 1000.0);
+    final summary = SectorSummary(
+      sectorId: kFinalSectorId,
+      lapNumber: _currentLap,
+      duration: duration,
+      startedAt: since,
+      endedAt: at,
+      distanceMeters: _sectorDistanceAccumulator,
+      avgSpeedMps: avgSpeed,
+    );
+    _sectorSummaries.add(summary);
+    _lastCrossedSectorId = kFinalSectorId;
+    _lastSectorTime = duration;
+    _events.add(SectorCrossed(
+      at: at,
+      sectorId: kFinalSectorId,
+      lapNumber: _currentLap,
+      duration: duration,
+    ));
   }
 
   void _onSectorCrossed(SectorDefinition sector, DateTime at) {
