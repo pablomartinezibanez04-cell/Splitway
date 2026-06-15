@@ -22,6 +22,7 @@ import '../../shared/formatters.dart';
 import '../../shared/widgets/empty_state.dart';
 import '../../shared/widgets/gps_signal_badge.dart';
 import '../../shared/widgets/sector_chip.dart';
+import '../../shared/widgets/sector_chips_bar.dart';
 import '../../shared/widgets/splitway_map.dart';
 import '../home/home_shell.dart';
 import 'live_session_controller.dart';
@@ -78,6 +79,8 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
   AudioPlayer? _audioPlayer;
   final FlyToNotifier _flyToNotifier = FlyToNotifier();
   Timer? _uiTicker;
+  bool _followUser = true;
+  LiveSessionStage? _prevStage;
 
   /// Non-admin users don't see the telemetry source picker. We auto-switch
   /// the controller from its `simulated` default to real GPS once, after we
@@ -156,11 +159,35 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
     return false;
   }
 
+  void _onMapInteraction() {
+    if (_followUser) setState(() => _followUser = false);
+  }
+
+  void _centerOnUser() {
+    final ctrl = widget.controller;
+    setState(() => _followUser = true);
+    final ingested = ctrl.tracker?.ingested ?? const [];
+    if (ingested.isNotEmpty) {
+      _flyToNotifier.flyTo(
+        ingested.last.location,
+        bearing: ctrl.currentBearingDeg,
+        pitch: kNavigationCameraPitchDeg,
+      );
+    }
+  }
+
   void _onChange() {
     _updateWakelock();
     _onNewEvents();
     final ctrl = widget.controller;
-    if (ctrl.stage == LiveSessionStage.running) {
+    // Re-enable follow-mode automatically when a new session begins running.
+    if (ctrl.stage == LiveSessionStage.running &&
+        _prevStage != LiveSessionStage.running &&
+        _prevStage != LiveSessionStage.paused) {
+      _followUser = true;
+    }
+    _prevStage = ctrl.stage;
+    if (ctrl.stage == LiveSessionStage.running && _followUser) {
       final ingested = ctrl.tracker?.ingested ?? const [];
       final bearing = ctrl.currentBearingDeg;
       final pointChanged = ingested.length > _lastPointCount;
@@ -452,6 +479,7 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
                 : null,
             userBearing: ctrl.currentBearingDeg,
             flyToNotifier: _flyToNotifier,
+            onUserInteraction: _onMapInteraction,
           ),
         ),
         if (drawerLeading != null)
@@ -508,20 +536,27 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
                   ),
                   const SizedBox(height: 8),
                 ],
-                if (ctrl.source == TrackingSource.realGps) ...[
-                  Padding(
-                    padding: const EdgeInsets.only(
-                        left: 16, right: 16, bottom: 8),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: GpsSignalBadge(
-                        lastPoint: tracker.ingested.isNotEmpty
-                            ? tracker.ingested.last
-                            : null,
+                Padding(
+                  padding: const EdgeInsets.only(
+                      left: 16, right: 16, bottom: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      if (ctrl.source == TrackingSource.realGps)
+                        GpsSignalBadge(
+                          lastPoint: tracker.ingested.isNotEmpty
+                              ? tracker.ingested.last
+                              : null,
+                        ),
+                      const Spacer(),
+                      FloatingActionButton.small(
+                        heroTag: 'live_session_center',
+                        onPressed: _centerOnUser,
+                        child: const Icon(Icons.my_location),
                       ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
                 Container(
                   decoration: BoxDecoration(
                     color:
@@ -857,21 +892,25 @@ class _LiveSectorChips extends StatelessWidget {
     // start/finish), keyed by [kFinalSectorId].
     final sectorIds = [...sectors.map((s) => s.id), kFinalSectorId];
 
-    return Row(
-      children: [
-        for (var i = 0; i < sectorIds.length; i++) ...[
-          if (i > 0) const SizedBox(width: 8),
-          Expanded(
-            child: SectorChip(
-              sectorNumber: i + 1,
-              tier: sectorChipTier(
-                lapTime: lapTimes[sectorIds[i]],
-                sessionCrossings: sessionTimes[sectorIds[i]] ?? const [],
-                historicalRecord: historicalRecords[sectorIds[i]],
-              ),
-            ),
+    // First sector without a time this lap = the one in progress; drives the
+    // auto-scroll when there are more sectors than fit on screen.
+    var activeIndex = sectorIds.length;
+    for (var i = 0; i < sectorIds.length; i++) {
+      if (lapTimes[sectorIds[i]] == null) {
+        activeIndex = i;
+        break;
+      }
+    }
+
+    return SectorChipsBar(
+      activeIndex: activeIndex,
+      tiers: [
+        for (final id in sectorIds)
+          sectorChipTier(
+            lapTime: lapTimes[id],
+            sessionCrossings: sessionTimes[id] ?? const [],
+            historicalRecord: historicalRecords[id],
           ),
-        ],
       ],
     );
   }

@@ -69,6 +69,47 @@ void main() {
     });
   });
 
+  group('SyncPlanner.canPushSession', () {
+    test('pushes when the route is present remotely', () {
+      expect(
+        SyncPlanner.canPushSession(
+          routeId: 'r1',
+          remoteRouteIds: {'r1', 'r2'},
+        ),
+        isTrue,
+      );
+    });
+
+    test('pushes when the route was pushed earlier this cycle', () {
+      // pushedRouteIds are folded into remoteRouteIds by the caller.
+      expect(
+        SyncPlanner.canPushSession(
+          routeId: 'just-pushed',
+          remoteRouteIds: {'just-pushed'},
+        ),
+        isTrue,
+      );
+    });
+
+    test('skips when the route is absent remotely (avoids 23503)', () {
+      // e.g. an official route the curator never published.
+      expect(
+        SyncPlanner.canPushSession(
+          routeId: 'official-not-on-server',
+          remoteRouteIds: {'r1'},
+        ),
+        isFalse,
+      );
+    });
+
+    test('skips when there are no remote routes at all', () {
+      expect(
+        SyncPlanner.canPushSession(routeId: 'r1', remoteRouteIds: {}),
+        isFalse,
+      );
+    });
+  });
+
   group('SyncPlanner.shouldApplyReconciliationDeletions', () {
     test('skips deletions when remote is empty but local has items', () {
       expect(

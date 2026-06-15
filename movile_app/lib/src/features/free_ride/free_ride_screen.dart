@@ -54,6 +54,7 @@ class _FreeRideScreenState extends State<FreeRideScreen>
   double? _lastSentBearing;
   GeoPoint? _initialCenter;
   Timer? _uiTicker;
+  FreeRideStage? _prevStage;
 
   /// Minimum heading change (degrees) that triggers a new flyTo. Smaller
   /// movements are filtered out so we don't spam the Mapbox channel with
@@ -103,9 +104,20 @@ class _FreeRideScreenState extends State<FreeRideScreen>
     }
   }
 
+  void _onMapInteraction() {
+    if (_followUser) setState(() => _followUser = false);
+  }
+
   void _onChange() {
     _updateWakelock();
     final ctrl = widget.controller;
+    // Re-enable follow-mode automatically when a new recording begins.
+    if (ctrl.stage == FreeRideStage.recording &&
+        _prevStage != FreeRideStage.recording &&
+        _prevStage != FreeRideStage.paused) {
+      _followUser = true;
+    }
+    _prevStage = ctrl.stage;
     if (ctrl.stage == FreeRideStage.recording && _followUser) {
       final points = ctrl.ingested;
       final bearing = ctrl.currentBearingDeg;
@@ -351,6 +363,7 @@ class _FreeRideScreenState extends State<FreeRideScreen>
             userBearing: ctrl.currentBearingDeg,
             initialCenter: _initialCenter,
             flyToNotifier: _flyToNotifier,
+            onUserInteraction: _onMapInteraction,
           ),
         ),
         if (drawerLeading != null)

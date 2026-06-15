@@ -234,9 +234,31 @@ class SyncService extends ChangeNotifier {
     final localSessions = await local.getAllSessions(includePoints: false);
     final remoteSessionTs = await remote.fetchSessionTimestamps();
 
+    // Route ids guaranteed to satisfy session_runs.route_id's FK: everything
+    // already on the remote plus everything pushed this cycle.
+    final remoteRouteIds = <String>{...remoteRouteTs.keys, ...pushedRouteIds};
+
     // Push local → remote (new or newer locally).
     // Re-load each session WITH points only when we actually need to push.
     for (final session in localSessions) {
+      if (!SyncPlanner.canPushSession(
+        routeId: session.routeTemplateId,
+        remoteRouteIds: remoteRouteIds,
+      )) {
+        // Route not present remotely (e.g. an unpublished official route).
+        // Skipping avoids a 23503 FK violation that would otherwise abort the
+        // whole sync; the session syncs once its route appears remotely.
+        AppLogger.maybeInstance?.warning(
+          'sync',
+          'Skipping session push: route absent remotely '
+              '(would violate session_runs_route_id_fkey)',
+          context: {
+            'session_id': session.id,
+            'route_id': session.routeTemplateId,
+          },
+        );
+        continue;
+      }
       final remoteUpdated = remoteSessionTs[session.id];
       // Sessions are versioned by endedAt (no separate updatedAt column).
       if (SyncPlanner.shouldPush(

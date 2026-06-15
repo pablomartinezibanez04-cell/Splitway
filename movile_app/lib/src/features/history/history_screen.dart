@@ -20,6 +20,7 @@ import '../../services/speed/speed_session.dart';
 import '../../shared/formatters.dart';
 import '../../shared/widgets/empty_state.dart';
 import '../../shared/widgets/sector_chip.dart';
+import '../../shared/widgets/sector_chips_bar.dart';
 import '../../shared/widgets/speed_heatmap_map_card.dart';
 import '../../shared/widgets/speed_heatmap_toggle_button.dart';
 import '../garage/vehicle_detail_screen.dart';
@@ -1435,24 +1436,16 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         Text(l.historySectorsLabel,
             style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
-        Row(
-          children: [
-            for (var i = 0; i < sectorIds.length; i++) ...[
-              if (i > 0) const SizedBox(width: 8),
-              Expanded(
-                child: SectorChip(
-                  sectorNumber: i + 1,
-                  time: lapSectorTimes[sectorIds[i]],
-                  dotSeparator: dot,
-                  tier: sectorChipTier(
-                    lapTime: lapSectorTimes[sectorIds[i]],
-                    sessionCrossings:
-                        sessionTimes[sectorIds[i]] ?? const [],
-                    historicalRecord: _historicalRecords[sectorIds[i]],
-                  ),
-                ),
+        SectorChipsBar(
+          dotSeparator: dot,
+          times: [for (final id in sectorIds) lapSectorTimes[id]],
+          tiers: [
+            for (final id in sectorIds)
+              sectorChipTier(
+                lapTime: lapSectorTimes[id],
+                sessionCrossings: sessionTimes[id] ?? const [],
+                historicalRecord: _historicalRecords[id],
               ),
-            ],
           ],
         ),
       ],

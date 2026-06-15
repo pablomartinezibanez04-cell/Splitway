@@ -108,6 +108,7 @@ class SplitwayMap extends StatefulWidget {
     this.onFreehandEnd,
     this.showSpeedHeatmap = false,
     this.speedHeatmapUnit = UnitSystem.metric,
+    this.onUserInteraction,
   });
 
   final bool useMapbox;
@@ -147,6 +148,9 @@ class SplitwayMap extends StatefulWidget {
   final bool showSpeedHeatmap;
   /// Unit used to compute the heatmap legend's "nice" max bucket.
   final UnitSystem speedHeatmapUnit;
+  /// Called when the user touches the map (pan, zoom, tap). Use to disable
+  /// GPS-follow mode until the center-on-user button is pressed again.
+  final VoidCallback? onUserInteraction;
 
   @override
   State<SplitwayMap> createState() => _SplitwayMapState();
@@ -650,9 +654,20 @@ class _SplitwayMapState extends State<SplitwayMap>
 
     final showStyleButton = widget.interactive && widget.useMapbox;
 
+    // Detect user-initiated map gestures (pan/zoom/tap) so the caller can
+    // disable GPS-follow mode. The Listener uses translucent hit behaviour so
+    // events are NOT consumed — Mapbox still handles all its own gestures.
+    final Widget baseMap = widget.onUserInteraction != null
+        ? Listener(
+            behavior: HitTestBehavior.translucent,
+            onPointerDown: (_) => widget.onUserInteraction!(),
+            child: mapWidget,
+          )
+        : mapWidget;
+
     return Stack(
       children: [
-        mapWidget,
+        baseMap,
         if (widget.freehandMode)
           Positioned.fill(
             child: Listener(

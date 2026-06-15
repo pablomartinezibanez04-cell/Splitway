@@ -32,6 +32,27 @@ class SyncPlanner {
     return remoteUpdatedAt.isAfter(localUpdatedAt);
   }
 
+  /// Whether a session may be pushed to the remote.
+  ///
+  /// `session_runs.route_id` has a non-deferrable foreign key to
+  /// `route_templates(id)`. Pushing a session whose route is not present
+  /// remotely — most often an official route the curator hasn't published, or
+  /// a route deleted remotely — raises a 23503 FK violation. Because the push
+  /// is not isolated, that single error aborts the entire sync, so no routes,
+  /// sessions or free rides get through. Gate the push on the route being
+  /// known-present remotely. [remoteRouteIds] must include both the ids fetched
+  /// from the remote and any pushed earlier in the same cycle.
+  ///
+  /// Non-official local routes are always either already remote or pushed
+  /// earlier in the cycle, so only official routes missing server-side are
+  /// skipped here; such sessions sync automatically once the route appears.
+  static bool canPushSession({
+    required String routeId,
+    required Set<String> remoteRouteIds,
+  }) {
+    return remoteRouteIds.contains(routeId);
+  }
+
   /// Whether reconciliation deletions (removing local rows absent from the
   /// remote set) are safe to apply.
   ///
