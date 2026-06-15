@@ -149,6 +149,59 @@ void main() {
     expect(telemetry, isEmpty);
   });
 
+  test(
+      'purgeOrphanedSessions removes sessions whose route is missing and '
+      'cascades telemetry, keeping linked sessions', () async {
+    await db.raw.insert('route_templates', {
+      'id': 'r-keep',
+      'name': 'Route r-keep',
+      'path_json': '[]',
+      'start_finish_gate_json':
+          '{"left":{"latitude":0,"longitude":0},"right":{"latitude":0,"longitude":0}}',
+      'difficulty': 'medium',
+      'created_at': 0,
+      'is_official': 0,
+      'owner_id': 'user-1',
+    });
+
+    Map<String, Object?> session(String id, String routeId) => {
+          'id': id,
+          'route_id': routeId,
+          'started_at': 0,
+          'status': 'completed',
+          'lap_summaries_json': '[]',
+          'sector_summaries_json': '[]',
+          'total_distance_m': 0.0,
+          'max_speed_mps': 0.0,
+          'avg_speed_mps': 0.0,
+          'owner_id': 'user-1',
+        };
+
+    await db.raw.insert('session_runs', session('s-keep', 'r-keep'));
+    // Orphan: route_id points to a route that doesn't exist. Insert with the
+    // FK disabled to reproduce the legacy bad-data state.
+    await db.raw.execute('PRAGMA foreign_keys = OFF');
+    await db.raw.insert('session_runs', session('s-orphan', 'ghost-route'));
+    await db.raw.execute('PRAGMA foreign_keys = ON');
+    await db.raw.insert('telemetry_points', {
+      'session_id': 's-orphan',
+      'ts': 0,
+      'lat': 0.0,
+      'lng': 0.0,
+    });
+
+    final repo = LocalDraftRepository(db);
+    await repo.purgeOrphanedSessions();
+
+    final sessionIds =
+        (await db.raw.query('session_runs')).map((r) => r['id']).toSet();
+    final orphanTelemetry = await db.raw.query('telemetry_points',
+        where: 'session_id = ?', whereArgs: ['s-orphan']);
+
+    expect(sessionIds, {'s-keep'});
+    expect(orphanTelemetry, isEmpty);
+  });
+
   test('purgeLegacyPublicRoutes removes orphan NULL-owner non-official routes',
       () async {
     // Insert a legacy orphan directly (bypassing the guardrail).

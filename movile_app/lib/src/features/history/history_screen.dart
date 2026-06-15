@@ -15,6 +15,7 @@ import '../../services/garage/garage_service.dart';
 import '../../services/garage/vehicle.dart';
 import '../../services/profile/profile_service.dart';
 import '../../services/settings/app_settings_controller.dart';
+import '../../services/sync/sync_service.dart';
 import '../../services/speed/speed_metric.dart';
 import '../../services/speed/speed_session.dart';
 import '../../shared/formatters.dart';
@@ -63,6 +64,7 @@ class HistoryScreen extends StatefulWidget {
     this.profileService,
     this.garageService,
     this.speedRepository,
+    this.syncService,
     this.initialTab,
   });
 
@@ -73,6 +75,7 @@ class HistoryScreen extends StatefulWidget {
   final ProfileService? profileService;
   final GarageService? garageService;
   final SpeedRepository? speedRepository;
+  final SyncService? syncService;
 
   /// When set to `'speed'`, the screen opens directly on the Velocidad tab.
   /// Defaults to the combined "all" view.
@@ -614,6 +617,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               config: widget.config,
               garageService: widget.garageService,
               settingsController: widget.settingsController,
+              syncService: widget.syncService,
             ),
           _FreeRideEntry(:final ride) => _FreeRideTile(
               ride: ride,
@@ -621,6 +625,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               config: widget.config,
               garageService: widget.garageService,
               settingsController: widget.settingsController,
+              syncService: widget.syncService,
             ),
         };
       },
@@ -821,6 +826,7 @@ class _SessionTile extends StatelessWidget {
     required this.config,
     required this.settingsController,
     this.garageService,
+    this.syncService,
   });
 
   final SessionRun session;
@@ -829,6 +835,7 @@ class _SessionTile extends StatelessWidget {
   final AppConfig config;
   final AppSettingsController settingsController;
   final GarageService? garageService;
+  final SyncService? syncService;
 
   Vehicle? get _vehicle {
     final vid = session.vehicleId;
@@ -929,6 +936,7 @@ class _SessionTile extends StatelessWidget {
                     repository: repository,
                     config: config,
                     settingsController: settingsController,
+                    syncService: syncService,
                   ),
                 )),
       ),
@@ -943,6 +951,7 @@ class _FreeRideTile extends StatelessWidget {
     required this.config,
     required this.settingsController,
     this.garageService,
+    this.syncService,
   });
 
   final FreeRideRun ride;
@@ -950,6 +959,7 @@ class _FreeRideTile extends StatelessWidget {
   final AppConfig config;
   final AppSettingsController settingsController;
   final GarageService? garageService;
+  final SyncService? syncService;
 
   Vehicle? get _vehicle {
     final vid = ride.vehicleId;
@@ -1039,6 +1049,7 @@ class _FreeRideTile extends StatelessWidget {
                 repository: repository,
                 config: config,
                 settingsController: settingsController,
+                syncService: syncService,
               ),
             )),
       ),
@@ -1053,12 +1064,14 @@ class FreeRideDetailScreen extends StatefulWidget {
     required this.repository,
     this.settingsController,
     this.config = const AppConfig(),
+    this.syncService,
   });
 
   final String rideId;
   final LocalDraftRepository repository;
   final AppSettingsController? settingsController;
   final AppConfig config;
+  final SyncService? syncService;
 
   @override
   State<FreeRideDetailScreen> createState() => _FreeRideDetailScreenState();
@@ -1163,7 +1176,11 @@ class _FreeRideDetailScreenState extends State<FreeRideDetailScreen> {
                   ),
                 );
                 if (ok != true) return;
-                await widget.repository.deleteFreeRide(rideId);
+                if (widget.syncService != null) {
+                  await widget.syncService!.deleteFreeRide(rideId);
+                } else {
+                  await widget.repository.deleteFreeRide(rideId);
+                }
                 if (!context.mounted) return;
                 Navigator.of(context).pop();
               },
@@ -1302,12 +1319,14 @@ class SessionDetailScreen extends StatefulWidget {
     required this.repository,
     this.settingsController,
     this.config = const AppConfig(),
+    this.syncService,
   });
 
   final String sessionId;
   final LocalDraftRepository repository;
   final AppSettingsController? settingsController;
   final AppConfig config;
+  final SyncService? syncService;
 
   @override
   State<SessionDetailScreen> createState() => _SessionDetailScreenState();
@@ -1531,7 +1550,11 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                   ),
                 );
                 if (ok != true) return;
-                await widget.repository.deleteSession(sessionId);
+                if (widget.syncService != null) {
+                  await widget.syncService!.deleteSession(sessionId);
+                } else {
+                  await widget.repository.deleteSession(sessionId);
+                }
                 if (!context.mounted) return;
                 Navigator.of(context).pop();
               },

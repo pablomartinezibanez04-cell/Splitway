@@ -118,6 +118,10 @@ Future<void> main() async {
     // NULL), which is what made a previous user's history show up after an
     // account switch. Idempotent no-op once clean.
     await seedRepo.purgeOwnerlessSessions();
+    // Drop sessions whose route no longer exists (orphans from older installs
+    // where the FK wasn't enforced, or a route deleted without cascading).
+    // They can never sync (route_id FK) and don't render without their route.
+    await seedRepo.purgeOrphanedSessions();
     await seedRepo.dispose();
 
     final deviceLocale =

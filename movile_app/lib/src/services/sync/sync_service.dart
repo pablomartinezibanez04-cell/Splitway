@@ -86,6 +86,40 @@ class SyncService extends ChangeNotifier {
     }
   }
 
+  /// Deletes a session from both local storage and the remote backend.
+  Future<void> deleteSession(String id) async {
+    await local.deleteSession(id);
+    try {
+      await remote.deleteSession(id);
+    } catch (e, st) {
+      debugPrint('SyncService: failed to delete session $id from remote: $e');
+      AppLogger.maybeInstance?.warning(
+        'sync',
+        'deleteSession remote failed',
+        error: e,
+        stackTrace: st,
+        context: {'id': id},
+      );
+    }
+  }
+
+  /// Deletes a free ride from both local storage and the remote backend.
+  Future<void> deleteFreeRide(String id) async {
+    await local.deleteFreeRide(id);
+    try {
+      await remote.deleteFreeRide(id);
+    } catch (e, st) {
+      debugPrint('SyncService: failed to delete free ride $id from remote: $e');
+      AppLogger.maybeInstance?.warning(
+        'sync',
+        'deleteFreeRide remote failed',
+        error: e,
+        stackTrace: st,
+        context: {'id': id},
+      );
+    }
+  }
+
   void _onConnectivityChanged(List<ConnectivityResult> results) {
     final wasConnected = _isConnected;
     _isConnected = results.any((r) => r != ConnectivityResult.none);
@@ -248,6 +282,14 @@ class SyncService extends ChangeNotifier {
         // Route not present remotely (e.g. an unpublished official route).
         // Skipping avoids a 23503 FK violation that would otherwise abort the
         // whole sync; the session syncs once its route appears remotely.
+        //
+        // Capture the local route's state so the log is conclusive about WHY:
+        //  - isOfficial == true  → an official route missing server-side
+        //    (curator deleted/never published it); nothing the client can fix.
+        //  - isOfficial == false → a user route that should have been pushed
+        //    this cycle but wasn't — a real sync gap, not just a stale catalog.
+        //  - null                → no locally-visible route for this id.
+        final route = await local.getRouteTemplate(session.routeTemplateId);
         AppLogger.maybeInstance?.warning(
           'sync',
           'Skipping session push: route absent remotely '
@@ -255,6 +297,8 @@ class SyncService extends ChangeNotifier {
           context: {
             'session_id': session.id,
             'route_id': session.routeTemplateId,
+            'route_exists_locally': route != null,
+            'route_is_official': route?.isOfficial,
           },
         );
         continue;

@@ -278,6 +278,12 @@ class SupabaseRepository implements OfficialRoutesRemote {
             }));
   }
 
+  /// Deletes a free ride from the cloud.
+  Future<void> deleteFreeRide(String id) async {
+    await logSupabase('deleteFreeRide',
+        () => _client.from('free_rides').delete().eq('id', id));
+  }
+
   /// Fetches all free rides belonging to the current user (without telemetry).
   Future<List<FreeRideRun>> fetchAllFreeRides() async {
     final rows = await logSupabase(

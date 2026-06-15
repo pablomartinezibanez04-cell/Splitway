@@ -344,6 +344,7 @@ class AppRouter {
                   profileService: profileService,
                   garageService: garageService,
                   speedRepository: speedRepository,
+                  syncService: syncService,
                   settingsController: settingsController,
                   initialTab: state.uri.queryParameters['tab'] == 'speed'
                       ? 'speed'

@@ -549,6 +549,24 @@ class LocalDraftRepository {
     if (deleted > 0) _changes.add(null);
   }
 
+  /// Removes session runs whose `route_id` no longer matches any
+  /// `route_templates` row (and, via `ON DELETE CASCADE`, their telemetry).
+  /// Such orphans come from older installs where the local foreign key wasn't
+  /// enforced, or a route deleted without its sessions cascading. They can
+  /// never sync — `session_runs.route_id` is a non-deferrable FK to
+  /// `route_templates(id)` on the server too — and the detail screen can't
+  /// render them without their route, so they are dead data. Idempotent and
+  /// safe to call on every cold start. `NOT EXISTS` is null-safe (unlike
+  /// `NOT IN`).
+  Future<void> purgeOrphanedSessions() async {
+    final deleted = await _db.delete(
+      'session_runs',
+      where: 'NOT EXISTS (SELECT 1 FROM route_templates rt '
+          'WHERE rt.id = session_runs.route_id)',
+    );
+    if (deleted > 0) _changes.add(null);
+  }
+
   Future<void> dispose() async {
     await _changes.close();
   }
