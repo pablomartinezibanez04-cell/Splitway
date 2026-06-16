@@ -1457,6 +1457,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         const SizedBox(height: 8),
         SectorChipsBar(
           dotSeparator: dot,
+          showFinish: true,
           times: [for (final id in sectorIds) lapSectorTimes[id]],
           tiers: [
             for (final id in sectorIds)

@@ -580,15 +580,27 @@ class RouteEditorController extends ChangeNotifier {
       locationLabel: locationLabel,
       path: List.unmodifiable(finalPath),
       startFinishGate: startFinishGate,
-      sectors: [
-        for (var i = 0; i < _draftSectorGates.length; i++)
-          SectorDefinition(
-            id: const Uuid().v4(),
-            order: i,
-            label: 'Sector ${i + 1}',
-            gate: _draftSectorGates[i],
-          ),
-      ],
+      sectors: () {
+        // Sort sectors by position along the route, not by placement order.
+        final sortedIndices =
+            List.generate(_draftSectorGates.length, (i) => i)
+              ..sort((a, b) {
+                final idxA =
+                    _nearestPathIndex(finalPath, _draftSectorPoints[a]);
+                final idxB =
+                    _nearestPathIndex(finalPath, _draftSectorPoints[b]);
+                return idxA.compareTo(idxB);
+              });
+        return [
+          for (var i = 0; i < sortedIndices.length; i++)
+            SectorDefinition(
+              id: const Uuid().v4(),
+              order: i,
+              label: 'Sector ${i + 1}',
+              gate: _draftSectorGates[sortedIndices[i]],
+            ),
+        ];
+      }(),
       difficulty: _draftDifficulty,
       createdAt: DateTime.now(),
       elevationRangeMeters: elevationRange,

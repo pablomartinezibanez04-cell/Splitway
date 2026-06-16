@@ -20,6 +20,21 @@ class BeepPlayer {
   AudioPlayer? _goPlayer;
   AudioPlayer? _falsePlayer;
 
+  static final _audioContext = AudioContext(
+    android: AudioContextAndroid(
+      isSpeakerphoneOn: false,
+      audioMode: AndroidAudioMode.normal,
+      stayAwake: false,
+      contentType: AndroidContentType.sonification,
+      usageType: AndroidUsageType.assistanceSonification,
+      audioFocus: AndroidAudioFocus.none,
+    ),
+    iOS: AudioContextIOS(
+      category: AVAudioSessionCategory.ambient,
+      options: {AVAudioSessionOptions.mixWithOthers},
+    ),
+  );
+
   Future<void> preload() async {
     try {
       for (var i = 0; i < 2; i++) {
@@ -35,6 +50,7 @@ class BeepPlayer {
 
   Future<AudioPlayer> _prepare(String src) async {
     final p = AudioPlayer();
+    await p.setAudioContext(_audioContext);
     await p.setSource(AssetSource(src));
     return p;
   }

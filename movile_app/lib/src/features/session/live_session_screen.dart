@@ -265,7 +265,21 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
         HapticFeedback.mediumImpact();
       }
       if (widget.settingsController.audioAlerts) {
-        _audioPlayer ??= AudioPlayer();
+        _audioPlayer ??= AudioPlayer()
+          ..setAudioContext(AudioContext(
+            android: AudioContextAndroid(
+              isSpeakerphoneOn: false,
+              audioMode: AndroidAudioMode.normal,
+              stayAwake: false,
+              contentType: AndroidContentType.sonification,
+              usageType: AndroidUsageType.assistanceSonification,
+              audioFocus: AndroidAudioFocus.none,
+            ),
+            iOS: AudioContextIOS(
+              category: AVAudioSessionCategory.ambient,
+              options: {AVAudioSessionOptions.mixWithOthers},
+            ),
+          ));
         unawaited(_audioPlayer!.play(AssetSource('sounds/beep.mp3')));
       }
     }
@@ -904,6 +918,7 @@ class _LiveSectorChips extends StatelessWidget {
 
     return SectorChipsBar(
       activeIndex: activeIndex,
+      showFinish: true,
       tiers: [
         for (final id in sectorIds)
           sectorChipTier(

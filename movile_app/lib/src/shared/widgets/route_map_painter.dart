@@ -139,6 +139,42 @@ class RouteMapPainter extends CustomPainter {
         canvas.drawCircle(project(center), 6, border);
       }
     }
+
+    // Checkered flag at the start/finish gate.
+    final sfPos = project(route.startFinishGate.center);
+    const flagR = 8.0;
+    canvas.drawCircle(
+        sfPos, flagR, Paint()..color = const Color(0xFFFFFFFF));
+    canvas.save();
+    canvas.clipPath(
+        Path()..addOval(Rect.fromCircle(center: sfPos, radius: flagR)));
+    const cells = 4;
+    final cellSize = flagR * 2 / cells;
+    final black = Paint()..color = const Color(0xFF212121);
+    for (var row = 0; row < cells; row++) {
+      for (var col = 0; col < cells; col++) {
+        if ((row + col) % 2 == 0) {
+          canvas.drawRect(
+            Rect.fromLTWH(
+              sfPos.dx - flagR + col * cellSize,
+              sfPos.dy - flagR + row * cellSize,
+              cellSize,
+              cellSize,
+            ),
+            black,
+          );
+        }
+      }
+    }
+    canvas.restore();
+    canvas.drawCircle(
+      sfPos,
+      flagR,
+      Paint()
+        ..color = const Color(0xFF212121)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
+    );
   }
 
   @override

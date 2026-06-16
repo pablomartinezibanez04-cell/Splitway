@@ -196,6 +196,10 @@ class _SplitwayMapState extends State<SplitwayMap>
   Uint8List? _arrowImageBytes;
   double _arrowDpr = 3.0;
 
+  // Finish-line marker rendered at the start/finish gate center.
+  mbx.PointAnnotationManager? _finishMarkerManager;
+  Uint8List? _finishFlagImageBytes;
+
   // Smooth growth of the recorded track. The bulk of the line (every
   // confirmed point except the newest) is drawn once per GPS sample like
   // before; the final, moving segment is a cheap 2-point "tip" that glides
@@ -261,6 +265,63 @@ class _SplitwayMapState extends State<SplitwayMap>
     return data!.buffer.asUint8List();
   }
 
+  Future<void> _ensureFinishFlagImage() async {
+    if (_finishFlagImageBytes != null || !mounted) return;
+    final dpr = MediaQuery.maybeOf(context)?.devicePixelRatio ?? 3.0;
+    _finishFlagImageBytes = await _buildFinishFlagImage(dpr);
+  }
+
+  Future<Uint8List> _buildFinishFlagImage(double dpr) async {
+    const logical = 32.0;
+    final px = logical * dpr;
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    final size = px;
+    final r = size / 2;
+
+    // White circle background with dark border.
+    canvas.drawCircle(
+      Offset(r, r),
+      r,
+      Paint()..color = const Color(0xFFFFFFFF),
+    );
+    canvas.drawCircle(
+      Offset(r, r),
+      r,
+      Paint()
+        ..color = const Color(0xFF212121)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0 * dpr,
+    );
+
+    // 4x4 checkered pattern inside the circle (clipped).
+    canvas.save();
+    canvas.clipPath(Path()..addOval(Rect.fromCircle(center: Offset(r, r), radius: r - 1.5 * dpr)));
+    final cellSize = (size - 4 * dpr) / 4;
+    final origin = 2.0 * dpr;
+    final black = Paint()..color = const Color(0xFF212121);
+    for (var row = 0; row < 4; row++) {
+      for (var col = 0; col < 4; col++) {
+        if ((row + col) % 2 == 0) {
+          canvas.drawRect(
+            Rect.fromLTWH(
+              origin + col * cellSize,
+              origin + row * cellSize,
+              cellSize,
+              cellSize,
+            ),
+            black,
+          );
+        }
+      }
+    }
+    canvas.restore();
+
+    final img = await recorder.endRecording().toImage(px.round(), px.round());
+    final data = await img.toByteData(format: ui.ImageByteFormat.png);
+    return data!.buffer.asUint8List();
+  }
+
   Future<void> _loadMapStyle() async {
     final prefs = await SharedPreferences.getInstance();
     final stored = prefs.getString(_kMapStyleKey);
@@ -306,9 +367,11 @@ class _SplitwayMapState extends State<SplitwayMap>
     final oldLine = _lineManager;
     final oldCircle = _circleManager;
     final oldArrow = _arrowManager;
+    final oldFinish = _finishMarkerManager;
     _lineManager = null;
     _circleManager = null;
     _arrowManager = null;
+    _finishMarkerManager = null;
     // The old user-marker handles belonged to the removed managers — drop
     // them so the next render recreates them on the new managers.
     _userCircleAnnotation = null;
@@ -329,6 +392,11 @@ class _SplitwayMapState extends State<SplitwayMap>
         await map.annotations.removeAnnotationManager(oldArrow);
       } on PlatformException catch (_) {}
     }
+    if (oldFinish != null) {
+      try {
+        await map.annotations.removeAnnotationManager(oldFinish);
+      } on PlatformException catch (_) {}
+    }
   }
 
   /// Creates fresh annotation managers on the currently-loaded style. Call
@@ -342,6 +410,7 @@ class _SplitwayMapState extends State<SplitwayMap>
       return;
     }
     await _createArrowManager(map);
+    await _createFinishMarkerManager(map);
   }
 
   @override
@@ -856,6 +925,7 @@ class _SplitwayMapState extends State<SplitwayMap>
     _circleManager = await map.annotations.createCircleAnnotationManager();
     await _createArrowManager(map);
     await _ensureArrowImage();
+    await _ensureFinishFlagImage();
     await _updateGesturesForFreehand();
     await _renderAnnotations();
     await _flyToFitRoute();
@@ -875,6 +945,17 @@ class _SplitwayMapState extends State<SplitwayMap>
     } on PlatformException {
       // Map channel torn down — leave the arrow manager null; the circle
       // fallback still renders the user position.
+    }
+  }
+
+  Future<void> _createFinishMarkerManager(mbx.MapboxMap map) async {
+    try {
+      final mgr = await map.annotations.createPointAnnotationManager();
+      await mgr.setIconAllowOverlap(true);
+      await mgr.setIconIgnorePlacement(true);
+      _finishMarkerManager = mgr;
+    } on PlatformException {
+      // Channel torn down — the checkered flag won't render but nothing breaks.
     }
   }
 
@@ -1022,6 +1103,7 @@ class _SplitwayMapState extends State<SplitwayMap>
     try {
       await lineMgr.deleteAll();
       await circleMgr.deleteAll();
+      await _finishMarkerManager?.deleteAll();
     } on PlatformException {
       // Map channel torn down (e.g. widget disposed mid-render). Bail out.
       return;
@@ -1086,6 +1168,25 @@ class _SplitwayMapState extends State<SplitwayMap>
           } on PlatformException {
             return;
           }
+        }
+      }
+      // Checkered flag at the start/finish gate.
+      final finishMgr = _finishMarkerManager;
+      final finishImg = _finishFlagImageBytes;
+      if (finishMgr != null && finishImg != null && mounted) {
+        final sfCenter = r.startFinishGate.center;
+        try {
+          await finishMgr.create(mbx.PointAnnotationOptions(
+            geometry: mbx.Point(
+              coordinates:
+                  mbx.Position(sfCenter.longitude, sfCenter.latitude),
+            ),
+            image: finishImg,
+            iconSize: 1 / (_arrowDpr),
+            iconAnchor: mbx.IconAnchor.CENTER,
+          ));
+        } on PlatformException {
+          // Channel torn down — skip silently.
         }
       }
     }
