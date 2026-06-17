@@ -858,7 +858,11 @@ class _SessionTile extends StatelessWidget {
     final vehicle = _vehicle;
     return Card(
       child: ListTile(
-        title: Text(route?.name ?? l.historyDeletedRoute),
+        title: Text(
+          (session.name != null && session.name!.isNotEmpty)
+              ? session.name!
+              : (route?.name ?? l.historyDeletedRoute),
+        ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
