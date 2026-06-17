@@ -57,6 +57,20 @@ class LiveSessionController extends ChangeNotifier {
   Map<String, Duration> _historicalSectorRecords = const {};
   Map<String, Duration> get historicalSectorRecords => _historicalSectorRecords;
 
+  /// Best completed-lap duration across the user's previous sessions on the
+  /// selected route, or null when the user opted out (includeHistorical=false)
+  /// or has no completed laps. Drives the closed-circuit reference lap.
+  Duration? _historicalBestLap;
+  Duration? get historicalBestLap => _historicalBestLap;
+
+  /// Whether this session competes against the user's historical best on the
+  /// route. Set from the config modal when the session starts.
+  bool _includeHistorical = true;
+  bool get includeHistorical => _includeHistorical;
+
+  /// Optional user-given name for the current session.
+  String? _sessionName;
+
   void selectVehicle(String? vehicleId) {
     _selectedVehicleId = vehicleId;
     notifyListeners();
@@ -163,12 +177,22 @@ class LiveSessionController extends ChangeNotifier {
     int distanceFilterMeters = 0,
     bool backgroundActive = false,
     bool useCompassHeading = true,
+    bool includeHistorical = true,
+    String? name,
   }) async {
     final route = _selected;
     if (route == null) return;
     _distanceFilterMeters = distanceFilterMeters;
     _useCompassHeading = useCompassHeading;
-    _historicalSectorRecords = await _loadHistoricalSectorRecords(route.id);
+    _includeHistorical = includeHistorical;
+    _sessionName = (name != null && name.trim().isNotEmpty) ? name.trim() : null;
+    if (includeHistorical) {
+      _historicalSectorRecords = await _loadHistoricalSectorRecords(route.id);
+      _historicalBestLap = await _loadHistoricalBestLap(route.id);
+    } else {
+      _historicalSectorRecords = const {};
+      _historicalBestLap = null;
+    }
     _tracker?.dispose();
     _tracker = LiveTrackingController(route: route)
       ..addListener(_onTrackerChange)
@@ -211,6 +235,24 @@ class LiveSessionController extends ChangeNotifier {
       return records;
     } catch (_) {
       return const {};
+    }
+  }
+
+  /// Minimum completed-lap duration across the user's previous sessions on
+  /// [routeId]. Returns null when there is no completed lap. Degrades to null
+  /// on error so a failed lookup never blocks starting a session.
+  Future<Duration?> _loadHistoricalBestLap(String routeId) async {
+    try {
+      final sessions = await _repo.getSessionsByRoute(routeId);
+      Duration? best;
+      for (final session in sessions) {
+        final lap = session.bestLap;
+        if (lap == null) continue;
+        if (best == null || lap.duration < best) best = lap.duration;
+      }
+      return best;
+    } catch (_) {
+      return null;
     }
   }
 
@@ -365,7 +407,7 @@ class LiveSessionController extends ChangeNotifier {
     final t = _tracker;
     if (t == null) return null;
     final raw = t.finishSession();
-    final session = raw.copyWith(vehicleId: _selectedVehicleId);
+    final session = raw.copyWith(vehicleId: _selectedVehicleId, name: _sessionName);
     await _repo.saveSessionRun(session);
     _result = session;
     _stage = LiveSessionStage.finished;
@@ -382,6 +424,8 @@ class LiveSessionController extends ChangeNotifier {
     _result = null;
     _backgroundActive = false;
     _historicalSectorRecords = const {};
+    _historicalBestLap = null;
+    _sessionName = null;
     _stage = _selected == null
         ? LiveSessionStage.selecting
         : LiveSessionStage.ready;
