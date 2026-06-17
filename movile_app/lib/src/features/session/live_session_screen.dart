@@ -16,7 +16,6 @@ import '../../services/garage/vehicle.dart';
 import '../../services/profile/profile_service.dart';
 import '../../services/sensors/device_heading_service.dart';
 import '../../services/settings/app_settings_controller.dart';
-import '../../shared/widgets/vehicle_picker_tile.dart';
 import '../../services/tracking/location_service.dart';
 import '../../shared/formatters.dart';
 import '../../shared/widgets/empty_state.dart';
@@ -26,6 +25,7 @@ import '../../shared/widgets/sector_chips_bar.dart';
 import '../../shared/widgets/splitway_map.dart';
 import '../home/home_shell.dart';
 import 'live_session_controller.dart';
+import 'session_config_sheet.dart';
 
 String _speedLabel(
   AppLocalizations l,
@@ -361,99 +361,72 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
                 ),
               ),
             ),
-          const SizedBox(height: 16),
-          if (widget.profileService?.isAdmin == true) ...[
-            Text(l.sessionTelemetrySource,
-                style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(height: 8),
-            SegmentedButton<TrackingSource>(
-              segments: [
-                ButtonSegment(
-                  value: TrackingSource.simulated,
-                  label: Text(l.sessionSourceSimulated),
-                  icon: const Icon(Icons.science_outlined),
-                ),
-                ButtonSegment(
-                  value: TrackingSource.realGps,
-                  label: Text(l.sessionSourceRealGps),
-                  icon: const Icon(Icons.gps_fixed),
-                ),
-              ],
-              selected: {ctrl.source},
-              onSelectionChanged: (s) => ctrl.setSource(s.first),
-            ),
-          ],
           if (ctrl.permissionStatus != null) ...[
             const SizedBox(height: 8),
             _PermissionBanner(status: ctrl.permissionStatus!),
-          ],
-          if (widget.garageService != null &&
-              widget.garageService!.vehicles.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Text(l.vehiclePickerLabel,
-                style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(height: 8),
-            VehiclePickerTile(
-              selectedVehicleId: ctrl.selectedVehicleId,
-              vehicles: widget.garageService!.vehicles,
-              onSelected: ctrl.selectVehicle,
-            ),
           ],
           const SizedBox(height: 12),
           FilledButton.icon(
             onPressed: ctrl.selected == null
                 ? null
-                : () async {
-                    // Auth guard: require login before recording.
-                    final allowed = await requireAuth(
-                      context,
-                      widget.authService,
-                      message: AppLocalizations.of(context).loginBannerDefault,
-                    );
-                    if (!allowed || !mounted) return;
-
-                    var hasBackground = false;
-                    if (ctrl.source == TrackingSource.realGps) {
-                      final bgPermission =
-                          await LocationService.ensureBackgroundPermission();
-                      hasBackground =
-                          bgPermission == LocationPermissionStatus.granted;
-
-                      if (!hasBackground && mounted) {
-                        final action =
-                            await _showBackgroundPermissionDialog(context);
-                        if (!mounted) return;
-                        if (action == null || action == true) return;
-                      }
-                    }
-
-                    if (!mounted) return;
-                    _lastEventCount = 0;
-                    // ignore: discarded_futures
-                    ctrl.startSession(
-                      distanceFilterMeters:
-                          widget.settingsController.gpsSamplingDistanceFilter,
-                      backgroundActive: hasBackground,
-                      useCompassHeading: !_selectedVehicleIsMotorized,
-                    );
-                  },
+                : () => _openConfigAndStart(ctrl),
             icon: const Icon(Icons.play_arrow),
             label: Text(l.sessionStartButton),
           ),
-          const SizedBox(height: 8),
-          Text(
-            // Non-admins are forced onto real GPS asynchronously; never show
-            // them the simulated hint, even while the switch is in flight.
-            ctrl.source == TrackingSource.simulated &&
-                    widget.profileService?.isAdmin == true
-                ? l.sessionSimulatedHint
-                : l.sessionRealGpsHint,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.outline,
-                ),
-          ),
         ],
       ),
+    );
+  }
+
+  Future<void> _openConfigAndStart(LiveSessionController ctrl) async {
+    final config = await showModalBottomSheet<SessionConfig>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => SessionConfigSheet(
+        vehicles: widget.garageService?.vehicles ?? const [],
+        initialVehicleId: ctrl.selectedVehicleId,
+        isAdmin: widget.profileService?.isAdmin == true,
+        initialSource: ctrl.source,
+        onStart: (c) => Navigator.pop(ctx, c),
+      ),
+    );
+    if (config == null || !mounted) return;
+
+    // Apply the picked vehicle + source to the controller.
+    ctrl.selectVehicle(config.vehicleId);
+    if (widget.profileService?.isAdmin == true) {
+      await ctrl.setSource(config.source);
+      if (!mounted) return;
+    }
+
+    // Auth guard: require login before recording.
+    final allowed = await requireAuth(
+      context,
+      widget.authService,
+      message: AppLocalizations.of(context).loginBannerDefault,
+    );
+    if (!allowed || !mounted) return;
+
+    var hasBackground = false;
+    if (ctrl.source == TrackingSource.realGps) {
+      final bgPermission = await LocationService.ensureBackgroundPermission();
+      hasBackground = bgPermission == LocationPermissionStatus.granted;
+      if (!hasBackground && mounted) {
+        final action = await _showBackgroundPermissionDialog(context);
+        if (!mounted) return;
+        if (action == null || action == true) return;
+      }
+    }
+
+    if (!mounted) return;
+    _lastEventCount = 0;
+    // ignore: discarded_futures
+    ctrl.startSession(
+      distanceFilterMeters: widget.settingsController.gpsSamplingDistanceFilter,
+      backgroundActive: hasBackground,
+      useCompassHeading: !_selectedVehicleIsMotorized,
+      includeHistorical: config.includeHistorical,
+      name: config.name,
     );
   }
 
@@ -586,6 +559,8 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
                         snapshot: snapshot,
                         isClosed: route.isClosed,
                         settingsController: widget.settingsController,
+                        historicalBestLap: ctrl.historicalBestLap,
+                        includeHistorical: ctrl.includeHistorical,
                       ),
                       if (route.sectors.isNotEmpty) ...[
                         const SizedBox(height: 12),
@@ -782,11 +757,15 @@ class _LapIndicators extends StatelessWidget {
     required this.snapshot,
     required this.isClosed,
     required this.settingsController,
+    this.historicalBestLap,
+    this.includeHistorical = false,
   });
 
   final TrackingSnapshot snapshot;
   final bool isClosed;
   final AppSettingsController settingsController;
+  final Duration? historicalBestLap;
+  final bool includeHistorical;
 
   @override
   Widget build(BuildContext context) {
@@ -802,7 +781,20 @@ class _LapIndicators extends StatelessWidget {
       );
     }
 
-    final best = snapshot.bestLap;
+    final sessionBest = snapshot.bestLap;
+    final histBest = includeHistorical ? historicalBestLap : null;
+    // Reference lap = the best of session + historical (when included).
+    Duration? reference = sessionBest;
+    if (histBest != null) {
+      reference = (sessionBest == null || histBest < sessionBest)
+          ? histBest
+          : sessionBest;
+    }
+    // Highlight as a record when the reference is the historical best that the
+    // session has not beaten yet (consistent with the purple sector tier).
+    final isRecordReference = histBest != null &&
+        (sessionBest == null || histBest <= sessionBest);
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -816,15 +808,17 @@ class _LapIndicators extends StatelessWidget {
         const SizedBox(width: 12),
         Expanded(
           child: _BigIndicator(
-            label: l.sessionBestLapLabel,
-            value: best == null
+            label: isRecordReference
+                ? l.sessionReferenceLapLabel
+                : l.sessionBestLapLabel,
+            value: reference == null
                 ? l.sessionNoLapYet
                 : Formatters.duration(
-                    best,
+                    reference,
                     dotSeparator: settingsController.timeFormatDot,
                   ),
             emphasized: false,
-            color: best == null ? null : theme.colorScheme.primary,
+            color: reference == null ? null : theme.colorScheme.primary,
           ),
         ),
       ],
@@ -918,7 +912,6 @@ class _LiveSectorChips extends StatelessWidget {
 
     return SectorChipsBar(
       activeIndex: activeIndex,
-      showFinish: true,
       tiers: [
         for (final id in sectorIds)
           sectorChipTier(
