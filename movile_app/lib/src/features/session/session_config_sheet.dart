@@ -38,6 +38,11 @@ class SessionConfigSheet extends StatefulWidget {
   final String? initialVehicleId;
   final bool isAdmin;
   final TrackingSource initialSource;
+
+  /// Invoked when the user taps Start. The sheet does not dismiss itself — the
+  /// caller is responsible for closing it (e.g. `Navigator.pop(ctx, config)`
+  /// from a `showModalBottomSheet<SessionConfig>`), so the form state can be
+  /// returned in one step.
   final ValueChanged<SessionConfig> onStart;
 
   @override
