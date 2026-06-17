@@ -56,35 +56,6 @@ SectorChipTier sectorChipTier({
   return SectorChipTier.slower;
 }
 
-/// Finish-line pill shown after the last sector chip. Uses a checkered-flag
-/// icon to indicate the end of the lap/circuit.
-class FinishChip extends StatelessWidget {
-  const FinishChip({super.key, this.crossed = false});
-
-  /// Whether the finish line has been crossed in the current lap.
-  final bool crossed;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final bg = crossed
-        ? theme.colorScheme.onSurface
-        : theme.colorScheme.surfaceContainerHighest;
-    final fg = crossed
-        ? theme.colorScheme.surface
-        : theme.colorScheme.onSurfaceVariant;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Icon(Icons.sports_score, color: fg, size: 20),
-    );
-  }
-}
-
 /// A single sector indicator pill. Shows the sector number, coloured by
 /// [tier]; when [time] is provided (history view) the time is shown above the
 /// number. In the live view [time] is omitted and only the colour + number

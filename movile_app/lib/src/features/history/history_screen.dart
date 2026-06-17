@@ -1457,7 +1457,6 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         const SizedBox(height: 8),
         SectorChipsBar(
           dotSeparator: dot,
-          showFinish: true,
           times: [for (final id in sectorIds) lapSectorTimes[id]],
           tiers: [
             for (final id in sectorIds)
@@ -1470,6 +1469,101 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         ),
       ],
     ];
+  }
+
+  /// Flag colour for a sector [tier], or null for [SectorChipTier.unset] (the
+  /// flag stays outlined/neutral when no time has been classified).
+  Color? _sectorTierColor(SectorChipTier tier) => switch (tier) {
+        SectorChipTier.unset => null,
+        SectorChipTier.overall => kSectorPurple,
+        SectorChipTier.sessionBest => kSectorGreen,
+        SectorChipTier.slower => kSectorOrange,
+      };
+
+  /// Sector list shown when the session has no completed laps. Each sector's
+  /// flag is painted with the F1 tier it achieved (purple = overall best,
+  /// green = session best, orange = slower); a coloured dot leads the trailing
+  /// time as an extra colour hint.
+  List<Widget> _buildSectorSummaryTiles(
+      BuildContext context, AppLocalizations l) {
+    final session = _session!;
+    final route = _route!;
+
+    if (session.sectorSummaries.isEmpty) {
+      return [
+        Padding(
+          padding:
+              const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          child: Text(
+            l.historySectorsEmpty,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
+        ),
+      ];
+    }
+
+    final dot = widget.settingsController?.timeFormatDot ?? true;
+
+    // Every recorded time per sector in this session, for tier classification.
+    final sessionTimes = <String, List<Duration>>{};
+    for (final sec in session.sectorSummaries) {
+      sessionTimes.putIfAbsent(sec.sectorId, () => []).add(sec.duration);
+    }
+
+    final tiles = <Widget>[];
+    for (final sec in session.sectorSummaries) {
+      final tier = sectorChipTier(
+        lapTime: sec.duration,
+        sessionCrossings: sessionTimes[sec.sectorId] ?? const [],
+        historicalRecord: _historicalRecords[sec.sectorId],
+      );
+      final color = _sectorTierColor(tier);
+      final label = sec.sectorId == kFinalSectorId
+          ? 'Sector ${route.sectors.length + 1}'
+          : route.sectors
+              .firstWhere(
+                (s) => s.id == sec.sectorId,
+                orElse: () => SectorDefinition(
+                  id: sec.sectorId,
+                  order: 0,
+                  label: sec.sectorId,
+                  gate: route.startFinishGate,
+                ),
+              )
+              .label;
+
+      tiles.add(ListTile(
+        leading: Icon(
+          color == null ? Icons.flag_outlined : Icons.flag,
+          color: color,
+        ),
+        title: Text(label),
+        subtitle: Text(
+          l.historySectorSubtitle(
+            sec.lapNumber,
+            _speedLabel(l, sec.avgSpeedMps, widget.settingsController),
+          ),
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (color != null) ...[
+              Container(
+                width: 8,
+                height: 8,
+                decoration:
+                    BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 8),
+            ],
+            Text(Formatters.duration(sec.duration, dotSeparator: dot)),
+          ],
+        ),
+      ));
+    }
+    return tiles;
   }
 
   @override
@@ -1585,9 +1679,43 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Expanded(
-                          child: Text(
-                            Formatters.dateTime(_session!.startedAt),
-                            style: Theme.of(context).textTheme.bodyMedium,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                Formatters.dateTime(_session!.startedAt),
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                              if (_session!.totalDuration != null) ...[
+                                const SizedBox(height: 4),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.timer_outlined,
+                                      size: 16,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '${l.statsTotalTime}: '
+                                      '${Formatters.durationHms(_session!.totalDuration!)}',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurfaceVariant,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ],
                           ),
                         ),
                         if (hasUsableSpeedTelemetry(_session!.points))
@@ -1609,51 +1737,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                       const SizedBox(height: 16),
                       Text(l.historySectorsLabel,
                           style: Theme.of(context).textTheme.titleMedium),
-                      if (_session!.sectorSummaries.isEmpty)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 12, horizontal: 16),
-                          child: Text(
-                            l.historySectorsEmpty,
-                            style:
-                                Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        )
-                      else
-                        for (final sec in _session!.sectorSummaries)
-                          ListTile(
-                            leading: const Icon(Icons.flag_outlined),
-                            title: Text(sec.sectorId == kFinalSectorId
-                                ? 'Sector ${_route!.sectors.length + 1}'
-                                : _route!.sectors
-                                    .firstWhere(
-                                      (s) => s.id == sec.sectorId,
-                                      orElse: () => SectorDefinition(
-                                        id: sec.sectorId,
-                                        order: 0,
-                                        label: sec.sectorId,
-                                        gate: _route!.startFinishGate,
-                                      ),
-                                    )
-                                    .label),
-                            subtitle: Text(
-                              l.historySectorSubtitle(
-                                sec.lapNumber,
-                                _speedLabel(
-                                  l,
-                                  sec.avgSpeedMps,
-                                  widget.settingsController,
-                                ),
-                              ),
-                            ),
-                            trailing: Text(Formatters.duration(
-                              sec.duration,
-                              dotSeparator:
-                                  widget.settingsController?.timeFormatDot ?? true,
-                            )),
-                          ),
+                      ..._buildSectorSummaryTiles(context, l),
                     ],
                   ],
                 ),

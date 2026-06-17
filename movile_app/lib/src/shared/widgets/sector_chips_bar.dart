@@ -21,7 +21,6 @@ class SectorChipsBar extends StatefulWidget {
     this.dotSeparator = true,
     this.visibleCount = 3,
     this.spacing = 8,
-    this.showFinish = false,
   })  : assert(times == null || times.length == tiers.length),
         assert(visibleCount > 0);
 
@@ -44,9 +43,6 @@ class SectorChipsBar extends StatefulWidget {
 
   final double spacing;
 
-  /// When true, a checkered-flag chip is appended after the last sector.
-  final bool showFinish;
-
   @override
   State<SectorChipsBar> createState() => _SectorChipsBarState();
 }
@@ -65,8 +61,7 @@ class _SectorChipsBarState extends State<SectorChipsBar> {
   /// True after the user manually scrolled, until the auto-return fires.
   bool _manualMode = false;
 
-  int get _totalSlots =>
-      widget.tiers.length + (widget.showFinish ? 1 : 0);
+  int get _totalSlots => widget.tiers.length;
 
   bool get _scrolls => _totalSlots > widget.visibleCount;
 
@@ -125,8 +120,6 @@ class _SectorChipsBarState extends State<SectorChipsBar> {
   @override
   Widget build(BuildContext context) {
     final n = widget.tiers.length;
-    final allSectorsCrossed = widget.activeIndex != null &&
-        widget.activeIndex! >= n;
 
     if (!_scrolls) {
       return Row(
@@ -134,10 +127,6 @@ class _SectorChipsBarState extends State<SectorChipsBar> {
           for (var i = 0; i < n; i++) ...[
             if (i > 0) SizedBox(width: widget.spacing),
             Expanded(child: _chip(i)),
-          ],
-          if (widget.showFinish) ...[
-            SizedBox(width: widget.spacing),
-            FinishChip(crossed: allSectorsCrossed),
           ],
         ],
       );
@@ -178,13 +167,6 @@ class _SectorChipsBarState extends State<SectorChipsBar> {
                   for (var i = 0; i < n; i++) ...[
                     if (i > 0) SizedBox(width: widget.spacing),
                     SizedBox(width: chipWidth, child: _chip(i)),
-                  ],
-                  if (widget.showFinish) ...[
-                    SizedBox(width: widget.spacing),
-                    SizedBox(
-                      width: chipWidth,
-                      child: FinishChip(crossed: allSectorsCrossed),
-                    ),
                   ],
                 ],
               ),
