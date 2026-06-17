@@ -621,6 +621,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sessionStartButton => 'Start recording';
 
   @override
+  String get sessionConfigTitle => 'Session setup';
+
+  @override
+  String get sessionConfigNameLabel => 'Session name (optional)';
+
+  @override
+  String get sessionConfigNameHint => 'e.g. Morning practice';
+
+  @override
+  String get sessionConfigIncludeHistoricalTitle =>
+      'Compete against my best on this route';
+
+  @override
+  String get sessionConfigIncludeHistoricalSubtitle =>
+      'When on, your best previous sector and lap times on this route are shown as the target to beat. When off, you only compete against this session.';
+
+  @override
+  String get sessionConfigStartButton => 'Start';
+
+  @override
+  String get sessionReferenceLapLabel => 'To beat';
+
+  @override
   String get sessionSimulatedHint =>
       'Tap \"Simulate point\" to advance, or \"Auto lap\" to run a lap automatically.';
 

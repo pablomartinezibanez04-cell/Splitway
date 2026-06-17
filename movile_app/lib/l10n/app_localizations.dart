@@ -1154,6 +1154,48 @@ abstract class AppLocalizations {
   /// **'Start recording'**
   String get sessionStartButton;
 
+  /// No description provided for @sessionConfigTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Session setup'**
+  String get sessionConfigTitle;
+
+  /// No description provided for @sessionConfigNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Session name (optional)'**
+  String get sessionConfigNameLabel;
+
+  /// No description provided for @sessionConfigNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Morning practice'**
+  String get sessionConfigNameHint;
+
+  /// No description provided for @sessionConfigIncludeHistoricalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Compete against my best on this route'**
+  String get sessionConfigIncludeHistoricalTitle;
+
+  /// No description provided for @sessionConfigIncludeHistoricalSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'When on, your best previous sector and lap times on this route are shown as the target to beat. When off, you only compete against this session.'**
+  String get sessionConfigIncludeHistoricalSubtitle;
+
+  /// No description provided for @sessionConfigStartButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get sessionConfigStartButton;
+
+  /// No description provided for @sessionReferenceLapLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'To beat'**
+  String get sessionReferenceLapLabel;
+
   /// No description provided for @sessionSimulatedHint.
   ///
   /// In en, this message translates to:
