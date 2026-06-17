@@ -187,8 +187,14 @@ class LiveSessionController extends ChangeNotifier {
     _includeHistorical = includeHistorical;
     _sessionName = (name != null && name.trim().isNotEmpty) ? name.trim() : null;
     if (includeHistorical) {
-      _historicalSectorRecords = await _loadHistoricalSectorRecords(route.id);
-      _historicalBestLap = await _loadHistoricalBestLap(route.id);
+      try {
+        final sessions = await _repo.getSessionsByRoute(route.id);
+        _historicalSectorRecords = _bestSectorRecords(sessions);
+        _historicalBestLap = _bestHistoricalLap(sessions);
+      } catch (_) {
+        _historicalSectorRecords = const {};
+        _historicalBestLap = null;
+      }
     } else {
       _historicalSectorRecords = const {};
       _historicalBestLap = null;
@@ -216,44 +222,31 @@ class LiveSessionController extends ChangeNotifier {
     }
   }
 
-  /// Computes the best (minimum) recorded duration per sector across all of the
-  /// user's previous sessions on [routeId]. Degrades to an empty map on error
-  /// so a failed lookup never blocks starting a session.
-  Future<Map<String, Duration>> _loadHistoricalSectorRecords(
-      String routeId) async {
-    try {
-      final sessions = await _repo.getSessionsByRoute(routeId);
-      final records = <String, Duration>{};
-      for (final session in sessions) {
-        for (final sector in session.sectorSummaries) {
-          final current = records[sector.sectorId];
-          if (current == null || sector.duration < current) {
-            records[sector.sectorId] = sector.duration;
-          }
+  /// Computes the best (minimum) recorded duration per sector across [sessions]
+  /// (the user's previous sessions on the route).
+  Map<String, Duration> _bestSectorRecords(List<SessionRun> sessions) {
+    final records = <String, Duration>{};
+    for (final session in sessions) {
+      for (final sector in session.sectorSummaries) {
+        final current = records[sector.sectorId];
+        if (current == null || sector.duration < current) {
+          records[sector.sectorId] = sector.duration;
         }
       }
-      return records;
-    } catch (_) {
-      return const {};
     }
+    return records;
   }
 
-  /// Minimum completed-lap duration across the user's previous sessions on
-  /// [routeId]. Returns null when there is no completed lap. Degrades to null
-  /// on error so a failed lookup never blocks starting a session.
-  Future<Duration?> _loadHistoricalBestLap(String routeId) async {
-    try {
-      final sessions = await _repo.getSessionsByRoute(routeId);
-      Duration? best;
-      for (final session in sessions) {
-        final lap = session.bestLap;
-        if (lap == null) continue;
-        if (best == null || lap.duration < best) best = lap.duration;
-      }
-      return best;
-    } catch (_) {
-      return null;
+  /// Minimum completed-lap duration across [sessions], or null when none has a
+  /// completed lap. Drives the closed-circuit reference lap.
+  Duration? _bestHistoricalLap(List<SessionRun> sessions) {
+    Duration? best;
+    for (final session in sessions) {
+      final lap = session.bestLap;
+      if (lap == null) continue;
+      if (best == null || lap.duration < best) best = lap.duration;
     }
+    return best;
   }
 
   void _subscribeToHeading() {
