@@ -29,6 +29,7 @@ class SessionRun {
     required this.avgSpeedMps,
     this.endedAt,
     this.vehicleId,
+    this.name,
   });
 
   final String id;
@@ -44,6 +45,9 @@ class SessionRun {
   final double avgSpeedMps;
   final String? vehicleId;
 
+  /// Optional user-given label for this session. Null/empty when unnamed.
+  final String? name;
+
   SessionRun copyWith({
     String? id,
     String? routeTemplateId,
@@ -57,6 +61,7 @@ class SessionRun {
     double? maxSpeedMps,
     double? avgSpeedMps,
     String? vehicleId,
+    String? name,
   }) {
     return SessionRun(
       id: id ?? this.id,
@@ -71,6 +76,7 @@ class SessionRun {
       maxSpeedMps: maxSpeedMps ?? this.maxSpeedMps,
       avgSpeedMps: avgSpeedMps ?? this.avgSpeedMps,
       vehicleId: vehicleId ?? this.vehicleId,
+      name: name ?? this.name,
     );
   }
 
