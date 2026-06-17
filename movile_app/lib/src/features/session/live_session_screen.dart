@@ -819,6 +819,9 @@ class _LapIndicators extends StatelessWidget {
                     dotSeparator: settingsController.timeFormatDot,
                   ),
             emphasized: false,
+            // Reference lap keeps the primary colour whenever one exists (same
+            // as the pre-modal best-lap behaviour); the label distinguishes the
+            // unbeaten historical record ("to beat") from a session best.
             color: reference == null ? null : theme.colorScheme.primary,
           ),
         ),
