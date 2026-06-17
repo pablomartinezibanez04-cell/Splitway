@@ -231,4 +231,30 @@ void main() {
     final ids = remaining.map((r) => r.id).toSet();
     expect(ids, {'official-keep'});
   });
+
+  SessionRun makeSession({required String id, String? name}) => SessionRun(
+        id: id,
+        routeTemplateId: 'r1',
+        startedAt: DateTime.utc(2026, 1, 1),
+        status: SessionStatus.completed,
+        points: const [],
+        laps: const [],
+        sectorSummaries: const [],
+        totalDistanceMeters: 0,
+        maxSpeedMps: 0,
+        avgSpeedMps: 0,
+        name: name,
+      );
+
+  test('saveSessionRun round-trips the optional name', () async {
+    final repo = LocalDraftRepository(db);
+    repo.userId = 'user-1';
+    await repo.saveRouteTemplate(makeRoute(id: 'r1'));
+
+    await repo.saveSessionRun(makeSession(id: 's1', name: 'Hot lap'));
+    expect((await repo.getSessionRun('s1'))!.name, 'Hot lap');
+
+    await repo.saveSessionRun(makeSession(id: 's2', name: null));
+    expect((await repo.getSessionRun('s2'))!.name, isNull);
+  });
 }

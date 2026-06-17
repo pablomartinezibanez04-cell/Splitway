@@ -197,6 +197,7 @@ class LocalDraftRepository {
           'max_speed_mps': session.maxSpeedMps,
           'avg_speed_mps': session.avgSpeedMps,
           'vehicle_id': session.vehicleId,
+          'name': session.name,
           'owner_id': _userId,
         },
         conflictAlgorithm: ConflictAlgorithm.replace,
@@ -321,6 +322,7 @@ class LocalDraftRepository {
       maxSpeedMps: (row['max_speed_mps']! as num).toDouble(),
       avgSpeedMps: (row['avg_speed_mps']! as num).toDouble(),
       vehicleId: row['vehicle_id'] as String?,
+      name: row['name'] as String?,
     );
   }
 
