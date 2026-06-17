@@ -181,6 +181,7 @@ class SupabaseRepository implements OfficialRoutesRemote {
                       })
                   .toList(),
               'p_vehicle_id': session.vehicleId,
+              'p_name': session.name,
             }));
   }
 
@@ -438,6 +439,7 @@ class SupabaseRepository implements OfficialRoutesRemote {
       maxSpeedMps: (row['max_speed_mps'] as num).toDouble(),
       avgSpeedMps: (row['avg_speed_mps'] as num).toDouble(),
       vehicleId: row['vehicle_id'] as String?,
+      name: row['name'] as String?,
     );
   }
 
