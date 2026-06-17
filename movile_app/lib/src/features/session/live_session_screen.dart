@@ -392,20 +392,21 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
     );
     if (config == null || !mounted) return;
 
-    // Apply the picked vehicle + source to the controller.
-    ctrl.selectVehicle(config.vehicleId);
-    if (widget.profileService?.isAdmin == true) {
-      await ctrl.setSource(config.source);
-      if (!mounted) return;
-    }
-
-    // Auth guard: require login before recording.
+    // Auth guard first: require login before mutating controller state or
+    // requesting any OS permission (setSource resolves location permission).
     final allowed = await requireAuth(
       context,
       widget.authService,
       message: AppLocalizations.of(context).loginBannerDefault,
     );
     if (!allowed || !mounted) return;
+
+    // Apply the picked vehicle + source to the controller.
+    ctrl.selectVehicle(config.vehicleId);
+    if (widget.profileService?.isAdmin == true) {
+      await ctrl.setSource(config.source);
+      if (!mounted) return;
+    }
 
     var hasBackground = false;
     if (ctrl.source == TrackingSource.realGps) {
