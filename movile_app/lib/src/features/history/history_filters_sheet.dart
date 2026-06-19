@@ -103,6 +103,21 @@ class _FiltersSheetBodyState extends State<_FiltersSheetBody> {
               ],
             ),
 
+            // ------- Group-by-route toggle (hidden on speed tab) -------
+            if (!widget.isSpeedTab)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l.historyFilterGroupByRoute),
+                  value: _draft.groupByRoute,
+                  onChanged: (on) {
+                    setState(
+                        () => _draft = _draft.copyWith(groupByRoute: on));
+                  },
+                ),
+              ),
+
             // ------- Kind filter (hidden on speed tab) -------
             if (!widget.isSpeedTab) ...[
               const SizedBox(height: 16),
