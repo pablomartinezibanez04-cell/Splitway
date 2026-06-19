@@ -66,6 +66,7 @@ class SupabaseRepository implements OfficialRoutesRemote {
         'p_thumbnail_url': route.thumbnailUrl,
         'p_elevation_range_m': route.elevationRangeMeters,
         'p_is_official': route.isOfficial,
+        'p_expected_duration_ms': route.expectedDuration?.inMilliseconds,
         'p_sectors': route.sectors
             .map((s) => {
                   'id': s.id,
@@ -402,6 +403,9 @@ class SupabaseRepository implements OfficialRoutesRemote {
       thumbnailUrl: row['thumbnail_url'] as String?,
       elevationRangeMeters: (row['elevation_range_m'] as num?)?.toDouble(),
       isOfficial: (row['is_official'] as bool?) ?? false,
+      expectedDuration: row['expected_duration_ms'] == null
+          ? null
+          : Duration(milliseconds: (row['expected_duration_ms'] as num).toInt()),
       updatedAt: row['updated_at'] == null
           ? null
           : DateTime.parse(row['updated_at'] as String).toLocal(),
