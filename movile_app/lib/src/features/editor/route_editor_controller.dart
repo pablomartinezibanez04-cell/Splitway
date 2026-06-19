@@ -681,6 +681,26 @@ class RouteEditorController extends ChangeNotifier {
     await load();
   }
 
+  /// Lazily fills a route's Mapbox "normal time" when it's missing and the
+  /// routing service is available (e.g. the route was created offline).
+  Future<void> recomputeExpectedDuration(String routeId) async {
+    final svc = routingService;
+    if (svc == null) return;
+    RouteTemplate? found;
+    for (final r in _routes) {
+      if (r.id == routeId) {
+        found = r;
+        break;
+      }
+    }
+    if (found == null || found.expectedDuration != null) return;
+    if (found.path.length < 2) return;
+    final d = await svc.matchDuration(found.path, profile: _defaultRoutingProfile);
+    if (d == null) return;
+    await _repo.updateRouteExpectedDuration(routeId, d);
+    await load();
+  }
+
   Future<void> updateRouteMetadata({
     required String routeId,
     required String name,

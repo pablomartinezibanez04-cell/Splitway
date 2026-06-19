@@ -45,6 +45,7 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
     super.initState();
     widget.controller.addListener(_onChange);
     widget.controller.select(widget.route);
+    widget.controller.recomputeExpectedDuration(widget.route.id);
   }
 
   @override
@@ -148,6 +149,16 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
                   icon: Icons.straighten,
                   label: l.historyDistanceLabel,
                   value: _distanceLabel(l, route.totalDistanceMeters, widget.settingsController),
+                ),
+              ),
+              SizedBox(
+                width: _halfWidth(context),
+                child: BentoTile(
+                  icon: Icons.timer_outlined,
+                  label: l.routeExpectedTimeLabel,
+                  value: route.expectedDuration == null
+                      ? '—'
+                      : Formatters.durationHms(route.expectedDuration!),
                 ),
               ),
               SizedBox(
