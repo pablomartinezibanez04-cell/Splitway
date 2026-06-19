@@ -469,7 +469,8 @@ class RouteEditorController extends ChangeNotifier {
     _snapping = true;
     notifyListeners();
 
-    final snapped = await routingService!.snapToRoads(waypoints, profile: _routingProfile);
+    final result = await routingService!.snapToRoads(waypoints, profile: _routingProfile);
+    final snapped = result?.path;
 
     if (_snapGeneration != generation) return;
 
@@ -495,6 +496,8 @@ class RouteEditorController extends ChangeNotifier {
     _cancelSnap();
 
     final pathParts = <List<GeoPoint>>[];
+    var expectedTotal = Duration.zero;
+    var expectedComplete = true;
 
     for (final seg in _segments) {
       switch (seg) {
@@ -504,12 +507,18 @@ class RouteEditorController extends ChangeNotifier {
           if (routingService != null && effective.length >= 2) {
             _snapping = true;
             notifyListeners();
-            final snapped = await routingService!.snapToRoads(effective, profile: _routingProfile);
+            final result = await routingService!.snapToRoads(effective, profile: _routingProfile);
             _snapping = false;
             notifyListeners();
-            pathParts.add(snapped ?? effective);
+            pathParts.add(result?.path ?? effective);
+            if (result?.duration != null) {
+              expectedTotal += result!.duration!;
+            } else {
+              expectedComplete = false;
+            }
           } else {
             pathParts.add(effective);
+            expectedComplete = false;
           }
         case FreehandSegment():
           if (seg.simplifiedPoints.isNotEmpty) {
@@ -517,6 +526,7 @@ class RouteEditorController extends ChangeNotifier {
           } else if (seg.rawPoints.isNotEmpty) {
             pathParts.add(List.of(seg.rawPoints));
           }
+          expectedComplete = false;
       }
     }
 
@@ -532,6 +542,14 @@ class RouteEditorController extends ChangeNotifier {
     }
 
     if (finalPath.length < 2) return null;
+
+    Duration? expectedDuration;
+    if (expectedComplete && expectedTotal > Duration.zero) {
+      expectedDuration = expectedTotal;
+    } else if (routingService != null) {
+      expectedDuration =
+          await routingService!.matchDuration(finalPath, profile: _routingProfile);
+    }
 
     final distFirstLast = finalPath.first.distanceTo(finalPath.last);
     final isClosed = distFirstLast <= 20.0;
@@ -604,6 +622,7 @@ class RouteEditorController extends ChangeNotifier {
       difficulty: _draftDifficulty,
       createdAt: DateTime.now(),
       elevationRangeMeters: elevationRange,
+      expectedDuration: expectedDuration,
     );
 
     await _repo.saveRouteTemplate(route);
