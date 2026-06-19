@@ -160,11 +160,13 @@ class RoutingService {
       '?geometries=geojson&overview=full&access_token=$_token',
     );
     try {
+      final client = _client ?? http.Client();
       final response = await logHttp(
         'mapbox',
         uri,
-        () => http.get(uri).timeout(const Duration(seconds: 10)),
+        () => client.get(uri).timeout(const Duration(seconds: 10)),
       );
+      if (_client == null) client.close();
       if (response.statusCode != 200) return null;
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       return parseMatching(data);
