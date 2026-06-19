@@ -111,6 +111,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
   HistoryFilters _filters = const HistoryFilters();
   Timer? _searchDebounce;
 
+  /// Whether we must hold the entire history in memory rather than paginate.
+  /// True when any filter narrows the list, or when grouping is on (we need
+  /// every entry to count sessions per route correctly).
+  bool get _needsFullLoad => !_filters.isEmpty || _filters.groupByRoute;
+
   @override
   void initState() {
     super.initState();
@@ -120,7 +125,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     _changesSub = widget.repository.changes.listen((_) {
       _reloadDebouncer?.cancel();
       _reloadDebouncer = Timer(const Duration(milliseconds: 300), () {
-        if (!_filters.isEmpty) {
+        if (_needsFullLoad) {
           _fullyLoaded = false; // force the next _loadAll to run
           _loadAll();
         } else {
@@ -182,9 +187,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
   /// - Filters became active and we were paginated → trigger a full load.
   /// - Filters cleared and we were fully loaded → trigger a paginated reload.
   Future<void> _onFiltersChanged() async {
-    if (!_filters.isEmpty && !_fullyLoaded) {
+    if (_needsFullLoad && !_fullyLoaded) {
       await _loadAll();
-    } else if (_filters.isEmpty && _fullyLoaded) {
+    } else if (!_needsFullLoad && _fullyLoaded) {
       _reload();
     }
   }
@@ -272,10 +277,21 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   /// Builds the horizontally scrollable row of active filter chips.
   Widget _buildActiveFilterChips(AppLocalizations l) {
-    if (_filters.activeCount == 0) return const SizedBox.shrink();
+    if (_filters.activeCount == 0 && !_filters.groupByRoute) {
+      return const SizedBox.shrink();
+    }
 
     final unit = widget.settingsController.unitSystem;
     final chips = <Widget>[];
+
+    // Group-by-route view-mode chip (not counted in the badge).
+    if (_filters.groupByRoute) {
+      chips.add(InputChip(
+        label: Text(l.historyGroupChip),
+        onDeleted: () =>
+            _updateFilters(_filters.copyWith(groupByRoute: false)),
+      ));
+    }
 
     // Kind chip (only when exactly one kind is selected).
     if (_filters.kinds.length == 1) {
@@ -591,6 +607,41 @@ class _HistoryScreenState extends State<HistoryScreen> {
       return _filteredEmptyState(l);
     }
 
+    if (_filters.groupByRoute) {
+      final groups = _groupByRoute(l, filtered);
+      return ListView.separated(
+        padding: const EdgeInsets.all(8),
+        itemCount: groups.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 4),
+        itemBuilder: (_, index) {
+          final group = groups[index];
+          final dateStr =
+              DateFormat.yMMMd(l.localeName).format(group.lastDate);
+          return Card(
+            child: ListTile(
+              leading: const Icon(Icons.route),
+              title: Text(group.title,
+                  maxLines: 1, overflow: TextOverflow.ellipsis),
+              subtitle: Text(l.historyGroupSubtitle(group.count, dateStr)),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => _RouteSessionsScreen(
+                  title: group.title,
+                  entries: group.entries,
+                  routes: _routes,
+                  repository: widget.repository,
+                  config: widget.config,
+                  settingsController: widget.settingsController,
+                  garageService: widget.garageService,
+                  syncService: widget.syncService,
+                ),
+              )),
+            ),
+          );
+        },
+      );
+    }
+
     // Hide the load-more sentinel when any filter is active to avoid loading
     // pages that will be entirely filtered out; also hide when fully loaded.
     final showSentinel = _hasMore && _filters.isEmpty && !_fullyLoaded;
@@ -630,6 +681,40 @@ class _HistoryScreenState extends State<HistoryScreen> {
         };
       },
     );
+  }
+
+  /// Groups already-filtered entries by route. Sessions are bucketed by
+  /// `routeTemplateId`; every free ride collapses into one synthetic
+  /// "Rutas libres" group. Groups are ordered by their most-recent entry.
+  List<_RouteGroup> _groupByRoute(
+      AppLocalizations l, List<_HistoryEntry> entries) {
+    final byRoute = <String, List<_HistoryEntry>>{};
+    final freeRides = <_HistoryEntry>[];
+    for (final e in entries) {
+      switch (e) {
+        case _SessionEntry(:final session):
+          byRoute.putIfAbsent(session.routeTemplateId, () => []).add(e);
+        case _FreeRideEntry():
+          freeRides.add(e);
+      }
+    }
+
+    final groups = <_RouteGroup>[];
+    byRoute.forEach((routeId, list) {
+      list.sort();
+      groups.add(_RouteGroup(
+        title: _routes[routeId]?.name ?? l.historyDeletedRoute,
+        entries: list,
+      ));
+    });
+    if (freeRides.isNotEmpty) {
+      freeRides.sort();
+      groups.add(_RouteGroup(title: l.historyGroupFreeRides, entries: freeRides));
+    }
+
+    // Most-recent group first.
+    groups.sort((a, b) => b.lastDate.compareTo(a.lastDate));
+    return groups;
   }
 
   Future<void> _loadSpeed() async {
@@ -1208,6 +1293,7 @@ class _FreeRideDetailScreenState extends State<FreeRideDetailScreen> {
                         showHeatmap: _heatmap,
                         unitSystem: widget.settingsController?.unitSystem ??
                             UnitSystem.metric,
+                        finishMarker: _ride!.points.last.location,
                       ),
                     const SizedBox(height: 16),
                     Row(
@@ -1871,6 +1957,75 @@ class _LapSummaryRow extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// One route's worth of history entries for the grouped view. `entries` are
+/// pre-sorted most-recent-first (they inherit [_HistoryEntry.compareTo]).
+class _RouteGroup {
+  _RouteGroup({required this.title, required this.entries});
+  final String title;
+  final List<_HistoryEntry> entries;
+
+  int get count => entries.length;
+  DateTime get lastDate => entries.first.date;
+}
+
+/// Lists every history entry in a single route group (or the "free rides"
+/// group). Reached from the grouped history view; reuses the standard tiles.
+class _RouteSessionsScreen extends StatelessWidget {
+  const _RouteSessionsScreen({
+    required this.title,
+    required this.entries,
+    required this.routes,
+    required this.repository,
+    required this.config,
+    required this.settingsController,
+    this.garageService,
+    this.syncService,
+  });
+
+  final String title;
+  final List<_HistoryEntry> entries;
+  final Map<String, RouteTemplate> routes;
+  final LocalDraftRepository repository;
+  final AppConfig config;
+  final AppSettingsController settingsController;
+  final GarageService? garageService;
+  final SyncService? syncService;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: ListView.separated(
+        padding: const EdgeInsets.all(8),
+        itemCount: entries.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 4),
+        itemBuilder: (_, index) {
+          final entry = entries[index];
+          return switch (entry) {
+            _SessionEntry(:final session) => _SessionTile(
+                session: session,
+                route: routes[session.routeTemplateId],
+                repository: repository,
+                config: config,
+                garageService: garageService,
+                settingsController: settingsController,
+                syncService: syncService,
+              ),
+            _FreeRideEntry(:final ride) => _FreeRideTile(
+                ride: ride,
+                repository: repository,
+                config: config,
+                garageService: garageService,
+                settingsController: settingsController,
+                syncService: syncService,
+              ),
+          };
+        },
+      ),
     );
   }
 }
