@@ -73,9 +73,58 @@ void main() {
       ]);
 
       expect(result, isNotNull);
-      expect(result!.length, 2);
-      expect(result.first.latitude, 0.0);
-      expect(result.last.longitude, 0.01);
+      expect(result!.path.length, 2);
+      expect(result.path.first.latitude, 0.0);
+      expect(result.path.last.longitude, 0.01);
+    });
+  });
+
+  group('RoutingService.parseDirections', () {
+    test('extracts path and duration', () {
+      final data = {
+        'routes': [
+          {
+            'duration': 73.6,
+            'geometry': {
+              'coordinates': [
+                [-3.70, 40.41],
+                [-3.69, 40.42],
+              ]
+            }
+          }
+        ]
+      };
+      final result = RoutingService.parseDirections(data);
+      expect(result, isNotNull);
+      expect(result!.path.length, 2);
+      expect(result.duration, const Duration(milliseconds: 73600));
+    });
+
+    test('returns null when no routes', () {
+      expect(RoutingService.parseDirections({'routes': []}), isNull);
+    });
+  });
+
+  group('RoutingService.parseMatching', () {
+    test('sums matching durations when code Ok', () {
+      final data = {
+        'code': 'Ok',
+        'matchings': [
+          {'duration': 30.0, 'confidence': 0.9},
+          {'duration': 12.5, 'confidence': 0.8},
+        ],
+      };
+      expect(
+        RoutingService.parseMatching(data),
+        const Duration(milliseconds: 42500),
+      );
+    });
+
+    test('returns null when code not Ok', () {
+      expect(
+        RoutingService.parseMatching({'code': 'NoMatch', 'matchings': []}),
+        isNull,
+      );
     });
   });
 }

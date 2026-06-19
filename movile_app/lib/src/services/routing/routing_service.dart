@@ -7,6 +7,13 @@ import 'package:splitway_core/splitway_core.dart';
 import '../logging/app_logger.dart';
 import '../logging/http_logging.dart';
 
+/// Road-snapped geometry plus the Mapbox-estimated travel time for it.
+class SnapResult {
+  const SnapResult({required this.path, this.duration});
+  final List<GeoPoint> path;
+  final Duration? duration;
+}
+
 /// Calls the Mapbox Directions API to convert a list of user-tapped
 /// waypoints into a road-following path.
 ///
@@ -45,7 +52,7 @@ class RoutingService {
   /// API call fails (no internet, invalid token, etc.).
   ///
   /// [profile] defaults to `'driving'` but can be `'cycling'` or `'walking'`.
-  Future<List<GeoPoint>?> snapToRoads(
+  Future<SnapResult?> snapToRoads(
     List<GeoPoint> waypoints, {
     String profile = 'driving',
   }) async {
@@ -87,24 +94,84 @@ class RoutingService {
       }
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
-      final routes = data['routes'] as List?;
-      if (routes == null || routes.isEmpty) {
-        debugPrint('RoutingService: no routes returned');
-        return null;
-      }
-
-      final geometry = routes[0]['geometry']['coordinates'] as List;
-      return geometry
-          .map((c) => GeoPoint(
-                latitude: (c[1] as num).toDouble(),
-                longitude: (c[0] as num).toDouble(),
-              ))
-          .toList();
+      return parseDirections(data);
     } catch (e, st) {
       debugPrint('RoutingService error: $e');
       AppLogger.maybeInstance?.warning(
         'mapbox',
         'RoutingService.snapToRoads failed',
+        error: e,
+        stackTrace: st,
+        context: {'url': uri.toString()},
+      );
+      return null;
+    }
+  }
+
+  /// Parses a Mapbox Directions response into a [SnapResult]. Returns null
+  /// when no route is present.
+  static SnapResult? parseDirections(Map<String, dynamic> data) {
+    final routes = data['routes'] as List?;
+    if (routes == null || routes.isEmpty) return null;
+    final geometry = routes[0]['geometry']['coordinates'] as List;
+    final path = geometry
+        .map((c) => GeoPoint(
+              latitude: (c[1] as num).toDouble(),
+              longitude: (c[0] as num).toDouble(),
+            ))
+        .toList();
+    final durSec = (routes[0]['duration'] as num?)?.toDouble();
+    return SnapResult(
+      path: path,
+      duration: durSec == null
+          ? null
+          : Duration(milliseconds: (durSec * 1000).round()),
+    );
+  }
+
+  /// Parses a Mapbox Map Matching response into a total [Duration], summing
+  /// every matching's duration. Returns null on a non-Ok code or empty match.
+  static Duration? parseMatching(Map<String, dynamic> data) {
+    if (data['code'] != 'Ok') return null;
+    final matchings = data['matchings'] as List?;
+    if (matchings == null || matchings.isEmpty) return null;
+    var totalSec = 0.0;
+    for (final m in matchings) {
+      final d = ((m as Map)['duration'] as num?)?.toDouble();
+      if (d != null) totalSec += d;
+    }
+    if (totalSec <= 0) return null;
+    return Duration(milliseconds: (totalSec * 1000).round());
+  }
+
+  /// Calls the Map Matching API to estimate the travel time along [path].
+  /// Returns null on any failure. [path] is capped to 100 coordinates (the
+  /// Map Matching limit) via [_sample].
+  Future<Duration?> matchDuration(
+    List<GeoPoint> path, {
+    String profile = 'driving',
+  }) async {
+    if (path.length < 2) return null;
+    final sampled = _sample(path, 100);
+    final coords =
+        sampled.map((p) => '${p.longitude},${p.latitude}').join(';');
+    final uri = Uri.parse(
+      '$_base/matching/v5/mapbox/$profile/$coords'
+      '?geometries=geojson&overview=full&access_token=$_token',
+    );
+    try {
+      final response = await logHttp(
+        'mapbox',
+        uri,
+        () => http.get(uri).timeout(const Duration(seconds: 10)),
+      );
+      if (response.statusCode != 200) return null;
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return parseMatching(data);
+    } catch (e, st) {
+      AppLogger.maybeInstance?.warning(
+        'mapbox',
+        'RoutingService.matchDuration failed',
         error: e,
         stackTrace: st,
         context: {'url': uri.toString()},
