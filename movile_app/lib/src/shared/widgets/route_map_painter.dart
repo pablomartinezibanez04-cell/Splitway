@@ -11,12 +11,18 @@ class RouteMapPainter extends CustomPainter {
     this.telemetry = const [],
     this.highlightSectorId,
     this.showSectors = false,
+    this.finishMarker,
   });
 
   final RouteTemplate route;
   final List<TelemetryPoint> telemetry;
   final String? highlightSectorId;
   final bool showSectors;
+
+  /// Overrides where the checkered finish flag is drawn. When null the flag
+  /// is placed at [route.startFinishGate] (the circuit's start/finish line).
+  /// Used for free rides, which have no gate, to mark the end of the trace.
+  final GeoPoint? finishMarker;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -26,6 +32,7 @@ class RouteMapPainter extends CustomPainter {
       route.startFinishGate.right,
       for (final s in route.sectors) ...[s.gate.left, s.gate.right],
       for (final p in telemetry) p.location,
+      if (finishMarker != null) finishMarker!,
     ];
     if (allPoints.isEmpty) return;
 
@@ -140,8 +147,9 @@ class RouteMapPainter extends CustomPainter {
       }
     }
 
-    // Checkered flag at the start/finish gate.
-    final sfPos = project(route.startFinishGate.center);
+    // Checkered flag marking the finish: a free ride's last point when
+    // [finishMarker] is set, otherwise the route's start/finish gate.
+    final sfPos = project(finishMarker ?? route.startFinishGate.center);
     const flagR = 8.0;
     canvas.drawCircle(
         sfPos, flagR, Paint()..color = const Color(0xFFFFFFFF));
@@ -182,6 +190,7 @@ class RouteMapPainter extends CustomPainter {
     return oldDelegate.route != route ||
         oldDelegate.telemetry.length != telemetry.length ||
         oldDelegate.highlightSectorId != highlightSectorId ||
-        oldDelegate.showSectors != showSectors;
+        oldDelegate.showSectors != showSectors ||
+        oldDelegate.finishMarker != finishMarker;
   }
 }

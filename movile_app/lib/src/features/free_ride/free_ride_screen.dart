@@ -518,6 +518,9 @@ class _FreeRideScreenState extends State<FreeRideScreen>
               useMapbox: widget.config.hasMapbox,
               telemetry: result.points,
               interactive: false,
+              finishMarker: result.points.isNotEmpty
+                  ? result.points.last.location
+                  : null,
             ),
           ),
         ),

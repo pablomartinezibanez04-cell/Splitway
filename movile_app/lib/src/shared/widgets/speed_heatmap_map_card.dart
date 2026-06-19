@@ -42,6 +42,7 @@ class SpeedHeatmapMapCard extends StatelessWidget {
     this.route,
     this.unitSystem = UnitSystem.metric,
     this.aspectRatio = 4 / 3,
+    this.finishMarker,
   });
 
   final AppConfig config;
@@ -50,6 +51,10 @@ class SpeedHeatmapMapCard extends StatelessWidget {
   final RouteTemplate? route;
   final UnitSystem unitSystem;
   final double aspectRatio;
+
+  /// Finish-flag position for route-less traces (e.g. a finished free ride).
+  /// Forwarded to [SplitwayMap.finishMarker].
+  final GeoPoint? finishMarker;
 
   @override
   Widget build(BuildContext context) {
@@ -68,6 +73,7 @@ class SpeedHeatmapMapCard extends StatelessWidget {
               interactive: false,
               showSpeedHeatmap: showHeatmap,
               speedHeatmapUnit: unitSystem,
+              finishMarker: finishMarker,
             ),
             if (showLegend)
               Positioned(

@@ -109,6 +109,7 @@ class SplitwayMap extends StatefulWidget {
     this.showSpeedHeatmap = false,
     this.speedHeatmapUnit = UnitSystem.metric,
     this.onUserInteraction,
+    this.finishMarker,
   });
 
   final bool useMapbox;
@@ -151,6 +152,11 @@ class SplitwayMap extends StatefulWidget {
   /// Called when the user touches the map (pan, zoom, tap). Use to disable
   /// GPS-follow mode until the center-on-user button is pressed again.
   final VoidCallback? onUserInteraction;
+  /// Position of the checkered finish flag when there is no [route] (e.g. a
+  /// finished free ride: pass the last telemetry point). Ignored when [route]
+  /// is set, where the flag is drawn at the start/finish gate. Like the route
+  /// flag, it is hidden while the speed heatmap is active.
+  final GeoPoint? finishMarker;
 
   @override
   State<SplitwayMap> createState() => _SplitwayMapState();
@@ -175,6 +181,14 @@ class _SplitwayMapState extends State<SplitwayMap>
   bool _isRendering = false;
   bool _renderPending = false;
   MapStyle _mapStyle = MapStyle.outdoors;
+  // The style URI currently loaded on the *native* map. The native view is
+  // always created with the default style — the persisted style is read
+  // asynchronously and only lands after the first frame — so this lets us
+  // reconcile the rendered style with [_mapStyle] (the value the switcher
+  // shows as selected) once both the prefs read and the map are ready.
+  String? _activeStyleUri;
+  bool _applyingStyle = false;
+  bool _applyStylePending = false;
 
   // Smooth user-location marker animation: interpolates between the previous
   // visible position and the latest GPS fix instead of teleporting on every
@@ -325,20 +339,15 @@ class _SplitwayMapState extends State<SplitwayMap>
   Future<void> _loadMapStyle() async {
     final prefs = await SharedPreferences.getInstance();
     final stored = prefs.getString(_kMapStyleKey);
-    if (stored != null && mounted) {
-      final parsed = MapStyle.values.where((s) => s.name == stored);
-      if (parsed.isNotEmpty) {
-        setState(() => _mapStyle = parsed.first);
-        final map = _map;
-        if (map != null) {
-          await _removeManagers(map);
-          await map.loadStyleURI(_mapStyle.uri);
-          if (!mounted) return;
-          await _createManagers(map);
-          await _renderAnnotations();
-        }
-      }
-    }
+    if (stored == null || !mounted) return;
+    final parsed = MapStyle.values.where((s) => s.name == stored);
+    if (parsed.isEmpty) return;
+    setState(() => _mapStyle = parsed.first);
+    // Apply to the native map if it already exists; otherwise [_onMapCreated]
+    // reconciles once the map is ready. On later sessions the prefs read is
+    // warm and usually resolves *before* the map is created, so without that
+    // fallback the restored style would update the switcher but never the map.
+    await _applyMapStyle();
   }
 
   Future<void> _switchStyle(MapStyle style) async {
@@ -346,17 +355,42 @@ class _SplitwayMapState extends State<SplitwayMap>
     setState(() => _mapStyle = style);
     unawaited(SharedPreferences.getInstance()
         .then((p) => p.setString(_kMapStyleKey, style.name)));
+    await _applyMapStyle();
+  }
+
+  /// Reconciles the native map's loaded style with [_mapStyle] — the single
+  /// source of truth, also shown selected in the switcher. No-op until the map
+  /// exists, and whenever the desired style is already loaded. Overlapping
+  /// calls coalesce like [_renderAnnotations] so a style change arriving
+  /// mid-swap is still applied.
+  Future<void> _applyMapStyle() async {
     final map = _map;
-    if (map == null) return;
-    // Tear down the annotation managers *before* the style reload. Once
-    // loadStyleURI runs, the native counterparts of these managers are gone,
-    // and removing them afterwards would crash with "No manager found with
-    // id: N" (an uncatchable native exception thrown inside getManager).
-    await _removeManagers(map);
-    await map.loadStyleURI(style.uri);
-    if (!mounted) return;
-    await _createManagers(map);
-    await _renderAnnotations();
+    if (map == null || !mounted) return;
+    if (_activeStyleUri == _mapStyle.uri) return;
+    if (_applyingStyle) {
+      _applyStylePending = true;
+      return;
+    }
+    _applyingStyle = true;
+    try {
+      final desired = _mapStyle.uri;
+      // Tear down the annotation managers *before* the style reload. Once
+      // loadStyleURI runs, the native counterparts of these managers are gone,
+      // and removing them afterwards would crash with "No manager found with
+      // id: N" (an uncatchable native exception thrown inside getManager).
+      await _removeManagers(map);
+      await map.loadStyleURI(desired);
+      _activeStyleUri = desired;
+      if (!mounted) return;
+      await _createManagers(map);
+      await _renderAnnotations();
+    } finally {
+      _applyingStyle = false;
+      if (_applyStylePending) {
+        _applyStylePending = false;
+        unawaited(_applyMapStyle());
+      }
+    }
   }
 
   /// Removes the current annotation managers while their native counterparts
@@ -837,7 +871,8 @@ class _SplitwayMapState extends State<SplitwayMap>
         oldWidget.draftSegments.length != widget.draftSegments.length ||
         oldWidget.freehandMode != widget.freehandMode ||
         oldWidget.showSpeedHeatmap != widget.showSpeedHeatmap ||
-        oldWidget.speedHeatmapUnit != widget.speedHeatmapUnit;
+        oldWidget.speedHeatmapUnit != widget.speedHeatmapUnit ||
+        oldWidget.finishMarker != widget.finishMarker;
 
     if (annotationsChanged) _renderAnnotations();
 
@@ -872,6 +907,7 @@ class _SplitwayMapState extends State<SplitwayMap>
         telemetry: widget.telemetry,
         highlightSectorId: widget.highlightSectorId,
         showSectors: widget.showSectors,
+        finishMarker: widget.finishMarker,
       ),
       child: const SizedBox.expand(),
     );
@@ -888,6 +924,11 @@ class _SplitwayMapState extends State<SplitwayMap>
 
   Future<void> _onMapCreated(mbx.MapboxMap map) async {
     _map = map;
+    // The native view is created with the styleUri from its first build, when
+    // [_mapStyle] is still the default (the persisted style only lands after
+    // the first frame). Record it so [_applyMapStyle] below can reconcile if a
+    // non-default style was restored before the map existed.
+    _activeStyleUri = widget.styleUri ?? MapStyle.outdoors.uri;
     // Position camera immediately (no animation) to avoid a blank-map flash.
     final center = _focusPoint();
     await map.setCamera(mbx.CameraOptions(
@@ -921,14 +962,20 @@ class _SplitwayMapState extends State<SplitwayMap>
         pinchPanEnabled: false,
       ));
     }
-    _lineManager = await map.annotations.createPolylineAnnotationManager();
-    _circleManager = await map.annotations.createCircleAnnotationManager();
-    await _createArrowManager(map);
+    // Create *all* annotation managers (incl. the finish-flag manager) up
+    // front. Inlining a subset here previously left _finishMarkerManager null
+    // until the first style switch, so the checkered flag never showed on the
+    // initial load.
+    await _createManagers(map);
     await _ensureArrowImage();
     await _ensureFinishFlagImage();
     await _updateGesturesForFreehand();
     await _renderAnnotations();
     await _flyToFitRoute();
+    // Reconcile the rendered style with the (possibly restored) [_mapStyle]:
+    // if the prefs read won the race and set a non-default style before the
+    // map existed, this is where it finally gets loaded.
+    await _applyMapStyle();
   }
 
   /// Creates the dedicated point manager for the directional user arrow and
@@ -956,6 +1003,26 @@ class _SplitwayMapState extends State<SplitwayMap>
       _finishMarkerManager = mgr;
     } on PlatformException {
       // Channel torn down — the checkered flag won't render but nothing breaks.
+    }
+  }
+
+  /// Draws the checkered finish flag at [center]. No-op until the marker
+  /// manager and flag image are ready.
+  Future<void> _createFinishFlag(GeoPoint center) async {
+    final finishMgr = _finishMarkerManager;
+    final finishImg = _finishFlagImageBytes;
+    if (finishMgr == null || finishImg == null || !mounted) return;
+    try {
+      await finishMgr.create(mbx.PointAnnotationOptions(
+        geometry: mbx.Point(
+          coordinates: mbx.Position(center.longitude, center.latitude),
+        ),
+        image: finishImg,
+        iconSize: 1 / (_arrowDpr),
+        iconAnchor: mbx.IconAnchor.CENTER,
+      ));
+    } on PlatformException {
+      // Channel torn down — skip silently.
     }
   }
 
@@ -1170,24 +1237,17 @@ class _SplitwayMapState extends State<SplitwayMap>
           }
         }
       }
-      // Checkered flag at the start/finish gate.
-      final finishMgr = _finishMarkerManager;
-      final finishImg = _finishFlagImageBytes;
-      if (finishMgr != null && finishImg != null && mounted) {
-        final sfCenter = r.startFinishGate.center;
-        try {
-          await finishMgr.create(mbx.PointAnnotationOptions(
-            geometry: mbx.Point(
-              coordinates:
-                  mbx.Position(sfCenter.longitude, sfCenter.latitude),
-            ),
-            image: finishImg,
-            iconSize: 1 / (_arrowDpr),
-            iconAnchor: mbx.IconAnchor.CENTER,
-          ));
-        } on PlatformException {
-          // Channel torn down — skip silently.
-        }
+    }
+
+    // Checkered finish flag: at the route's start/finish gate, or — for a
+    // finished free ride without a route — at the explicit [finishMarker].
+    // Hidden while the heatmap is active, matching the route line.
+    if (!useHeatmap && mounted) {
+      final finishCenter = (r != null && r.path.isNotEmpty)
+          ? r.startFinishGate.center
+          : (r == null ? widget.finishMarker : null);
+      if (finishCenter != null) {
+        await _createFinishFlag(finishCenter);
       }
     }
 
