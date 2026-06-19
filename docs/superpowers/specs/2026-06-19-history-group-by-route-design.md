@@ -47,13 +47,11 @@ lista de todas las veces que se ha corrido esa ruta en concreto.
 - Añadir campo `bool groupByRoute` (por defecto `false`) a `HistoryFilters`.
 - Soportarlo en `copyWith`.
 - **No** se incluye en `activeCount` (es un modo de vista, no un filtro que
-  oculta datos) ni en `isEmpty` para los efectos de recarga... **Excepción:**
-  ver nota de `isEmpty` abajo.
-- `isEmpty`: `groupByRoute` **no** debe forzar la carga completa por sí solo.
-  El agrupado necesita ver todas las entradas para contar correctamente, así
-  que cuando `groupByRoute` está activo se debe forzar `_loadAll()` igual que
-  cuando hay filtros activos. Se gestiona en la pantalla (ver abajo) sin
-  cambiar la semántica de `isEmpty`/`activeCount`.
+  oculta datos), y `isEmpty`/`activeCount` mantienen su semántica actual.
+- Carga: el agrupado necesita ver todas las entradas para contar
+  correctamente. La pantalla fuerza `_loadAll()` cuando `groupByRoute` está
+  activo, igual que hace cuando hay filtros activos (ver `history_screen.dart`
+  abajo), sin cambiar la semántica de `isEmpty`.
 
 ### `history_filters_sheet.dart`
 - Añadir un `SwitchListTile` "Agrupar por ruta" cerca de la cabecera, visible
