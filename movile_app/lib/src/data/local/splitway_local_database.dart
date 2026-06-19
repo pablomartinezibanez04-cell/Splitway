@@ -13,7 +13,7 @@ class SplitwayLocalDatabase {
 
   Database get raw => _db;
 
-  static const int _schemaVersion = 12;
+  static const int _schemaVersion = 13;
 
   static Future<SplitwayLocalDatabase> open({String? overridePath}) async {
     final path = overridePath ?? await _defaultPath();
@@ -232,6 +232,11 @@ class SplitwayLocalDatabase {
     if (from < 12 && to >= 12) {
       await db.execute(
         'ALTER TABLE session_runs ADD COLUMN name TEXT',
+      );
+    }
+    if (from < 13 && to >= 13) {
+      await db.execute(
+        'ALTER TABLE route_templates ADD COLUMN expected_duration_ms INTEGER',
       );
     }
   }

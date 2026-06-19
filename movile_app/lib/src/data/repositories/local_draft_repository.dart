@@ -59,6 +59,7 @@ class LocalDraftRepository {
         'owner_id': route.isOfficial ? null : _userId,
         'thumbnail_url': route.thumbnailUrl,
         'elevation_range_m': route.elevationRangeMeters,
+        'expected_duration_ms': route.expectedDuration?.inMilliseconds,
         'is_official': route.isOfficial ? 1 : 0,
         'updated_at': route.updatedAt?.toUtc().millisecondsSinceEpoch,
       };
@@ -151,6 +152,9 @@ class LocalDraftRepository {
       locationLabel: row['location_label'] as String?,
       thumbnailUrl: row['thumbnail_url'] as String?,
       elevationRangeMeters: (row['elevation_range_m'] as num?)?.toDouble(),
+      expectedDuration: row['expected_duration_ms'] == null
+          ? null
+          : Duration(milliseconds: (row['expected_duration_ms'] as num).toInt()),
       isOfficial: ((row['is_official'] as int?) ?? 0) == 1,
       updatedAt: row['updated_at'] == null
           ? null
@@ -165,6 +169,17 @@ class LocalDraftRepository {
     await _db.update(
       'route_templates',
       {'name': name},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    _changes.add(null);
+  }
+
+  /// Updates only the cached Mapbox "normal time" for a route.
+  Future<void> updateRouteExpectedDuration(String id, Duration? d) async {
+    await _db.update(
+      'route_templates',
+      {'expected_duration_ms': d?.inMilliseconds},
       where: 'id = ?',
       whereArgs: [id],
     );
