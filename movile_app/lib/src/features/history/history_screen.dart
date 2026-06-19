@@ -28,6 +28,8 @@ import '../garage/vehicle_detail_screen.dart';
 import '../home/home_shell.dart';
 import 'history_filters.dart';
 import 'history_filters_sheet.dart';
+import 'run_comparison.dart';
+import '../../shared/widgets/time_delta_indicator.dart';
 
 sealed class _HistoryEntry implements Comparable<_HistoryEntry> {
   DateTime get date;
@@ -1014,6 +1016,29 @@ class _SessionTile extends StatelessWidget {
                   ],
                 ),
               ),
+            Builder(builder: (context) {
+              final expected = route?.expectedDuration;
+              final actual =
+                  route == null ? null : representativeRunTime(route!, session);
+              if (expected == null || actual == null) {
+                return const SizedBox.shrink();
+              }
+              return Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${l.routeExpectedTimeLabel}: '
+                      '${Formatters.duration(actual, dotSeparator: settingsController.timeFormatDot)}',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    const SizedBox(width: 8),
+                    TimeDeltaIndicator(expected: expected, actual: actual),
+                  ],
+                ),
+              );
+            }),
           ],
         ),
         trailing: const Icon(Icons.chevron_right),
@@ -1816,6 +1841,40 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
+                    Builder(builder: (context) {
+                      final route = _route;
+                      final session = _session;
+                      if (route == null || session == null) {
+                        return const SizedBox.shrink();
+                      }
+                      final expected = route.expectedDuration;
+                      final actual = representativeRunTime(route, session);
+                      if (expected == null || actual == null) {
+                        return const SizedBox.shrink();
+                      }
+                      final dot =
+                          widget.settingsController?.timeFormatDot ?? true;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Row(
+                          children: [
+                            Text(
+                              '${l.routeExpectedTimeLabel}: '
+                              '${Formatters.duration(expected, dotSeparator: dot)}',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                            const Spacer(),
+                            Text(
+                              Formatters.duration(actual, dotSeparator: dot),
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                            const SizedBox(width: 8),
+                            TimeDeltaIndicator(
+                                expected: expected, actual: actual),
+                          ],
+                        ),
+                      );
+                    }),
                     if (_session!.laps.isNotEmpty)
                       ..._buildLapDetail(context, l)
                     else ...[
