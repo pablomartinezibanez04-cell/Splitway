@@ -504,6 +504,7 @@
   "vehiclePickerSelectVehicle": "Select a vehicle",
 
   "elevationRangeLabel": "Elevation",
+  "routeExpectedTimeLabel": "Normal time",
   "elevationRangeValue": "{value} m",
   "@elevationRangeValue": { "placeholders": { "value": { "type": "String" } } },
   "elevationRangeValueFeet": "{value} ft",

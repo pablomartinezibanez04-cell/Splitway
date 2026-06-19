@@ -2582,6 +2582,12 @@ abstract class AppLocalizations {
   /// **'Elevation'**
   String get elevationRangeLabel;
 
+  /// No description provided for @routeExpectedTimeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal time'**
+  String get routeExpectedTimeLabel;
+
   /// No description provided for @elevationRangeValue.
   ///
   /// In en, this message translates to:

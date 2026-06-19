@@ -504,6 +504,7 @@
   "vehiclePickerSelectVehicle": "Selecciona un vehículo",
 
   "elevationRangeLabel": "Desnivel",
+  "routeExpectedTimeLabel": "Tiempo normal",
   "elevationRangeValue": "{value} m",
   "@elevationRangeValue": { "placeholders": { "value": { "type": "String" } } },
   "elevationRangeValueFeet": "{value} ft",

@@ -1431,6 +1431,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get elevationRangeLabel => 'Elevation';
 
   @override
+  String get routeExpectedTimeLabel => 'Normal time';
+
+  @override
   String elevationRangeValue(String value) {
     return '$value m';
   }
