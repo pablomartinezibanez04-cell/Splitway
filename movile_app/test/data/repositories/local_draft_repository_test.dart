@@ -66,6 +66,23 @@ void main() {
     );
   });
 
+  test('updateRouteExpectedDuration stores the value and bumps updatedAt',
+      () async {
+    final repo = LocalDraftRepository(db);
+    repo.userId = 'user-1';
+    // Route already synced once with an old updatedAt and no normal time.
+    final old = DateTime.utc(2026, 1, 2);
+    await repo.saveRouteTemplate(makeRoute(id: 'r1', updatedAt: old));
+
+    await repo.updateRouteExpectedDuration('r1', const Duration(seconds: 120));
+
+    final loaded = await repo.getRouteTemplate('r1');
+    expect(loaded!.expectedDuration, const Duration(seconds: 120));
+    // updatedAt must be bumped past the old timestamp so the next sync's
+    // shouldPush() detects the change and uploads the lazily-computed value.
+    expect(loaded.updatedAt!.isAfter(old), isTrue);
+  });
+
   test('clearUserData keeps all is_official=1 routes', () async {
     final repo = LocalDraftRepository(db);
     await repo.saveRouteTemplate(

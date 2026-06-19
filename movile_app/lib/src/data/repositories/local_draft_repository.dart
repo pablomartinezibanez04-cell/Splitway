@@ -175,11 +175,18 @@ class LocalDraftRepository {
     _changes.add(null);
   }
 
-  /// Updates only the cached Mapbox "normal time" for a route.
+  /// Updates the cached Mapbox "normal time" for a route and bumps its
+  /// `updated_at` so the next sync's last-write-wins push uploads the value.
+  /// This is what lets a time computed lazily (e.g. for a route created
+  /// offline and already synced without one) reach the backend on the next
+  /// sync instead of being stranded locally.
   Future<void> updateRouteExpectedDuration(String id, Duration? d) async {
     await _db.update(
       'route_templates',
-      {'expected_duration_ms': d?.inMilliseconds},
+      {
+        'expected_duration_ms': d?.inMilliseconds,
+        'updated_at': DateTime.now().toUtc().millisecondsSinceEpoch,
+      },
       where: 'id = ?',
       whereArgs: [id],
     );

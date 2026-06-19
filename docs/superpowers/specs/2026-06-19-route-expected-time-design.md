@@ -128,7 +128,8 @@ cuanto se vuelve a abrir con conexión, cumpliendo "vacío hasta tener red".
 - Lectura de fila (`RouteTemplate(...)` ~línea 137): añadir
   `expectedDuration: (row['expected_duration_ms'] as int?) == null ? null : Duration(milliseconds: row['expected_duration_ms'] as int)`.
 - Nuevo método `updateRouteExpectedDuration(String id, Duration? d)` para el
-  recálculo perezoso (UPDATE puntual de la columna).
+  recálculo perezoso (UPDATE de la columna **+ bump de `updated_at`**, para que
+  el siguiente `sync()` lo suba vía last-write-wins en vez de quedarse en local).
 
 ### 5. Sync Supabase
 
