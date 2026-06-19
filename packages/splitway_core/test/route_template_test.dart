@@ -53,4 +53,20 @@ void main() {
     expect(restored.isOfficial, isTrue);
     expect(restored.updatedAt, ts);
   });
+
+  test('expectedDuration roundtrips and copyWith clears/sets it', () {
+    final r = sample().copyWith(expectedDuration: const Duration(seconds: 90));
+    expect(r.expectedDuration, const Duration(seconds: 90));
+
+    final restored = RouteTemplate.fromJson(r.toJson());
+    expect(restored.expectedDuration, const Duration(seconds: 90));
+
+    // No-arg copyWith keeps the value; explicit null clears it.
+    expect(r.copyWith().expectedDuration, const Duration(seconds: 90));
+    expect(r.copyWith(expectedDuration: null).expectedDuration, isNull);
+  });
+
+  test('expectedDuration defaults to null', () {
+    expect(sample().expectedDuration, isNull);
+  });
 }

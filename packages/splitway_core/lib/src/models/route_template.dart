@@ -32,6 +32,7 @@ class RouteTemplate {
     this.elevationRangeMeters,
     this.isOfficial = false,
     this.updatedAt,
+    this.expectedDuration,
   });
 
   final String id;
@@ -47,6 +48,11 @@ class RouteTemplate {
   final double? elevationRangeMeters;
   final bool isOfficial;
   final DateTime? updatedAt;
+
+  /// Estimated time to complete the route once at normal driving speed,
+  /// computed from Mapbox. Null when it could not be computed (offline, no
+  /// token, no road match).
+  final Duration? expectedDuration;
 
   /// True when the route is a closed circuit (first and last path points
   /// are the same, as set when the gap between them is ≤ 20 m at save time).
@@ -77,6 +83,7 @@ class RouteTemplate {
     Object? elevationRangeMeters = _sentinel,
     bool? isOfficial,
     Object? updatedAt = _sentinel,
+    Object? expectedDuration = _sentinel,
   }) {
     return RouteTemplate(
       id: id ?? this.id,
@@ -98,6 +105,9 @@ class RouteTemplate {
       updatedAt: updatedAt == _sentinel
           ? this.updatedAt
           : updatedAt as DateTime?,
+      expectedDuration: expectedDuration == _sentinel
+          ? this.expectedDuration
+          : expectedDuration as Duration?,
     );
   }
 
@@ -115,6 +125,7 @@ class RouteTemplate {
         'elevationRangeMeters': elevationRangeMeters,
         'isOfficial': isOfficial,
         'updatedAt': updatedAt?.toUtc().toIso8601String(),
+        'expectedDurationMs': expectedDuration?.inMilliseconds,
       };
 
   factory RouteTemplate.fromJson(Map<String, dynamic> json) => RouteTemplate(
@@ -140,5 +151,8 @@ class RouteTemplate {
         updatedAt: json['updatedAt'] == null
             ? null
             : DateTime.parse(json['updatedAt'] as String),
+        expectedDuration: json['expectedDurationMs'] == null
+            ? null
+            : Duration(milliseconds: (json['expectedDurationMs'] as num).toInt()),
       );
 }
