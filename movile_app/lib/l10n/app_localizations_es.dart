@@ -1242,6 +1242,26 @@ class AppLocalizationsEs extends AppLocalizations {
   String get historyFilteredEmptyAction => 'Limpiar filtros';
 
   @override
+  String get historyFilterGroupByRoute => 'Agrupar por ruta';
+
+  @override
+  String get historyGroupFreeRides => 'Rutas libres';
+
+  @override
+  String get historyGroupChip => 'Agrupado por ruta';
+
+  @override
+  String historyGroupSubtitle(int count, String date) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sesiones',
+      one: '1 sesión',
+    );
+    return '$_temp0 · última $date';
+  }
+
+  @override
   String get routesTitle => 'Mis rutas';
 
   @override

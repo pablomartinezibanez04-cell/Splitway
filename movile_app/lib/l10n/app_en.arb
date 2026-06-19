@@ -433,6 +433,12 @@
   "historyFilteredEmptyTitle": "No matches",
   "historyFilteredEmptyAction": "Clear filters",
 
+  "historyFilterGroupByRoute": "Group by route",
+  "historyGroupFreeRides": "Free rides",
+  "historyGroupChip": "Grouped by route",
+  "historyGroupSubtitle": "{count, plural, =1{1 session} other{{count} sessions}} · last {date}",
+  "@historyGroupSubtitle": { "placeholders": { "count": { "type": "int" }, "date": { "type": "String" } } },
+
   "routesTitle": "My routes",
   "routesViewList": "List",
   "routesViewGrid": "Grid",

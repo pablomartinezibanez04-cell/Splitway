@@ -2252,6 +2252,30 @@ abstract class AppLocalizations {
   /// **'Clear filters'**
   String get historyFilteredEmptyAction;
 
+  /// No description provided for @historyFilterGroupByRoute.
+  ///
+  /// In en, this message translates to:
+  /// **'Group by route'**
+  String get historyFilterGroupByRoute;
+
+  /// No description provided for @historyGroupFreeRides.
+  ///
+  /// In en, this message translates to:
+  /// **'Free rides'**
+  String get historyGroupFreeRides;
+
+  /// No description provided for @historyGroupChip.
+  ///
+  /// In en, this message translates to:
+  /// **'Grouped by route'**
+  String get historyGroupChip;
+
+  /// No description provided for @historyGroupSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 session} other{{count} sessions}} · last {date}'**
+  String historyGroupSubtitle(int count, String date);
+
   /// No description provided for @routesTitle.
   ///
   /// In en, this message translates to:
