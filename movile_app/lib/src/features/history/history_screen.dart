@@ -1293,7 +1293,6 @@ class _FreeRideDetailScreenState extends State<FreeRideDetailScreen> {
                         showHeatmap: _heatmap,
                         unitSystem: widget.settingsController?.unitSystem ??
                             UnitSystem.metric,
-                        finishMarker: _ride!.points.last.location,
                       ),
                     const SizedBox(height: 16),
                     Row(
