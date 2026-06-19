@@ -20,6 +20,7 @@ class HistoryFilters {
     this.vehicleIds = const <String?>{},
     this.dateRange,
     this.minDistanceMeters,
+    this.groupByRoute = false,
   });
 
   final String query;
@@ -31,6 +32,11 @@ class HistoryFilters {
 
   final DateTimeRange? dateRange;
   final double? minDistanceMeters;
+
+  /// View-mode flag: when true the history list collapses into one row per
+  /// route. Deliberately excluded from [activeCount] and [isEmpty] — it does
+  /// not hide entries, it only changes how they're presented.
+  final bool groupByRoute;
 
   bool get isEmpty =>
       query.isEmpty &&
@@ -56,6 +62,7 @@ class HistoryFilters {
     Set<String?>? vehicleIds,
     Object? dateRange = _sentinel,
     Object? minDistanceMeters = _sentinel,
+    bool? groupByRoute,
   }) {
     return HistoryFilters(
       query: query ?? this.query,
@@ -67,6 +74,7 @@ class HistoryFilters {
       minDistanceMeters: identical(minDistanceMeters, _sentinel)
           ? this.minDistanceMeters
           : minDistanceMeters as double?,
+      groupByRoute: groupByRoute ?? this.groupByRoute,
     );
   }
 

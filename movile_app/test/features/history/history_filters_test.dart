@@ -50,6 +50,23 @@ void main() {
       expect(next.minDistanceMeters, 5000);      // preserved
       expect(next.dateRange, isNull);            // explicitly cleared
     });
+
+    test('groupByRoute defaults to false and does not affect activeCount', () {
+      const f = HistoryFilters();
+      expect(f.groupByRoute, isFalse);
+
+      const g = HistoryFilters(groupByRoute: true);
+      // It is a view mode, not a structured filter group.
+      expect(g.activeCount, 0);
+      // isEmpty keeps its current meaning (query + structured groups only).
+      expect(g.isEmpty, isTrue);
+    });
+
+    test('copyWith toggles groupByRoute and preserves it otherwise', () {
+      const f = HistoryFilters(groupByRoute: true);
+      expect(f.copyWith(query: 'x').groupByRoute, isTrue); // preserved
+      expect(f.copyWith(groupByRoute: false).groupByRoute, isFalse); // overridden
+    });
   });
 
   group('foldForSearch', () {
