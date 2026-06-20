@@ -287,6 +287,7 @@ class AppRouter {
           syncService: syncService,
           profileService: profileService,
           settingsController: settingsController,
+          routeEditorController: _editorController,
         ),
         branches: [
           StatefulShellBranch(

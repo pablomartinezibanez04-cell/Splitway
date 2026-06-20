@@ -20,7 +20,7 @@ class RouteMapPainter extends CustomPainter {
   final bool showSectors;
 
   /// Overrides where the checkered finish flag is drawn. When null the flag
-  /// is placed at [route.startFinishGate] (the circuit's start/finish line).
+  /// is placed at the route's last path node (the end of the route).
   /// Used for free rides, which have no gate, to mark the end of the trace.
   final GeoPoint? finishMarker;
 
@@ -148,8 +148,8 @@ class RouteMapPainter extends CustomPainter {
     }
 
     // Checkered flag marking the finish: a free ride's last point when
-    // [finishMarker] is set, otherwise the route's start/finish gate.
-    final sfPos = project(finishMarker ?? route.startFinishGate.center);
+    // [finishMarker] is set, otherwise the route's last path node.
+    final sfPos = project(finishMarker ?? route.path.last);
     const flagR = 8.0;
     canvas.drawCircle(
         sfPos, flagR, Paint()..color = const Color(0xFFFFFFFF));

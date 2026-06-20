@@ -468,6 +468,7 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
             userBearing: ctrl.currentBearingDeg,
             flyToNotifier: _flyToNotifier,
             onUserInteraction: _onMapInteraction,
+            persistStyle: true,
           ),
         ),
         if (drawerLeading != null)

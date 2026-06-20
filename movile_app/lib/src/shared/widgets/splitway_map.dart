@@ -110,6 +110,7 @@ class SplitwayMap extends StatefulWidget {
     this.speedHeatmapUnit = UnitSystem.metric,
     this.onUserInteraction,
     this.finishMarker,
+    this.persistStyle = false,
   });
 
   final bool useMapbox;
@@ -154,9 +155,15 @@ class SplitwayMap extends StatefulWidget {
   final VoidCallback? onUserInteraction;
   /// Position of the checkered finish flag when there is no [route] (e.g. a
   /// finished free ride: pass the last telemetry point). Ignored when [route]
-  /// is set, where the flag is drawn at the start/finish gate. Like the route
+  /// is set, where the flag is drawn at the route's last path node. Like the route
   /// flag, it is hidden while the speed heatmap is active.
   final GeoPoint? finishMarker;
+  /// When true, the map restores the user's last-selected style from
+  /// SharedPreferences on launch and persists changes made via the switcher.
+  /// Only the live recording maps (route session, free ride) set this; every
+  /// other map (previews, editor, result review) starts on the classic
+  /// Outdoors style and any ad-hoc style change there is session-local.
+  final bool persistStyle;
 
   @override
   State<SplitwayMap> createState() => _SplitwayMapState();
@@ -233,7 +240,9 @@ class _SplitwayMapState extends State<SplitwayMap>
     )..addListener(_onUserMarkerTick);
     _animatedUserLocation = widget.userLocation;
     _userBearing = widget.userBearing;
-    _loadMapStyle();
+    // Only recording maps restore the persisted style; everything else stays
+    // on the classic Outdoors default.
+    if (widget.persistStyle) _loadMapStyle();
   }
 
   /// Lazily renders the navigation arrow bitmap once. Drawn at the device
@@ -353,8 +362,12 @@ class _SplitwayMapState extends State<SplitwayMap>
   Future<void> _switchStyle(MapStyle style) async {
     if (style == _mapStyle) return;
     setState(() => _mapStyle = style);
-    unawaited(SharedPreferences.getInstance()
-        .then((p) => p.setString(_kMapStyleKey, style.name)));
+    // Only recording maps remember the choice; elsewhere the switch is a
+    // session-local preview that doesn't touch the saved preference.
+    if (widget.persistStyle) {
+      unawaited(SharedPreferences.getInstance()
+          .then((p) => p.setString(_kMapStyleKey, style.name)));
+    }
     await _applyMapStyle();
   }
 
@@ -1239,12 +1252,12 @@ class _SplitwayMapState extends State<SplitwayMap>
       }
     }
 
-    // Checkered finish flag: at the route's start/finish gate, or — for a
+    // Checkered finish flag: at the route's last path node, or — for a
     // finished free ride without a route — at the explicit [finishMarker].
     // Hidden while the heatmap is active, matching the route line.
     if (!useHeatmap && mounted) {
       final finishCenter = (r != null && r.path.isNotEmpty)
-          ? r.startFinishGate.center
+          ? r.path.last
           : (r == null ? widget.finishMarker : null);
       if (finishCenter != null) {
         await _createFinishFlag(finishCenter);

@@ -11,6 +11,7 @@ import '../../services/settings/app_settings_controller.dart';
 import '../../services/sync/sync_service.dart';
 import '../../shared/widgets/app_drawer.dart';
 import '../auth/login_screen.dart';
+import '../editor/route_editor_controller.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({
@@ -20,6 +21,7 @@ class HomeShell extends StatefulWidget {
     this.authService,
     this.syncService,
     this.profileService,
+    this.routeEditorController,
   });
 
   final StatefulNavigationShell shell;
@@ -27,6 +29,10 @@ class HomeShell extends StatefulWidget {
   final AuthService? authService;
   final SyncService? syncService;
   final ProfileService? profileService;
+
+  /// Used to hide the bottom navigation bar while a route is being drawn,
+  /// so the user can only leave the drawing screen via its own close button.
+  final RouteEditorController? routeEditorController;
 
   @override
   State<HomeShell> createState() => _HomeShellState();
@@ -84,20 +90,27 @@ class _HomeShellState extends State<HomeShell> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.authService == null) return _buildScaffold(context);
-
-    final listenable = widget.profileService != null
-        ? Listenable.merge([widget.authService!, widget.profileService!])
-        : widget.authService!;
+    final listenables = <Listenable>[
+      if (widget.authService != null) widget.authService!,
+      if (widget.profileService != null) widget.profileService!,
+      if (widget.routeEditorController != null) widget.routeEditorController!,
+    ];
+    if (listenables.isEmpty) return _buildScaffold(context);
 
     return ListenableBuilder(
-      listenable: listenable,
+      listenable: Listenable.merge(listenables),
       builder: (context, _) => _buildScaffold(context),
     );
   }
 
   Widget _buildScaffold(BuildContext context) {
+    // While drawing a route the bottom nav is hidden so the user can only
+    // leave via the drawing screen's own close button.
+    final drawing = widget.routeEditorController?.drawing ?? false;
     return Scaffold(
+      // The drawer can only be opened via the hamburger button, not by
+      // dragging from the left edge.
+      drawerEnableOpenDragGesture: false,
       drawer: widget.authService != null
           ? AppDrawer(
               authService: widget.authService!,
@@ -110,7 +123,9 @@ class _HomeShellState extends State<HomeShell> {
             )
           : null,
       body: widget.shell,
-      bottomNavigationBar: NavigationBar(
+      bottomNavigationBar: drawing
+          ? null
+          : NavigationBar(
         selectedIndex: widget.shell.currentIndex,
         onDestinationSelected: (i) => widget.shell.goBranch(
           i,

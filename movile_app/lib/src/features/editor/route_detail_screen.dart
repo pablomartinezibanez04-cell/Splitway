@@ -91,7 +91,31 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
     final l = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: Text(route.name)),
+      appBar: AppBar(
+        title: Text(route.name),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.calendar_today_outlined,
+                  size: 14,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  Formatters.dateTime(route.createdAt),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -187,14 +211,6 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
                   icon: route.isClosed ? Icons.loop : Icons.linear_scale,
                   label: 'Circuito',
                   value: route.isClosed ? 'Cerrado' : 'Abierto',
-                ),
-              ),
-              SizedBox(
-                width: _halfWidth(context),
-                child: BentoTile(
-                  icon: Icons.calendar_today_outlined,
-                  label: 'Creación',
-                  value: Formatters.dateTime(route.createdAt),
                 ),
               ),
               SizedBox(

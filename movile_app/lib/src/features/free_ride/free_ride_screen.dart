@@ -364,6 +364,7 @@ class _FreeRideScreenState extends State<FreeRideScreen>
             initialCenter: _initialCenter,
             flyToNotifier: _flyToNotifier,
             onUserInteraction: _onMapInteraction,
+            persistStyle: true,
           ),
         ),
         if (drawerLeading != null)
