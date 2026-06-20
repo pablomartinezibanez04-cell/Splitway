@@ -1199,7 +1199,7 @@ class _SplitwayMapState extends State<SplitwayMap>
           try {
             await lineMgr.create(mbx.PolylineAnnotationOptions(
               geometry: _toLineString(segments[i]),
-              lineColor: kSectorColors[i % kSectorColors.length].value,
+              lineColor: kSectorColors[i % kSectorColors.length].toARGB32(),
               lineWidth: 4,
             ));
           } on PlatformException {
@@ -1227,7 +1227,7 @@ class _SplitwayMapState extends State<SplitwayMap>
             await circleMgr.create(mbx.CircleAnnotationOptions(
               geometry: mbx.Point(
                   coordinates: mbx.Position(center.longitude, center.latitude)),
-              circleColor: kSectorColors[(i + 1) % kSectorColors.length].value,
+              circleColor: kSectorColors[(i + 1) % kSectorColors.length].toARGB32(),
               circleRadius: 6,
               circleStrokeColor: 0xFFFFFFFF,
               circleStrokeWidth: 2,
@@ -1328,7 +1328,7 @@ class _SplitwayMapState extends State<SplitwayMap>
       try {
         await circleMgr.create(mbx.CircleAnnotationOptions(
           geometry: mbx.Point(coordinates: mbx.Position(p.longitude, p.latitude)),
-          circleColor: kSectorColors[i % kSectorColors.length].value,
+          circleColor: kSectorColors[i % kSectorColors.length].toARGB32(),
           circleRadius: 6,
           circleStrokeColor: 0xFFFFFFFF,
           circleStrokeWidth: 2,
@@ -1408,10 +1408,10 @@ class _SplitwayMapState extends State<SplitwayMap>
       expr.add(stop.progress);
       expr.add(<Object>[
         'rgba',
-        c.red,
-        c.green,
-        c.blue,
-        c.alpha / 255.0,
+        (c.r * 255.0).round().clamp(0, 255),
+        (c.g * 255.0).round().clamp(0, 255),
+        (c.b * 255.0).round().clamp(0, 255),
+        c.a,
       ]);
     }
 

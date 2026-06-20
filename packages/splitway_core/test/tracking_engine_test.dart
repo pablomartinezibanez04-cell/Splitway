@@ -6,20 +6,20 @@ RouteTemplate _buildTestRoute() {
     left: GeoPoint(latitude: 0, longitude: -0.001),
     right: GeoPoint(latitude: 0, longitude: 0.001),
   );
-  final s1 = SectorDefinition(
+  final s1 = const SectorDefinition(
     id: 'sec-1',
     order: 0,
     label: 'Sector 1',
-    gate: const GateDefinition(
+    gate: GateDefinition(
       left: GeoPoint(latitude: 0.001, longitude: 0.0005),
       right: GeoPoint(latitude: 0.001, longitude: 0.0015),
     ),
   );
-  final s2 = SectorDefinition(
+  final s2 = const SectorDefinition(
     id: 'sec-2',
     order: 1,
     label: 'Sector 2',
-    gate: const GateDefinition(
+    gate: GateDefinition(
       left: GeoPoint(latitude: 0.0005, longitude: 0.002),
       right: GeoPoint(latitude: 0.0015, longitude: 0.002),
     ),
@@ -171,7 +171,7 @@ void main() {
 
   test('gate cooldown: two crossings 500 ms apart count as one', () async {
     // Minimal closed route: start gate at (0,0), path loops back.
-    final gate = GateDefinition(
+    final gate = const GateDefinition(
       left: GeoPoint(latitude: 0.0, longitude: -0.0001),
       right: GeoPoint(latitude: 0.0, longitude: 0.0001),
     );
@@ -201,9 +201,9 @@ void main() {
     engine.events.listen(events.add);
 
     // Approach from south (before gate).
-    final pBefore = GeoPoint(latitude: -0.0002, longitude: 0.0);
+    final pBefore = const GeoPoint(latitude: -0.0002, longitude: 0.0);
     // Point past gate (north, inside circuit).
-    final pInside = GeoPoint(latitude: 0.0002, longitude: 0.0);
+    final pInside = const GeoPoint(latitude: 0.0002, longitude: 0.0);
 
     // First crossing — should open lap 1.
     tick = now;
@@ -310,16 +310,16 @@ void main() {
     ///   start gate at latitude=0, sector at lat=0.001, finish at lat=0.002.
     ///   Path goes from (0,0) → (0.001,0.001) → (0.002,0).
     ///   First ≠ last → isClosed == false.
-    RouteTemplate _buildOpenRoute() {
+    RouteTemplate buildOpenRoute() {
       final start = const GateDefinition(
         left: GeoPoint(latitude: 0, longitude: -0.001),
         right: GeoPoint(latitude: 0, longitude: 0.001),
       );
-      final s1 = SectorDefinition(
+      final s1 = const SectorDefinition(
         id: 'sec-1',
         order: 0,
         label: 'Sector 1',
-        gate: const GateDefinition(
+        gate: GateDefinition(
           left: GeoPoint(latitude: 0.001, longitude: 0.0005),
           right: GeoPoint(latitude: 0.001, longitude: 0.0015),
         ),
@@ -340,13 +340,13 @@ void main() {
     }
 
     test('route is recognised as open', () {
-      final route = _buildOpenRoute();
+      final route = buildOpenRoute();
       expect(route.isClosed, isFalse);
     });
 
     test('start gate begins tracking, sector is recorded, proximity finishes',
         () async {
-      final route = _buildOpenRoute();
+      final route = buildOpenRoute();
       final base = DateTime.parse('2026-04-29T10:00:00Z');
       final engine = TrackingEngine(
           route: route, sessionId: 'open-1', clock: () => base);
@@ -383,7 +383,7 @@ void main() {
     });
 
     test('re-crossing start/finish gate during run is ignored', () async {
-      final route = _buildOpenRoute();
+      final route = buildOpenRoute();
       final base = DateTime.parse('2026-04-29T10:00:00Z');
       final engine = TrackingEngine(
           route: route, sessionId: 'open-2', clock: () => base);
@@ -410,7 +410,7 @@ void main() {
     });
 
     test('finish() before reaching end produces no laps', () async {
-      final route = _buildOpenRoute();
+      final route = buildOpenRoute();
       final base = DateTime.parse('2026-04-29T10:00:00Z');
       final engine = TrackingEngine(
           route: route, sessionId: 'open-3', clock: () => base);
@@ -429,7 +429,7 @@ void main() {
     });
 
     test('finish() after auto-finish returns correct session', () async {
-      final route = _buildOpenRoute();
+      final route = buildOpenRoute();
       final base = DateTime.parse('2026-04-29T10:00:00Z');
       final engine = TrackingEngine(
           route: route, sessionId: 'open-4', clock: () => base);
@@ -506,7 +506,7 @@ void main() {
   });
 
   test('gate cooldown: crossing after 3+ s is accepted and closes lap', () async {
-    final gate = GateDefinition(
+    final gate = const GateDefinition(
       left: GeoPoint(latitude: 0.0, longitude: -0.0001),
       right: GeoPoint(latitude: 0.0, longitude: 0.0001),
     );
@@ -536,8 +536,8 @@ void main() {
     final events = <TrackingEvent>[];
     engine.events.listen(events.add);
 
-    final pBefore = GeoPoint(latitude: -0.0002, longitude: 0.0);
-    final pInside = GeoPoint(latitude: 0.0002, longitude: 0.0);
+    final pBefore = const GeoPoint(latitude: -0.0002, longitude: 0.0);
+    final pInside = const GeoPoint(latitude: 0.0002, longitude: 0.0);
 
     // First crossing — opens lap 1.
     tick = now;

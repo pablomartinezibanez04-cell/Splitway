@@ -1,5 +1,5 @@
 /// Splitway core domain models and tracking engine. Pure Dart, no Flutter.
-library splitway_core;
+library;
 
 export 'src/models/free_ride_run.dart';
 export 'src/models/free_ride_snapshot.dart';

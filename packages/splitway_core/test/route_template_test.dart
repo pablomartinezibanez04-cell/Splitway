@@ -10,7 +10,7 @@ void main() {
       id: 'r1',
       name: 'X',
       path: const [],
-      startFinishGate: GateDefinition(
+      startFinishGate: const GateDefinition(
         left: GeoPoint(latitude: 0, longitude: 0),
         right: GeoPoint(latitude: 0, longitude: 0),
       ),
@@ -27,7 +27,7 @@ void main() {
       id: 'r1',
       name: 'X',
       path: const [],
-      startFinishGate: GateDefinition(
+      startFinishGate: const GateDefinition(
         left: GeoPoint(latitude: 0, longitude: 0),
         right: GeoPoint(latitude: 0, longitude: 0),
       ),
