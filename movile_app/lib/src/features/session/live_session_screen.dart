@@ -470,7 +470,9 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
           child: SplitwayMap(
             useMapbox: widget.config.hasMapbox,
             route: route,
-            telemetry: tracker.ingested,
+            // Estela = solo el tramo de ruta (primer nodo → final). El marcador
+            // y la cámara siguen usando ingested.last (posición real).
+            telemetry: tracker.trailPoints,
             showSectors: true,
             highlightSectorId: snapshot.lastCrossedSectorId,
             userLocation: tracker.ingested.isNotEmpty
@@ -480,6 +482,7 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
             flyToNotifier: _flyToNotifier,
             onUserInteraction: _onMapInteraction,
             persistStyle: true,
+            recording: tracker.snapshot.status == TrackingStatus.inLap,
           ),
         ),
         if (drawerLeading != null)
