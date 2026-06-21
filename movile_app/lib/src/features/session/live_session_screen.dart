@@ -188,7 +188,8 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
     }
     // Show the "session saved" snackbar once when the session finishes —
     // covers both the manual Finish button and the automatic open-route finish.
-    if (ctrl.stage == LiveSessionStage.finished &&
+    if (mounted &&
+        ctrl.stage == LiveSessionStage.finished &&
         _prevStage != null &&
         _prevStage != LiveSessionStage.finished &&
         ctrl.result != null) {
