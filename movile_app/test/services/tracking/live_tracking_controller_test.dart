@@ -272,4 +272,36 @@ void main() {
       controller.dispose();
     });
   });
+
+  test('trailPoints exclude points ingested before the first node', () {
+    final route = RouteTemplate(
+      id: 'r-open',
+      name: 'Open',
+      path: const [
+        GeoPoint(latitude: 40.0, longitude: -3.0),
+        GeoPoint(latitude: 40.00018, longitude: -3.0),
+        GeoPoint(latitude: 40.00036, longitude: -3.0),
+      ],
+      startFinishGate: GateDefinition(
+        left: GeoPoint(latitude: 40.0, longitude: -3.0001),
+        right: GeoPoint(latitude: 40.0, longitude: -2.9999),
+      ),
+      sectors: const [],
+      difficulty: RouteDifficulty.easy,
+      createdAt: DateTime.utc(2026, 1, 1),
+    );
+    final ctrl = LiveTrackingController(route: route)..startSession();
+    final base = DateTime(2026, 5, 9, 10);
+    TelemetryPoint tp(double lat, DateTime t) => TelemetryPoint(
+        timestamp: t, location: GeoPoint(latitude: lat, longitude: -3.0), speedMps: 12);
+
+    // Before crossing the gate.
+    ctrl.ingestSimulatedPoint(tp(39.9999, base));
+    // Cross the gate (lap begins).
+    ctrl.ingestSimulatedPoint(tp(40.00005, base.add(const Duration(seconds: 1))));
+
+    // ingested has both points; trailPoints excludes the pre-start one.
+    expect(ctrl.ingested.length, 2);
+    expect(ctrl.trailPoints.any((p) => p.location.latitude == 39.9999), isFalse);
+  });
 }

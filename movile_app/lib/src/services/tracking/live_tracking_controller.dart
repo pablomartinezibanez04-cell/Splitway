@@ -32,6 +32,11 @@ class LiveTrackingController extends ChangeNotifier {
   final List<TelemetryPoint> _ingested = [];
   List<TelemetryPoint> get ingested => List.unmodifiable(_ingested);
 
+  /// The in-route trail — telemetry recorded between the first node crossing and
+  /// the finish. Drives the drawn estela; `ingested` (all points) still drives
+  /// the user marker, camera and bearing.
+  List<TelemetryPoint> get trailPoints => _engine.recordedPoints;
+
   /// All sector crossings recorded so far this session, across every lap.
   List<SectorSummary> get sectorSummaries => _engine.sectorSummaries;
 
