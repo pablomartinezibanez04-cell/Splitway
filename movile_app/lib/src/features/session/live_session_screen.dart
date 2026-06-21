@@ -873,7 +873,8 @@ class _BigIndicator extends StatelessWidget {
 }
 
 /// Row of F1-style sector chips for the current lap. Each sector is grey until
-/// it is crossed in the current lap, then coloured by [sectorChipTier].
+/// it is crossed in the current lap, then coloured by [sectorChipTier] with the
+/// crossing time shown below the number.
 class _LiveSectorChips extends StatelessWidget {
   const _LiveSectorChips({
     required this.route,
@@ -917,6 +918,9 @@ class _LiveSectorChips extends StatelessWidget {
 
     return SectorChipsBar(
       activeIndex: activeIndex,
+      // Show the crossing time below each sector number; sectors not yet
+      // crossed this lap stay null (number only).
+      times: [for (final id in sectorIds) lapTimes[id]],
       tiers: [
         for (final id in sectorIds)
           sectorChipTier(
