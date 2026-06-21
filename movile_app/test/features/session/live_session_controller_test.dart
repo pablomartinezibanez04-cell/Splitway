@@ -163,9 +163,11 @@ void main() {
     expect(ctrl.result, isNotNull);
     expect(ctrl.result!.id, t.sessionId);
 
-    // The run was persisted exactly once.
+    // The finished run was persisted for the route. (saveSessionRun upserts by
+    // id, so this asserts the run exists, not that the save ran exactly once.)
     final saved = await repo.getSessionsByRoute('r-open');
     expect(saved.length, 1);
+    expect(saved.single.id, t.sessionId);
 
     ctrl.dispose();
   });

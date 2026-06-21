@@ -485,8 +485,16 @@ class LiveSessionController extends ChangeNotifier {
         (_stage == LiveSessionStage.running ||
             _stage == LiveSessionStage.paused)) {
       _autoFinishing = true;
+      // Fire-and-forget: we cannot await inside a listener. If persistence
+      // fails, reset the guard and notify so the session isn't left silently
+      // wedged in `running` — the user can still retry via the Finish button
+      // (which re-runs finishSession against the already-finished tracker).
       // ignore: discarded_futures
-      finishSession();
+      finishSession().catchError((Object _) {
+        _autoFinishing = false;
+        notifyListeners();
+        return null;
+      });
     }
     notifyListeners();
   }
