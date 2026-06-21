@@ -23,6 +23,7 @@ import '../../shared/widgets/gps_signal_badge.dart';
 import '../../shared/widgets/sector_chip.dart';
 import '../../shared/widgets/sector_chips_bar.dart';
 import '../../shared/widgets/splitway_map.dart';
+import '../../shared/widgets/time_delta_indicator.dart';
 import '../home/home_shell.dart';
 import 'live_session_controller.dart';
 import 'session_config_sheet.dart';
@@ -307,7 +308,8 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
     final l = AppLocalizations.of(context);
     final ctrl = widget.controller;
     final isRunning = ctrl.stage == LiveSessionStage.running ||
-        ctrl.stage == LiveSessionStage.paused;
+        ctrl.stage == LiveSessionStage.paused ||
+        ctrl.stage == LiveSessionStage.summary;
     return ListenableBuilder(
       listenable: widget.settingsController,
       builder: (context, _) => Scaffold(
@@ -619,6 +621,12 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
             ),
           ),
         ),
+        if (ctrl.stage == LiveSessionStage.summary && ctrl.result != null)
+          _FinishOverlay(
+            session: ctrl.result!,
+            reference: ctrl.referenceDuration,
+            onContinue: ctrl.dismissFinishOverlay,
+          ),
       ],
     );
   }
@@ -1192,6 +1200,80 @@ class _SimulationToggle extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// Semi-transparent panel shown over the frozen map when an open route finishes.
+/// Shows the total time and its delta vs the reference, with a Continue button
+/// that advances to the results screen. While it is visible the map + bottom
+/// controls are frozen (the session is already finished and saved).
+class _FinishOverlay extends StatelessWidget {
+  const _FinishOverlay({
+    required this.session,
+    required this.reference,
+    required this.onContinue,
+  });
+
+  final SessionRun session;
+  final Duration? reference;
+  final VoidCallback onContinue;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final total = session.totalDuration;
+    return Positioned.fill(
+      child: GestureDetector(
+        // Absorb taps on the backdrop so the frozen controls below stay inert.
+        onTap: () {},
+        child: ColoredBox(
+          color: Colors.black.withValues(alpha: 0.25),
+          child: Center(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 32),
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface.withValues(alpha: 0.85),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.flag, size: 40, color: theme.colorScheme.primary),
+                  const SizedBox(height: 12),
+                  Text(
+                    l.sessionFinishedOverlayTitle,
+                    style: theme.textTheme.titleLarge,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    total == null ? '--:--' : Formatters.durationHms(total),
+                    style: theme.textTheme.displaySmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                  if (reference != null && total != null) ...[
+                    const SizedBox(height: 8),
+                    TimeDeltaIndicator(expected: reference!, actual: total),
+                  ],
+                  const SizedBox(height: 24),
+                  FilledButton(
+                    onPressed: onContinue,
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(48),
+                    ),
+                    child: Text(l.sessionContinueButton),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
