@@ -111,6 +111,7 @@ class SplitwayMap extends StatefulWidget {
     this.onUserInteraction,
     this.finishMarker,
     this.persistStyle = false,
+    this.recording = true,
   });
 
   final bool useMapbox;
@@ -164,6 +165,13 @@ class SplitwayMap extends StatefulWidget {
   /// other map (previews, editor, result review) starts on the classic
   /// Outdoors style and any ad-hoc style change there is session-local.
   final bool persistStyle;
+
+  /// When false, the recorded trail is drawn fully static and its final segment
+  /// does NOT grow toward [userLocation]. The live session sets this false once
+  /// the route has finished so the estela freezes at the last in-route point
+  /// even if late GPS samples keep updating the user marker. Defaults to true
+  /// (every other caller keeps the previous growing-tip behaviour).
+  final bool recording;
 
   @override
   State<SplitwayMap> createState() => _SplitwayMapState();
@@ -654,10 +662,11 @@ class _SplitwayMapState extends State<SplitwayMap>
     _userArrowAnnotation = null;
   }
 
-  /// True while a live position is being tracked (recording), in which case
-  /// the recorded line's final segment is animated separately. Off-recording
-  /// (e.g. the review map) the whole line is drawn statically.
-  bool get _hasLivePosition => _animatedUserLocation != null;
+  /// True while the recorded line's final segment should animate toward the
+  /// gliding user marker: a live position is being tracked AND recording is
+  /// active. False off-recording (e.g. the review map) or once the route has
+  /// finished, so the whole trail is drawn statically and freezes in place.
+  bool get _growsTip => _animatedUserLocation != null && widget.recording;
 
   /// Per-frame in-place update of the growing tip segment so the recorded
   /// line follows the gliding user marker. Only 2 points are sent, so this is
@@ -688,7 +697,8 @@ class _SplitwayMapState extends State<SplitwayMap>
     final animated = _animatedUserLocation;
     final useHeatmap =
         widget.showSpeedHeatmap && _hasUsableSpeedTelemetry(tel);
-    final showTip = !useHeatmap && tel.length >= 2 && animated != null;
+    final showTip =
+        !useHeatmap && tel.length >= 2 && animated != null && widget.recording;
     if (!showTip) {
       await _removeTelemetryTip();
       return;
@@ -885,7 +895,8 @@ class _SplitwayMapState extends State<SplitwayMap>
         oldWidget.freehandMode != widget.freehandMode ||
         oldWidget.showSpeedHeatmap != widget.showSpeedHeatmap ||
         oldWidget.speedHeatmapUnit != widget.speedHeatmapUnit ||
-        oldWidget.finishMarker != widget.finishMarker;
+        oldWidget.finishMarker != widget.finishMarker ||
+        oldWidget.recording != widget.recording;
 
     if (annotationsChanged) _renderAnnotations();
 
@@ -1270,7 +1281,7 @@ class _SplitwayMapState extends State<SplitwayMap>
       // While recording, the final segment is animated by the tip annotation,
       // so the static line stops at the last confirmed point. Off-recording
       // the whole track is drawn statically.
-      final staticPoints = _hasLivePosition
+      final staticPoints = _growsTip
           ? tel.sublist(0, tel.length - 1)
           : tel;
       final staticPath =
