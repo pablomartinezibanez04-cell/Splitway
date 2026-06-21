@@ -578,6 +578,7 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
                         settingsController: widget.settingsController,
                         historicalBestLap: ctrl.historicalBestLap,
                         includeHistorical: ctrl.includeHistorical,
+                        referenceDuration: ctrl.referenceDuration,
                       ),
                       if (route.sectors.isNotEmpty) ...[
                         const SizedBox(height: 12),
@@ -774,6 +775,7 @@ class _LapIndicators extends StatelessWidget {
     required this.settingsController,
     this.historicalBestLap,
     this.includeHistorical = false,
+    this.referenceDuration,
   });
 
   final TrackingSnapshot snapshot;
@@ -781,6 +783,7 @@ class _LapIndicators extends StatelessWidget {
   final AppSettingsController settingsController;
   final Duration? historicalBestLap;
   final bool includeHistorical;
+  final Duration? referenceDuration;
 
   @override
   Widget build(BuildContext context) {
@@ -789,10 +792,38 @@ class _LapIndicators extends StatelessWidget {
 
     final elapsed = Formatters.durationHms(snapshot.currentLapElapsed);
     if (!isClosed) {
-      return _BigIndicator(
-        label: l.sessionElapsedLabel,
-        value: elapsed,
-        emphasized: true,
+      final reference = referenceDuration;
+      // No reference available → keep the single centered chronometer.
+      if (reference == null) {
+        return _BigIndicator(
+          label: l.sessionElapsedLabel,
+          value: elapsed,
+          emphasized: true,
+        );
+      }
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: _BigIndicator(
+              label: l.sessionElapsedLabel,
+              value: elapsed,
+              emphasized: true,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _BigIndicator(
+              label: l.sessionTargetLabel,
+              value: Formatters.duration(
+                reference,
+                dotSeparator: settingsController.timeFormatDot,
+              ),
+              emphasized: false,
+              color: theme.colorScheme.primary,
+            ),
+          ),
+        ],
       );
     }
 
