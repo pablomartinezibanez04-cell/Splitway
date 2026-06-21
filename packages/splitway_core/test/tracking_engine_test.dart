@@ -487,6 +487,12 @@ void main() {
       // The finish point is the last recorded point.
       expect(recorded.last.location.latitude, 0.002);
 
+      // Exactly two points stored: the mid-route point and the finish point.
+      // The pre-start point, the gate-crossing point (status is still
+      // awaitingStart when it is ingested), and the post-finish point are all
+      // excluded — so the trail begins one sample after the start gate.
+      expect(recorded.length, 2);
+
       await engine.dispose();
     });
   });

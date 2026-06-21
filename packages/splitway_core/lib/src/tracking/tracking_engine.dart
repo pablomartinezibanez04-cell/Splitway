@@ -137,10 +137,13 @@ class TrackingEngine {
         _status == TrackingStatus.finished) {
       return;
     }
-    // Only store telemetry that belongs to the active route. While
-    // `awaitingStart` (before the first node) and after `finished`, points are
-    // still processed for crossing detection / metrics but not stored, so the
-    // drawn + saved trail starts at the first node and stops at the finish.
+    // Only store telemetry that belongs to the active route. Points ingested
+    // while `awaitingStart` (before the first node — including the gate-crossing
+    // point itself, since the status flips to inLap only after this guard) are
+    // skipped here; points ingested after the route finishes are skipped by the
+    // early-return at the top of ingest. They are still processed for crossing
+    // detection / metrics, so only storage — the drawn + saved trail — is
+    // trimmed to start at the first node and stop at the finish.
     if (_status == TrackingStatus.inLap) {
       _points.add(point);
     }
