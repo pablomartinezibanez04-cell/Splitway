@@ -51,6 +51,11 @@ class LiveSessionController extends ChangeNotifier {
   bool _backgroundActive = false;
   bool get backgroundActive => _backgroundActive;
 
+  /// True while an automatic finish (open route reached its end) is in flight,
+  /// so the detection in [_onTrackerChange] does not fire twice during the
+  /// async [finishSession] await.
+  bool _autoFinishing = false;
+
   /// Best recorded time per sector across the user's previous sessions on the
   /// selected route. Loaded when a session starts; drives the "purple"
   /// (all-time circuit record) sector colour. Empty when there is no history.
@@ -415,6 +420,7 @@ class LiveSessionController extends ChangeNotifier {
     _autoIndex = 0;
     _autoScript = const [];
     _result = null;
+    _autoFinishing = false;
     _backgroundActive = false;
     _historicalSectorRecords = const {};
     _historicalBestLap = null;
@@ -468,7 +474,22 @@ class LiveSessionController extends ChangeNotifier {
     );
   }
 
-  void _onTrackerChange() => notifyListeners();
+  void _onTrackerChange() {
+    final t = _tracker;
+    // Open routes auto-finish in the tracker on proximity to the last path
+    // point. When that happens mid-session, finalize the session exactly as
+    // the manual "Finish" button would.
+    if (t != null &&
+        !_autoFinishing &&
+        t.state == LiveControllerState.finished &&
+        (_stage == LiveSessionStage.running ||
+            _stage == LiveSessionStage.paused)) {
+      _autoFinishing = true;
+      // ignore: discarded_futures
+      finishSession();
+    }
+    notifyListeners();
+  }
 
   static String _formatElapsed(Duration d) {
     final h = d.inHours;

@@ -51,6 +51,29 @@ void main() {
         createdAt: DateTime.utc(2026, 1, 1),
       );
 
+  TelemetryPoint tp(double lat, double lon, DateTime t) => TelemetryPoint(
+        timestamp: t,
+        location: GeoPoint(latitude: lat, longitude: lon),
+        speedMps: 12,
+      );
+
+  RouteTemplate openRoute() => RouteTemplate(
+        id: 'r-open',
+        name: 'Open',
+        path: const [
+          GeoPoint(latitude: 40.0, longitude: -3.0),
+          GeoPoint(latitude: 40.00018, longitude: -3.0),
+          GeoPoint(latitude: 40.00036, longitude: -3.0),
+        ],
+        startFinishGate: GateDefinition(
+          left: GeoPoint(latitude: 40.0, longitude: -3.0001),
+          right: GeoPoint(latitude: 40.0, longitude: -2.9999),
+        ),
+        sectors: const [],
+        difficulty: RouteDifficulty.easy,
+        createdAt: DateTime.utc(2026, 1, 1),
+      );
+
   Future<void> seedPriorSession() async {
     await repo.saveRouteTemplate(route());
     await repo.saveSessionRun(SessionRun(
@@ -108,6 +131,42 @@ void main() {
 
     expect(ctrl.historicalSectorRecords, isEmpty);
     expect(ctrl.historicalBestLap, isNull);
+    ctrl.dispose();
+  });
+
+  test('open route auto-finishes the session when the end is reached',
+      () async {
+    await repo.saveRouteTemplate(openRoute());
+    final ctrl =
+        LiveSessionController(repo, headingService: _StubHeadingService());
+    await ctrl.load();
+    ctrl.selectRoute(openRoute());
+    await ctrl.startSession(includeHistorical: false);
+
+    expect(ctrl.stage, LiveSessionStage.running);
+
+    final base = DateTime(2026, 5, 9, 10);
+    final t = ctrl.tracker!;
+    // South of the gate → cross gate (lap begins, ~34 m from end) → reach the
+    // last path point (40.00036). The crossing point stays outside the 20 m
+    // finish-proximity so the run does not finish prematurely.
+    t.ingestSimulatedPoint(tp(39.9999, -3.0, base));
+    t.ingestSimulatedPoint(tp(40.00005, -3.0, base.add(const Duration(seconds: 1))));
+    t.ingestSimulatedPoint(tp(40.00036, -3.0, base.add(const Duration(seconds: 2))));
+
+    // Let the engine event propagate to the tracker, then to the session
+    // controller, then let the async finishSession() complete (it awaits the
+    // repo save).
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+
+    expect(ctrl.stage, LiveSessionStage.finished);
+    expect(ctrl.result, isNotNull);
+    expect(ctrl.result!.id, t.sessionId);
+
+    // The run was persisted exactly once.
+    final saved = await repo.getSessionsByRoute('r-open');
+    expect(saved.length, 1);
+
     ctrl.dispose();
   });
 }
