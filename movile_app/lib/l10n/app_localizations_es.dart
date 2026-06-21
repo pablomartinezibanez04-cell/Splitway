@@ -695,6 +695,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get sessionElapsedLabel => 'Tiempo';
 
   @override
+  String get sessionTargetLabel => 'Objetivo';
+
+  @override
+  String get sessionFinishedOverlayTitle => 'Ruta finalizada';
+
+  @override
+  String get sessionContinueButton => 'Continuar';
+
+  @override
   String get sessionAwaitingStart => 'Esperando primer cruce de meta…';
 
   @override

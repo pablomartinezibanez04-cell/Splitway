@@ -1280,6 +1280,24 @@ abstract class AppLocalizations {
   /// **'Time'**
   String get sessionElapsedLabel;
 
+  /// No description provided for @sessionTargetLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Target'**
+  String get sessionTargetLabel;
+
+  /// No description provided for @sessionFinishedOverlayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Route finished'**
+  String get sessionFinishedOverlayTitle;
+
+  /// No description provided for @sessionContinueButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get sessionContinueButton;
+
   /// No description provided for @sessionAwaitingStart.
   ///
   /// In en, this message translates to:
