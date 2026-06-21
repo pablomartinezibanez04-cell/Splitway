@@ -159,9 +159,14 @@ void main() {
     // repo save).
     await Future<void>.delayed(const Duration(milliseconds: 20));
 
-    expect(ctrl.stage, LiveSessionStage.finished);
+    // Open routes pause on a summary overlay before the results screen.
+    expect(ctrl.stage, LiveSessionStage.summary);
     expect(ctrl.result, isNotNull);
     expect(ctrl.result!.id, t.sessionId);
+
+    // Continuar → results screen.
+    ctrl.dismissFinishOverlay();
+    expect(ctrl.stage, LiveSessionStage.finished);
 
     // The finished run was persisted for the route. (saveSessionRun upserts by
     // id, so this asserts the run exists, not that the save ran exactly once.)

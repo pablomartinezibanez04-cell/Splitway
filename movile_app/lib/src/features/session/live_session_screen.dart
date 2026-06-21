@@ -330,6 +330,7 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
           LiveSessionStage.ready => _buildReady(context, ctrl),
           LiveSessionStage.running => _buildRunning(context, ctrl),
           LiveSessionStage.paused => _buildRunning(context, ctrl),
+          LiveSessionStage.summary => _buildRunning(context, ctrl),
           LiveSessionStage.finished => _buildFinished(context, ctrl),
         },
       ),

@@ -9,7 +9,7 @@ import '../../services/tracking/live_tracking_controller.dart';
 import '../../services/tracking/background_tracking_service.dart';
 import '../../services/tracking/location_service.dart';
 
-enum LiveSessionStage { selecting, ready, running, paused, finished }
+enum LiveSessionStage { selecting, ready, running, paused, summary, finished }
 
 enum TrackingSource { simulated, realGps }
 
@@ -437,9 +437,20 @@ class LiveSessionController extends ChangeNotifier {
     final session = raw.copyWith(vehicleId: _selectedVehicleId, name: _sessionName);
     await _repo.saveSessionRun(session);
     _result = session;
-    _stage = LiveSessionStage.finished;
+    // Open routes pause on a finish overlay (frozen map + summary) before the
+    // results screen; closed routes go straight to results as before.
+    _stage = t.route.isClosed
+        ? LiveSessionStage.finished
+        : LiveSessionStage.summary;
     notifyListeners();
     return session;
+  }
+
+  /// Advances from the finish overlay (open routes) to the results screen.
+  void dismissFinishOverlay() {
+    if (_stage != LiveSessionStage.summary) return;
+    _stage = LiveSessionStage.finished;
+    notifyListeners();
   }
 
   void resetForNewSession() {
