@@ -46,15 +46,20 @@ TelemetryPoint _tp(double lat, double lon, DateTime t) => TelemetryPoint(
       speedMps: 12,
     );
 
-/// Triángulo cerrado (path.first == path.last) con la puerta de meta sobre
-/// path[0], perpendicular al primer tramo.
+/// Closed loop (path.first == path.last) whose first and final legs both run
+/// due north/south through the gate centre (lon -3.0). buildAutoLapScript places
+/// its entry/exit point due south of the gate (the first leg is northbound), so
+/// both the opening crossing (entry → first point) and the closing crossing
+/// (last point → exit) actually intersect the east–west gate — giving a real
+/// LapClosed rather than a degenerate no-op.
 RouteTemplate _closedRoute() {
   const start = GeoPoint(latitude: 40.0, longitude: -3.0);
   final path = const [
     start,
-    GeoPoint(latitude: 40.0005, longitude: -3.0),
-    GeoPoint(latitude: 40.0005, longitude: -2.9994),
-    start, // cierre: last == first → isClosed == true
+    GeoPoint(latitude: 40.0005, longitude: -3.0), // due north of the gate
+    GeoPoint(latitude: 40.0005, longitude: -2.9990), // east leg
+    GeoPoint(latitude: 40.0010, longitude: -3.0), // back onto lon -3.0, north
+    start, // closing vertex: last == first → isClosed == true
   ];
   const gate = GateDefinition(
     left: GeoPoint(latitude: 40.0, longitude: -3.0001),
@@ -259,7 +264,10 @@ void main() {
       }
       await Future<void>.delayed(Duration.zero);
 
-      // Closed circuits loop laps; they never auto-finish on their own.
+      // A lap actually closed (regression guard against a degenerate no-op
+      // where no gate crossing was ever detected)...
+      expect(controller.events.whereType<LapClosed>(), isNotEmpty);
+      // ...and yet the closed circuit loops rather than auto-finishing.
       expect(controller.state, LiveControllerState.recording);
       controller.dispose();
     });
