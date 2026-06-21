@@ -44,6 +44,13 @@ class LiveTrackingController extends ChangeNotifier {
     _state = LiveControllerState.recording;
     _eventSub = _engine.events.listen((evt) {
       _events.add(evt);
+      // Open routes auto-finish in the engine on proximity to the last path
+      // point. Mirror that here so listeners (LiveSessionController) can react.
+      if (evt is TrackingFinished && _state == LiveControllerState.recording) {
+        _state = LiveControllerState.finished;
+        _ticker?.cancel();
+        _ticker = null;
+      }
       notifyListeners();
     });
     _ticker = Timer.periodic(const Duration(milliseconds: 100), (_) {

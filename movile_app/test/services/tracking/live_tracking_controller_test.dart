@@ -40,6 +40,37 @@ RouteTemplate _straightRoute({required int pointCount}) {
   );
 }
 
+TelemetryPoint _tp(double lat, double lon, DateTime t) => TelemetryPoint(
+      timestamp: t,
+      location: GeoPoint(latitude: lat, longitude: lon),
+      speedMps: 12,
+    );
+
+/// Triángulo cerrado (path.first == path.last) con la puerta de meta sobre
+/// path[0], perpendicular al primer tramo.
+RouteTemplate _closedRoute() {
+  const start = GeoPoint(latitude: 40.0, longitude: -3.0);
+  final path = const [
+    start,
+    GeoPoint(latitude: 40.0005, longitude: -3.0),
+    GeoPoint(latitude: 40.0005, longitude: -2.9994),
+    start, // cierre: last == first → isClosed == true
+  ];
+  const gate = GateDefinition(
+    left: GeoPoint(latitude: 40.0, longitude: -3.0001),
+    right: GeoPoint(latitude: 40.0, longitude: -2.9999),
+  );
+  return RouteTemplate(
+    id: 'closed-route',
+    name: 'Closed route',
+    path: path,
+    startFinishGate: gate,
+    sectors: const [],
+    difficulty: RouteDifficulty.easy,
+    createdAt: DateTime(2026),
+  );
+}
+
 final _uuidRe = RegExp(
   r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
 );
@@ -180,6 +211,56 @@ void main() {
             script[i].timestamp.difference(script[i - 1].timestamp).inMilliseconds;
         expect(diff, interval);
       }
+      controller.dispose();
+    });
+  });
+
+  group('auto-finish on TrackingFinished', () {
+    final base = DateTime(2026, 5, 9, 10);
+
+    test('open route auto-finishes when the end is reached', () async {
+      // 5-point straight open route; last point at lat 40.00036 (~40 m from
+      // the gate). Using 5 points keeps the gate-crossing point well outside
+      // the 20 m finish-proximity of the last path point, so the run does not
+      // finish prematurely on the crossing.
+      final route = _straightRoute(pointCount: 5);
+      final controller = LiveTrackingController(route: route);
+      controller.startSession();
+
+      // South of the gate (baseline).
+      controller.ingestSimulatedPoint(_tp(39.9999, -3.0, base));
+      // Cross the start gate (north) → lap begins. ~34 m from the end.
+      controller.ingestSimulatedPoint(
+          _tp(40.00005, -3.0, base.add(const Duration(seconds: 1))));
+      // Reach the last path point (40.00036, -3.0) → proximity finish.
+      controller.ingestSimulatedPoint(
+          _tp(40.00036, -3.0, base.add(const Duration(seconds: 2))));
+
+      // Let the engine's broadcast event reach the controller subscription.
+      await Future<void>.delayed(Duration.zero);
+
+      expect(controller.state, LiveControllerState.finished);
+      controller.dispose();
+    });
+
+    test('closed route does NOT auto-finish after completing a lap', () async {
+      final route = _closedRoute();
+      final controller = LiveTrackingController(route: route);
+      controller.startSession();
+
+      // buildAutoLapScript drives one full lap around the closed circuit.
+      // intervalMs: 2000 spaces the two gate crossings 4 s apart so the second
+      // one clears the engine's 3 s crossing cooldown and actually closes lap 1
+      // (opening lap 2) — exercising the loop, not a no-op.
+      final script = controller.buildAutoLapScript(
+          startTime: base, lapCount: 1, intervalMs: 2000);
+      for (final p in script) {
+        controller.ingestSimulatedPoint(p);
+      }
+      await Future<void>.delayed(Duration.zero);
+
+      // Closed circuits loop laps; they never auto-finish on their own.
+      expect(controller.state, LiveControllerState.recording);
       controller.dispose();
     });
   });
