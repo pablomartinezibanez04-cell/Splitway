@@ -186,6 +186,16 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
         _prevStage != LiveSessionStage.paused) {
       _followUser = true;
     }
+    // Show the "session saved" snackbar once when the session finishes —
+    // covers both the manual Finish button and the automatic open-route finish.
+    if (ctrl.stage == LiveSessionStage.finished &&
+        _prevStage != null &&
+        _prevStage != LiveSessionStage.finished &&
+        ctrl.result != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).sessionSavedSnackBar)),
+      );
+    }
     _prevStage = ctrl.stage;
     if (ctrl.stage == LiveSessionStage.running && _followUser) {
       final ingested = ctrl.tracker?.ingested ?? const [];
@@ -588,13 +598,11 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
                         onPause: ctrl.pauseSession,
                         onResume: ctrl.resumeSession,
                         onFinish: () async {
-                          final savedText = l.sessionSavedSnackBar;
-                          final messenger = ScaffoldMessenger.of(context);
-                          final session = await ctrl.finishSession();
-                          if (!mounted || session == null) return;
-                          messenger.showSnackBar(
-                            SnackBar(content: Text(savedText)),
-                          );
+                          // The "session saved" snackbar is shown from
+                          // _onChange on the running/paused → finished
+                          // transition, so it covers both manual and automatic
+                          // (open-route) finishes from one place.
+                          await ctrl.finishSession();
                         },
                         finishLabel: l.sessionFinishButton,
                       ),
