@@ -177,6 +177,34 @@ void main() {
     ctrl.dispose();
   });
 
+  test('repo change during the summary overlay does not reset the session',
+      () async {
+    await repo.saveRouteTemplate(openRoute());
+    final ctrl =
+        LiveSessionController(repo, headingService: _StubHeadingService());
+    await ctrl.load();
+    ctrl.selectRoute(openRoute());
+    await ctrl.startSession(includeHistorical: false);
+
+    final base = DateTime(2026, 5, 9, 10);
+    final t = ctrl.tracker!;
+    t.ingestSimulatedPoint(tp(39.9999, -3.0, base));
+    t.ingestSimulatedPoint(tp(40.00005, -3.0, base.add(const Duration(seconds: 1))));
+    t.ingestSimulatedPoint(tp(40.00036, -3.0, base.add(const Duration(seconds: 2))));
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    expect(ctrl.stage, LiveSessionStage.summary);
+
+    // A background repo change fires repo.changes. The 300 ms debounced reload
+    // must NOT run while the summary overlay is up, or the result would be lost.
+    await repo.saveRouteTemplate(openRoute());
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+
+    expect(ctrl.stage, LiveSessionStage.summary);
+    expect(ctrl.result, isNotNull);
+
+    ctrl.dispose();
+  });
+
   test('referenceDuration uses previous best total when competing', () async {
     // Route with a normal time, plus a prior completed run of 100 s.
     final r = route().copyWith(expectedDuration: const Duration(seconds: 200));

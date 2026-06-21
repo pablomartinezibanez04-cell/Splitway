@@ -161,7 +161,13 @@ class LiveSessionController extends ChangeNotifier {
   }
 
   void _onRepoChanged() {
+    // Never reload (which resets _stage via load()) while a session is active
+    // or showing its result. Besides `running`/`finished`, this must also cover
+    // `paused` and the open-route `summary` overlay — otherwise a background
+    // repo change would clobber the stage and lose the in-progress run/result.
     if (_stage == LiveSessionStage.running ||
+        _stage == LiveSessionStage.paused ||
+        _stage == LiveSessionStage.summary ||
         _stage == LiveSessionStage.finished) {
       return;
     }
@@ -420,6 +426,13 @@ class LiveSessionController extends ChangeNotifier {
   int get simTotal => _autoScript.length;
 
   Future<SessionRun?> finishSession() async {
+    // Re-entrancy guard: once the run is finished (results) or paused on the
+    // open-route summary overlay, ignore further finish requests so the run is
+    // not saved twice (e.g. a stray tap reaching the frozen Finish button).
+    if (_stage == LiveSessionStage.summary ||
+        _stage == LiveSessionStage.finished) {
+      return _result;
+    }
     await _gpsSub?.cancel();
     _gpsSub = null;
     _bgNotificationTicker?.cancel();
