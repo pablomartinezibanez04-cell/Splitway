@@ -102,6 +102,12 @@ class TrackingEngine {
   /// Ordered by crossing time. Read-only view for live/historical coloring.
   List<SectorSummary> get sectorSummaries => List.unmodifiable(_sectorSummaries);
 
+  /// Telemetry recorded during the active route — between the first start/finish
+  /// crossing (status `inLap`) and the finish. Points ingested before the first
+  /// crossing, or after the route finishes, drive crossing detection but are
+  /// never stored. This is what the live view and the saved history draw.
+  List<TelemetryPoint> get recordedPoints => List.unmodifiable(_points);
+
   TrackingSnapshot get snapshot {
     final lapElapsed = _lapStartedAt == null
         ? Duration.zero
@@ -131,7 +137,13 @@ class TrackingEngine {
         _status == TrackingStatus.finished) {
       return;
     }
-    _points.add(point);
+    // Only store telemetry that belongs to the active route. While
+    // `awaitingStart` (before the first node) and after `finished`, points are
+    // still processed for crossing detection / metrics but not stored, so the
+    // drawn + saved trail starts at the first node and stops at the finish.
+    if (_status == TrackingStatus.inLap) {
+      _points.add(point);
+    }
 
     // Speed is a per-sample value — update it on every ingest so the live
     // display tracks the GPS-reported speed instantly, regardless of gap

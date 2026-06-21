@@ -451,6 +451,44 @@ void main() {
 
       await engine.dispose();
     });
+
+    test('recordedPoints excludes pre-start and post-finish telemetry',
+        () async {
+      final route = buildOpenRoute();
+      final base = DateTime.parse('2026-04-29T10:00:00Z');
+      final engine = TrackingEngine(
+          route: route, sessionId: 'open-trim', clock: () => base);
+
+      engine.start();
+      // Pre-start: ingested while awaitingStart — must NOT be recorded.
+      engine.ingest(_p(-0.0005, 0, base));
+      // Cross start gate (opens inLap).
+      engine.ingest(_p(0.0005, 0.0008, base.add(const Duration(seconds: 1))));
+      // Mid-route point — recorded.
+      engine.ingest(_p(0.0015, 0.0008, base.add(const Duration(seconds: 4))));
+      // Reach finish (≤20 m of last path point) — this point is recorded,
+      // then the engine finishes.
+      engine.ingest(_p(0.002, 0.00005, base.add(const Duration(seconds: 7))));
+      // Post-finish point — engine is finished, must NOT be recorded.
+      engine.ingest(_p(0.003, 0.0, base.add(const Duration(seconds: 9))));
+
+      final recorded = engine.recordedPoints;
+      // No pre-start or post-finish points.
+      expect(
+        recorded.any((p) => p.location.latitude == -0.0005),
+        isFalse,
+        reason: 'pre-start point must be excluded',
+      );
+      expect(
+        recorded.any((p) => p.location.latitude == 0.003),
+        isFalse,
+        reason: 'post-finish point must be excluded',
+      );
+      // The finish point is the last recorded point.
+      expect(recorded.last.location.latitude, 0.002);
+
+      await engine.dispose();
+    });
   });
 
   test('finish() right after lap close does not save phantom lap', () async {
