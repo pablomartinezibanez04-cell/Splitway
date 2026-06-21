@@ -68,6 +68,21 @@ class LiveSessionController extends ChangeNotifier {
   Duration? _historicalBestLap;
   Duration? get historicalBestLap => _historicalBestLap;
 
+  /// Best total time across the user's previous sessions on the selected route
+  /// (used for open routes, which have no laps). Loaded when the session starts
+  /// and `includeHistorical` is true; null when there is no prior run.
+  Duration? _historicalBestTotal;
+
+  /// Reference time for an open route: the user's previous best total when they
+  /// chose to compete against it and one exists, otherwise the route's normal
+  /// (expected) time. Null when neither is available.
+  Duration? get referenceDuration {
+    if (_includeHistorical && _historicalBestTotal != null) {
+      return _historicalBestTotal;
+    }
+    return _selected?.expectedDuration;
+  }
+
   /// Whether this session competes against the user's historical best on the
   /// route. Set from the config modal when the session starts.
   bool _includeHistorical = true;
@@ -196,13 +211,16 @@ class LiveSessionController extends ChangeNotifier {
         final sessions = await _repo.getSessionsByRoute(route.id);
         _historicalSectorRecords = _bestSectorRecords(sessions);
         _historicalBestLap = _bestHistoricalLap(sessions);
+        _historicalBestTotal = _bestHistoricalTotal(sessions);
       } catch (_) {
         _historicalSectorRecords = const {};
         _historicalBestLap = null;
+        _historicalBestTotal = null;
       }
     } else {
       _historicalSectorRecords = const {};
       _historicalBestLap = null;
+      _historicalBestTotal = null;
     }
     _tracker?.dispose();
     _tracker = LiveTrackingController(route: route)
@@ -250,6 +268,17 @@ class LiveSessionController extends ChangeNotifier {
       final lap = session.bestLap;
       if (lap == null) continue;
       if (best == null || lap.duration < best) best = lap.duration;
+    }
+    return best;
+  }
+
+  /// Minimum total run duration across [sessions]; null when none has one.
+  Duration? _bestHistoricalTotal(List<SessionRun> sessions) {
+    Duration? best;
+    for (final session in sessions) {
+      final d = session.totalDuration;
+      if (d == null) continue;
+      if (best == null || d < best) best = d;
     }
     return best;
   }
@@ -424,6 +453,7 @@ class LiveSessionController extends ChangeNotifier {
     _backgroundActive = false;
     _historicalSectorRecords = const {};
     _historicalBestLap = null;
+    _historicalBestTotal = null;
     _sessionName = null;
     _stage = _selected == null
         ? LiveSessionStage.selecting

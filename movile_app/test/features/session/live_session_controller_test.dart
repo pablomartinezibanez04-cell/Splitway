@@ -171,4 +171,47 @@ void main() {
 
     ctrl.dispose();
   });
+
+  test('referenceDuration uses previous best total when competing', () async {
+    // Route with a normal time, plus a prior completed run of 100 s.
+    final r = route().copyWith(expectedDuration: const Duration(seconds: 200));
+    await repo.saveRouteTemplate(r);
+    await repo.saveSessionRun(SessionRun(
+      id: 'prev-open',
+      routeTemplateId: 'r1',
+      startedAt: DateTime.utc(2026, 1, 1, 0, 0, 0),
+      endedAt: DateTime.utc(2026, 1, 1, 0, 1, 40), // 100 s
+      status: SessionStatus.completed,
+      points: const [],
+      laps: const [],
+      sectorSummaries: const [],
+      totalDistanceMeters: 500,
+      maxSpeedMps: 12,
+      avgSpeedMps: 10,
+    ));
+    final ctrl = LiveSessionController(repo, headingService: _StubHeadingService());
+    await ctrl.load();
+    ctrl.selectRoute(r);
+    await ctrl.startSession(includeHistorical: true);
+
+    expect(ctrl.referenceDuration, const Duration(seconds: 100));
+    ctrl.dispose();
+  });
+
+  test('referenceDuration falls back to route normal time', () async {
+    // Competing chosen but no prior runs → use expectedDuration.
+    final r = route().copyWith(expectedDuration: const Duration(seconds: 200));
+    await repo.saveRouteTemplate(r);
+    final ctrl = LiveSessionController(repo, headingService: _StubHeadingService());
+    await ctrl.load();
+    ctrl.selectRoute(r);
+    await ctrl.startSession(includeHistorical: true);
+
+    expect(ctrl.referenceDuration, const Duration(seconds: 200));
+
+    // Not competing → also the normal time, even if a prior run exists.
+    await ctrl.startSession(includeHistorical: false);
+    expect(ctrl.referenceDuration, const Duration(seconds: 200));
+    ctrl.dispose();
+  });
 }
