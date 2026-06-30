@@ -1214,6 +1214,12 @@ abstract class AppLocalizations {
   /// **'Session saved'**
   String get sessionSavedSnackBar;
 
+  /// No description provided for @sessionNotStartedSnackBar.
+  ///
+  /// In en, this message translates to:
+  /// **'No route recorded — you didn\'t cross the start line'**
+  String get sessionNotStartedSnackBar;
+
   /// No description provided for @sessionFinishButton.
   ///
   /// In en, this message translates to:
@@ -1297,6 +1303,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Continue'**
   String get sessionContinueButton;
+
+  /// No description provided for @sessionTimeGainedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'You gained'**
+  String get sessionTimeGainedLabel;
+
+  /// No description provided for @sessionTimeLostLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'You lost'**
+  String get sessionTimeLostLabel;
+
+  /// No description provided for @sessionTimeDeltaFaster.
+  ///
+  /// In en, this message translates to:
+  /// **'{time} faster'**
+  String sessionTimeDeltaFaster(String time);
+
+  /// No description provided for @sessionTimeDeltaSlower.
+  ///
+  /// In en, this message translates to:
+  /// **'{time} slower'**
+  String sessionTimeDeltaSlower(String time);
 
   /// No description provided for @sessionAwaitingStart.
   ///

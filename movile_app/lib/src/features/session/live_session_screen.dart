@@ -23,7 +23,7 @@ import '../../shared/widgets/gps_signal_badge.dart';
 import '../../shared/widgets/sector_chip.dart';
 import '../../shared/widgets/sector_chips_bar.dart';
 import '../../shared/widgets/splitway_map.dart';
-import '../../shared/widgets/time_delta_indicator.dart';
+import '../history/run_comparison.dart';
 import '../home/home_shell.dart';
 import 'live_session_controller.dart';
 import 'session_config_sheet.dart';
@@ -196,6 +196,22 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
         ctrl.result != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(AppLocalizations.of(context).sessionSavedSnackBar)),
+      );
+    }
+    // A run that never crossed the start line is discarded (not saved, no
+    // results). Surface a brief hint on the running/paused → ready transition
+    // so the user understands nothing was recorded.
+    if (mounted &&
+        ctrl.lastRunDiscarded &&
+        (_prevStage == LiveSessionStage.running ||
+            _prevStage == LiveSessionStage.paused) &&
+        ctrl.stage != LiveSessionStage.running &&
+        ctrl.stage != LiveSessionStage.paused) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content:
+              Text(AppLocalizations.of(context).sessionNotStartedSnackBar),
+        ),
       );
     }
     _prevStage = ctrl.stage;
@@ -1257,8 +1273,8 @@ class _FinishOverlay extends StatelessWidget {
                     ),
                   ),
                   if (reference != null && total != null) ...[
-                    const SizedBox(height: 8),
-                    TimeDeltaIndicator(expected: reference!, actual: total),
+                    const SizedBox(height: 12),
+                    _TimeGainedSummary(expected: reference!, actual: total),
                   ],
                   const SizedBox(height: 24),
                   FilledButton(
@@ -1274,6 +1290,74 @@ class _FinishOverlay extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Finish-overlay block that spells out how much time the run gained or lost
+/// against the reference: a prominent coloured "{gained/lost} {pct} %" line
+/// plus the absolute time delta underneath. Renders nothing when the percentage
+/// can't be computed (non-positive reference).
+class _TimeGainedSummary extends StatelessWidget {
+  const _TimeGainedSummary({required this.expected, required this.actual});
+
+  final Duration expected;
+  final Duration actual;
+
+  /// Compact `m:ss` (or `h:mm:ss` past an hour) for the absolute delta, with no
+  /// sign — the colour + label already convey gained vs lost.
+  static String _compactDelta(Duration d) {
+    final abs = d.abs();
+    final h = abs.inHours;
+    final m = abs.inMinutes.remainder(60);
+    final s = abs.inSeconds.remainder(60);
+    if (h > 0) {
+      return '$h:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+    }
+    return '$m:${s.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final pct = runDeltaPercent(expected: expected, actual: actual);
+    if (pct == null) return const SizedBox.shrink();
+
+    final faster = pct < 0;
+    final color = faster ? const Color(0xFF2E7D32) : const Color(0xFFC62828);
+    final icon = faster ? Icons.arrow_downward : Icons.arrow_upward;
+    final label = faster ? l.sessionTimeGainedLabel : l.sessionTimeLostLabel;
+    final pctText = '${pct.abs().toStringAsFixed(0)} %';
+    final deltaText = _compactDelta(actual - expected);
+    final deltaLine = faster
+        ? l.sessionTimeDeltaFaster(deltaText)
+        : l.sessionTimeDeltaSlower(deltaText);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 22, color: color),
+            const SizedBox(width: 4),
+            Text(
+              '$label  $pctText',
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: color,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 2),
+        Text(
+          deltaLine,
+          style: theme.textTheme.bodySmall
+              ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+        ),
+      ],
     );
   }
 }

@@ -40,6 +40,7 @@ class SpeedHeatmapMapCard extends StatelessWidget {
     required this.telemetry,
     required this.showHeatmap,
     this.route,
+    this.showSectors = false,
     this.unitSystem = UnitSystem.metric,
     this.aspectRatio = 4 / 3,
     this.finishMarker,
@@ -49,6 +50,10 @@ class SpeedHeatmapMapCard extends StatelessWidget {
   final List<TelemetryPoint> telemetry;
   final bool showHeatmap;
   final RouteTemplate? route;
+
+  /// When true, the route is drawn in per-sector colors with sector boundary
+  /// circles (matching the live panel). No effect when [route] has no sectors.
+  final bool showSectors;
   final UnitSystem unitSystem;
   final double aspectRatio;
 
@@ -69,6 +74,7 @@ class SpeedHeatmapMapCard extends StatelessWidget {
             SplitwayMap(
               useMapbox: config.hasMapbox,
               route: route,
+              showSectors: showSectors,
               telemetry: telemetry,
               interactive: false,
               showSpeedHeatmap: showHeatmap,

@@ -177,6 +177,53 @@ void main() {
     ctrl.dispose();
   });
 
+  test('finishing a run that never crossed the start line discards it',
+      () async {
+    await repo.saveRouteTemplate(openRoute());
+    final ctrl =
+        LiveSessionController(repo, headingService: _StubHeadingService());
+    await ctrl.load();
+    ctrl.selectRoute(openRoute());
+    await ctrl.startSession(includeHistorical: false);
+
+    expect(ctrl.stage, LiveSessionStage.running);
+
+    // Ingest a point that stays outside the gate (never opens the run), then
+    // finish manually.
+    final base = DateTime(2026, 5, 9, 10);
+    ctrl.tracker!.ingestSimulatedPoint(tp(39.9999, -3.0, base));
+
+    final result = await ctrl.finishSession();
+
+    expect(result, isNull);
+    expect(ctrl.lastRunDiscarded, isTrue);
+    expect(ctrl.result, isNull);
+    // Back to the ready screen, not the summary/finished result.
+    expect(ctrl.stage, LiveSessionStage.ready);
+
+    // Nothing was persisted to history.
+    final saved = await repo.getSessionsByRoute('r-open');
+    expect(saved, isEmpty);
+
+    ctrl.dispose();
+  });
+
+  test('starting a new session clears the discarded flag', () async {
+    await repo.saveRouteTemplate(openRoute());
+    final ctrl =
+        LiveSessionController(repo, headingService: _StubHeadingService());
+    await ctrl.load();
+    ctrl.selectRoute(openRoute());
+    await ctrl.startSession(includeHistorical: false);
+    await ctrl.finishSession();
+    expect(ctrl.lastRunDiscarded, isTrue);
+
+    await ctrl.startSession(includeHistorical: false);
+    expect(ctrl.lastRunDiscarded, isFalse);
+
+    ctrl.dispose();
+  });
+
   test('repo change during the summary overlay does not reset the session',
       () async {
     await repo.saveRouteTemplate(openRoute());

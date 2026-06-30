@@ -11,6 +11,7 @@ import 'package:splitway_mobile/src/features/history/history_screen.dart';
 import 'package:splitway_mobile/src/services/locale/locale_controller.dart';
 import 'package:splitway_mobile/src/services/settings/app_settings_controller.dart';
 import 'package:splitway_mobile/src/shared/widgets/sector_chip.dart';
+import 'package:splitway_mobile/src/shared/widgets/splitway_map.dart';
 
 Widget _harness({required Locale locale, required Widget child}) => MaterialApp(
       locale: locale,
@@ -202,6 +203,35 @@ void main() {
       find.ancestor(of: find.text('S1'), matching: find.byType(SectorChip)),
     );
     expect(s1Chip.tier, SectorChipTier.overall);
+
+    await tester.runAsync(() => boot.repo.dispose());
+    await tester.runAsync(() => boot.db.close());
+  });
+
+  testWidgets('paints the route sectors on the history map', (tester) async {
+    _useTallScreen(tester);
+    late ({SplitwayLocalDatabase db, LocalDraftRepository repo}) boot;
+    late AppSettingsController settings;
+    await tester.runAsync(() async {
+      boot = await _openRepo();
+      boot.repo.userId = 'test-user';
+      await boot.repo.saveRouteTemplate(_route());
+      await boot.repo.saveSessionRun(_session());
+      settings = await AppSettingsController.load();
+    });
+
+    await tester.pumpWidget(_harness(
+      locale: const Locale('es'),
+      child: SessionDetailScreen(
+        sessionId: 'session-x',
+        repository: boot.repo,
+        settingsController: settings,
+      ),
+    ));
+    await _settle(tester);
+
+    final map = tester.widget<SplitwayMap>(find.byType(SplitwayMap));
+    expect(map.showSectors, isTrue);
 
     await tester.runAsync(() => boot.repo.dispose());
     await tester.runAsync(() => boot.db.close());

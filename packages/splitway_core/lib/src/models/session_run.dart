@@ -86,6 +86,13 @@ class SessionRun {
     return end.difference(startedAt);
   }
 
+  /// Whether the run actually began — i.e. the start/finish gate was crossed at
+  /// least once. Recorded telemetry [points] only accumulate while the engine is
+  /// `inLap` (after the first crossing), so their presence — or a recorded lap —
+  /// is a reliable signal. A session that ends in `awaitingStart` has neither and
+  /// must not be saved to history nor compared against the route's normal time.
+  bool get hasStarted => points.isNotEmpty || laps.isNotEmpty;
+
   LapSummary? get bestLap {
     final completed = laps.where((l) => l.completed).toList();
     if (completed.isEmpty) return null;

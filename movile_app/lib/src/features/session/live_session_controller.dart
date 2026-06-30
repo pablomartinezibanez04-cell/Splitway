@@ -56,6 +56,13 @@ class LiveSessionController extends ChangeNotifier {
   /// async [finishSession] await.
   bool _autoFinishing = false;
 
+  /// True when the last [finishSession] discarded the run because it never
+  /// started (the start/finish gate was never crossed). Lets the UI show a
+  /// "nothing recorded" hint instead of a results screen. Reset on the next
+  /// [startSession].
+  bool _lastRunDiscarded = false;
+  bool get lastRunDiscarded => _lastRunDiscarded;
+
   /// Best recorded time per sector across the user's previous sessions on the
   /// selected route. Loaded when a session starts; drives the "purple"
   /// (all-time circuit record) sector colour. Empty when there is no history.
@@ -211,6 +218,8 @@ class LiveSessionController extends ChangeNotifier {
     _distanceFilterMeters = distanceFilterMeters;
     _useCompassHeading = useCompassHeading;
     _includeHistorical = includeHistorical;
+    _lastRunDiscarded = false;
+    _autoFinishing = false;
     _sessionName = (name != null && name.trim().isNotEmpty) ? name.trim() : null;
     if (includeHistorical) {
       try {
@@ -446,8 +455,26 @@ class LiveSessionController extends ChangeNotifier {
     _unsubscribeFromHeading();
     final t = _tracker;
     if (t == null) return null;
+    // Claim the auto-finish guard before finalizing the tracker: t.finishSession()
+    // flips the tracker to `finished` and notifies, which would otherwise re-enter
+    // here via [_onTrackerChange]. The success path is shielded by the stage guard
+    // above, but the discard path below returns to `ready` (no such shield), so a
+    // stray re-entrant finish could clobber the next session. The guard is reset
+    // on the next [startSession]/[resetForNewSession].
+    _autoFinishing = true;
     final raw = t.finishSession();
     final session = raw.copyWith(vehicleId: _selectedVehicleId, name: _sessionName);
+
+    // A run that never crossed the start line is discarded: not saved to
+    // history and no results/finish overlay shown. Return to `ready` so the
+    // user can simply start again; the UI surfaces a brief "nothing recorded"
+    // hint via [lastRunDiscarded].
+    if (!session.hasStarted) {
+      _lastRunDiscarded = true;
+      resetForNewSession();
+      return null;
+    }
+
     await _repo.saveSessionRun(session);
     _result = session;
     // Open routes pause on a finish overlay (frozen map + summary) before the

@@ -4,6 +4,9 @@ import 'package:splitway_core/splitway_core.dart';
 /// lap on a closed circuit, or the whole-session duration on an open route.
 /// Returns null when no comparable time exists.
 Duration? representativeRunTime(RouteTemplate route, SessionRun session) {
+  // A run that never crossed the start line has no comparable time — guard so
+  // the improvement percentage never renders for a phantom 0:00 session.
+  if (!session.hasStarted) return null;
   if (route.isClosed) return session.bestLap?.duration;
   return session.totalDuration;
 }

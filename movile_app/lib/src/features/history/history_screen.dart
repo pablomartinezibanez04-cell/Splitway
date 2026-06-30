@@ -1783,6 +1783,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                     SpeedHeatmapMapCard(
                       config: widget.config,
                       route: _route!,
+                      showSectors: true,
                       telemetry: _session!.points,
                       showHeatmap: _heatmap,
                       unitSystem: widget.settingsController?.unitSystem ??
@@ -1801,34 +1802,6 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                                 Formatters.dateTime(_session!.startedAt),
                                 style: Theme.of(context).textTheme.bodyMedium,
                               ),
-                              if (_session!.totalDuration != null) ...[
-                                const SizedBox(height: 4),
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.timer_outlined,
-                                      size: 16,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurfaceVariant,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '${l.statsTotalTime}: '
-                                      '${Formatters.durationHms(_session!.totalDuration!)}',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium
-                                          ?.copyWith(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSurfaceVariant,
-                                          ),
-                                    ),
-                                  ],
-                                ),
-                              ],
                             ],
                           ),
                         ),
@@ -1847,30 +1820,43 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                       if (route == null || session == null) {
                         return const SizedBox.shrink();
                       }
-                      final expected = route.expectedDuration;
-                      final actual = representativeRunTime(route, session);
-                      if (expected == null || actual == null) {
+                      final total = session.totalDuration;
+                      if (total == null) {
                         return const SizedBox.shrink();
                       }
+                      final expected = route.expectedDuration;
+                      final actual = representativeRunTime(route, session);
                       final dot =
                           widget.settingsController?.timeFormatDot ?? true;
+                      final style = Theme.of(context).textTheme.bodyMedium;
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 12),
-                        child: Row(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
-                              '${l.routeExpectedTimeLabel}: '
-                              '${Formatters.duration(expected, dotSeparator: dot)}',
-                              style: Theme.of(context).textTheme.bodyMedium,
+                            if (expected != null) ...[
+                              Text(
+                                '${l.routeExpectedTimeLabel}: '
+                                '${Formatters.duration(expected, dotSeparator: dot)}',
+                                style: style,
+                              ),
+                              const SizedBox(height: 4),
+                            ],
+                            Row(
+                              children: [
+                                Text(
+                                  '${l.statsTotalTime}: '
+                                  '${Formatters.duration(total, dotSeparator: dot)}',
+                                  style: style,
+                                ),
+                                if (expected != null && actual != null) ...[
+                                  const SizedBox(width: 8),
+                                  TimeDeltaIndicator(
+                                      expected: expected, actual: actual),
+                                ],
+                              ],
                             ),
-                            const Spacer(),
-                            Text(
-                              Formatters.duration(actual, dotSeparator: dot),
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                            const SizedBox(width: 8),
-                            TimeDeltaIndicator(
-                                expected: expected, actual: actual),
                           ],
                         ),
                       );

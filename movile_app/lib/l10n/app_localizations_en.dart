@@ -655,6 +655,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sessionSavedSnackBar => 'Session saved';
 
   @override
+  String get sessionNotStartedSnackBar =>
+      'No route recorded — you didn\'t cross the start line';
+
+  @override
   String get sessionFinishButton => 'Finish and save';
 
   @override
@@ -699,6 +703,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sessionContinueButton => 'Continue';
+
+  @override
+  String get sessionTimeGainedLabel => 'You gained';
+
+  @override
+  String get sessionTimeLostLabel => 'You lost';
+
+  @override
+  String sessionTimeDeltaFaster(String time) {
+    return '$time faster';
+  }
+
+  @override
+  String sessionTimeDeltaSlower(String time) {
+    return '$time slower';
+  }
 
   @override
   String get sessionAwaitingStart => 'Waiting for first finish-line crossing…';

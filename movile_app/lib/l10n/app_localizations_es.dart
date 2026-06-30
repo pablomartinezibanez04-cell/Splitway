@@ -658,6 +658,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get sessionSavedSnackBar => 'Sesión guardada';
 
   @override
+  String get sessionNotStartedSnackBar =>
+      'No se registró ninguna ruta: no cruzaste la salida';
+
+  @override
   String get sessionFinishButton => 'Finalizar y guardar';
 
   @override
@@ -702,6 +706,22 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get sessionContinueButton => 'Continuar';
+
+  @override
+  String get sessionTimeGainedLabel => 'Has ganado';
+
+  @override
+  String get sessionTimeLostLabel => 'Has perdido';
+
+  @override
+  String sessionTimeDeltaFaster(String time) {
+    return '$time más rápido';
+  }
+
+  @override
+  String sessionTimeDeltaSlower(String time) {
+    return '$time más lento';
+  }
 
   @override
   String get sessionAwaitingStart => 'Esperando primer cruce de meta…';
