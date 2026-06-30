@@ -1,6 +1,8 @@
 import 'geo_point.dart';
 import 'telemetry_point.dart';
 
+const _sentinel = Object();
+
 enum FreeRideStatus { recording, completed }
 
 extension FreeRideStatusX on FreeRideStatus {
@@ -28,6 +30,7 @@ class FreeRideRun {
     this.description,
     this.locationLabel,
     this.vehicleId,
+    this.expectedDuration,
   });
 
   final String id;
@@ -42,6 +45,11 @@ class FreeRideRun {
   final String? description;
   final String? locationLabel;
   final String? vehicleId;
+
+  /// Estimated time to complete this ride's path at normal driving/riding
+  /// speed, computed from Mapbox Map Matching. Null when it could not be
+  /// computed (offline, no token, no road match, <2 points).
+  final Duration? expectedDuration;
 
   Duration? get totalDuration {
     final end = endedAt;
@@ -77,6 +85,7 @@ class FreeRideRun {
     String? description,
     String? locationLabel,
     String? vehicleId,
+    Object? expectedDuration = _sentinel,
   }) {
     return FreeRideRun(
       id: id ?? this.id,
@@ -91,6 +100,9 @@ class FreeRideRun {
       description: description ?? this.description,
       locationLabel: locationLabel ?? this.locationLabel,
       vehicleId: vehicleId ?? this.vehicleId,
+      expectedDuration: expectedDuration == _sentinel
+          ? this.expectedDuration
+          : expectedDuration as Duration?,
     );
   }
 }
