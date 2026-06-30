@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../data/repositories/local_draft_repository.dart';
 import '../../services/geocoding/reverse_geocoding_service.dart';
+import '../../services/routing/routing_service.dart';
 import '../../services/sensors/device_heading_service.dart';
 import '../../services/tracking/background_tracking_service.dart';
 import '../../services/tracking/location_service.dart';
@@ -17,11 +18,13 @@ class FreeRideController extends ChangeNotifier {
   FreeRideController(
     this._repo, {
     this.geocodingService,
+    this.routingService,
     DeviceHeadingService? headingService,
   }) : _headingService = headingService ?? DeviceHeadingService();
 
   final LocalDraftRepository _repo;
   final ReverseGeocodingService? geocodingService;
+  final RoutingService? routingService;
   final DeviceHeadingService _headingService;
   StreamSubscription<double>? _headingSub;
 
@@ -260,7 +263,7 @@ class FreeRideController extends ChangeNotifier {
     return prev.location.bearingTo(last.location);
   }
 
-  Future<FreeRideRun?> finishRecording() async {
+  Future<FreeRideRun?> finishRecording({String routingProfile = 'driving'}) async {
     await _gpsSub?.cancel();
     _gpsSub = null;
     _ticker?.cancel();
@@ -283,11 +286,23 @@ class FreeRideController extends ChangeNotifier {
           await geocodingService!.reverseGeocode(raw.points.first.location);
     }
 
-    final run = raw.copyWith(
+    var run = raw.copyWith(
       name: _sessionName,
       vehicleId: _selectedVehicleId,
       locationLabel: locationLabel,
     );
+
+    // Mapbox "normal time" for the recorded path. One Map Matching call; any
+    // failure (offline, no token, no match, <2 points) leaves it null and the
+    // ride is saved anyway. Recomputed lazily when the detail screen opens.
+    final svc = routingService;
+    if (svc != null && run.points.length >= 2) {
+      final d = await svc.matchDuration(run.path, profile: routingProfile);
+      if (d != null) {
+        run = run.copyWith(expectedDuration: d);
+      }
+    }
+
     await _repo.saveFreeRideRun(run);
     _result = run;
     _stage = FreeRideStage.finished;
