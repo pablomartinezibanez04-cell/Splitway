@@ -371,6 +371,7 @@ class LocalDraftRepository {
           'description': ride.description,
           'location_label': ride.locationLabel,
           'vehicle_id': ride.vehicleId,
+          'expected_duration_ms': ride.expectedDuration?.inMilliseconds,
           'owner_id': _userId,
         },
         conflictAlgorithm: ConflictAlgorithm.replace,
@@ -441,6 +442,19 @@ class LocalDraftRepository {
     _changes.add(null);
   }
 
+  /// Updates the cached Mapbox "normal time" for a free ride. Mirrors
+  /// [updateRouteExpectedDuration] for the open-route case (the local
+  /// free_rides table has no updated_at column, so only the value is written).
+  Future<void> updateFreeRideExpectedDuration(String id, Duration? d) async {
+    await _db.update(
+      'free_rides',
+      {'expected_duration_ms': d?.inMilliseconds},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    _changes.add(null);
+  }
+
   Future<void> deleteFreeRide(String id) async {
     await _db.delete('free_rides', where: 'id = ?', whereArgs: [id]);
     _changes.add(null);
@@ -499,6 +513,9 @@ class LocalDraftRepository {
       description: row['description'] as String?,
       locationLabel: row['location_label'] as String?,
       vehicleId: row['vehicle_id'] as String?,
+      expectedDuration: row['expected_duration_ms'] == null
+          ? null
+          : Duration(milliseconds: (row['expected_duration_ms'] as num).toInt()),
     );
   }
 

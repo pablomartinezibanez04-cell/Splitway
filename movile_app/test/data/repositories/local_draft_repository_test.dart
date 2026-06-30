@@ -39,6 +39,23 @@ void main() {
     );
   }
 
+  FreeRideRun makeFreeRide({
+    required String id,
+    Duration? expectedDuration,
+  }) {
+    return FreeRideRun(
+      id: id,
+      startedAt: DateTime.utc(2026, 1, 1, 10),
+      endedAt: DateTime.utc(2026, 1, 1, 10, 30),
+      status: FreeRideStatus.completed,
+      points: const [],
+      totalDistanceMeters: 1000,
+      maxSpeedMps: 20,
+      avgSpeedMps: 10,
+      expectedDuration: expectedDuration,
+    );
+  }
+
   test('saveRouteTemplate persists isOfficial and updatedAt', () async {
     final repo = LocalDraftRepository(db);
     repo.userId = 'user-1';
@@ -273,5 +290,30 @@ void main() {
 
     await repo.saveSessionRun(makeSession(id: 's2', name: null));
     expect((await repo.getSessionRun('s2'))!.name, isNull);
+  });
+
+  test('saveFreeRideRun round-trips expectedDuration', () async {
+    final repo = LocalDraftRepository(db);
+    repo.userId = 'user-1';
+
+    await repo.saveFreeRideRun(
+        makeFreeRide(id: 'fr-1', expectedDuration: const Duration(seconds: 75)));
+    final loaded = await repo.getFreeRideRun('fr-1');
+    expect(loaded!.expectedDuration, const Duration(seconds: 75));
+
+    await repo.saveFreeRideRun(makeFreeRide(id: 'fr-2'));
+    final loaded2 = await repo.getFreeRideRun('fr-2');
+    expect(loaded2!.expectedDuration, isNull);
+  });
+
+  test('updateFreeRideExpectedDuration stores value', () async {
+    final repo = LocalDraftRepository(db);
+    repo.userId = 'user-1';
+    await repo.saveFreeRideRun(makeFreeRide(id: 'fr-1'));
+
+    await repo.updateFreeRideExpectedDuration('fr-1', const Duration(seconds: 90));
+
+    final loaded = await repo.getFreeRideRun('fr-1');
+    expect(loaded!.expectedDuration, const Duration(seconds: 90));
   });
 }
