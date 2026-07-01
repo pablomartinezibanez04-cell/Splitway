@@ -38,6 +38,7 @@
   "drawerSyncSyncing": "SINCRONIZANDO…",
   "drawerSyncError": "ERROR DE SYNC",
   "drawerSyncOffline": "SIN CONEXIÓN",
+  "drawerSyncPending": "CAMBIOS PENDIENTES",
   "drawerSyncNow": "Sincronizar ahora",
   "drawerProfile": "Perfil",
 
