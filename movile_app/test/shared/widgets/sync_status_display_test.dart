@@ -62,4 +62,13 @@ void main() {
     expect(color, green);
     expect(label, l.drawerSyncSyncedMinutes(2));
   });
+
+  test('idle, not pending, synced over an hour ago shows clock time', () {
+    final now = DateTime(2026, 1, 1, 12, 0);
+    final last = DateTime(2026, 1, 1, 9, 5);
+    final (color, label) = syncStatusDisplay(
+        SyncStatus.idle, false, last, l, now: now);
+    expect(color, green);
+    expect(label, l.drawerSyncSyncedAt('9:05'));
+  });
 }

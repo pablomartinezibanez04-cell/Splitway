@@ -19,9 +19,12 @@ import 'sync_remote.dart';
 /// - Pull: all remote routes/sessions that don't exist locally or are newer.
 ///
 /// Supports:
+/// - Change-triggered auto-sync: a local write arms a debounce timer
+///   ([autoSyncDebounce], default 1 min) that resets on each change, so a
+///   burst of edits uploads together. Exposes [hasPendingChanges] for the UI.
 /// - Periodic auto-sync every [syncInterval] (default 5 min).
 /// - Connectivity awareness — pauses when offline, resumes when back online.
-/// - Manual trigger via [sync()].
+/// - Programmatic trigger via [sync()].
 class SyncService extends ChangeNotifier {
   SyncService({
     required this.local,
