@@ -14,6 +14,8 @@ import '../../services/auth/auth_service.dart';
 import '../../services/garage/garage_service.dart';
 import '../../services/garage/vehicle.dart';
 import '../../services/profile/profile_service.dart';
+import '../../services/routing/routing_service.dart';
+import '../../services/routing/routing_profile.dart';
 import '../../services/settings/app_settings_controller.dart';
 import '../../services/sync/sync_service.dart';
 import '../../services/speed/speed_metric.dart';
@@ -1179,6 +1181,8 @@ class FreeRideDetailScreen extends StatefulWidget {
     this.settingsController,
     this.config = const AppConfig(),
     this.syncService,
+    this.routingService,
+    this.routingProfile = 'driving',
   });
 
   final String rideId;
@@ -1186,6 +1190,8 @@ class FreeRideDetailScreen extends StatefulWidget {
   final AppSettingsController? settingsController;
   final AppConfig config;
   final SyncService? syncService;
+  final RoutingService? routingService;
+  final String routingProfile;
 
   @override
   State<FreeRideDetailScreen> createState() => _FreeRideDetailScreenState();
@@ -1209,6 +1215,22 @@ class _FreeRideDetailScreenState extends State<FreeRideDetailScreen> {
       _ride = ride;
       _loading = false;
     });
+
+    // Lazily compute the Mapbox "normal time" when it is missing (e.g. the ride
+    // finished offline) and we now have a routing service. Persist + refresh.
+    final svc = widget.routingService;
+    if (ride != null &&
+        ride.expectedDuration == null &&
+        svc != null &&
+        ride.points.length >= 2) {
+      final d =
+          await svc.matchDuration(ride.path, profile: widget.routingProfile);
+      if (d == null || !mounted) return;
+      await widget.repository.updateFreeRideExpectedDuration(ride.id, d);
+      final refreshed = await widget.repository.getFreeRideRun(widget.rideId);
+      if (!mounted) return;
+      setState(() => _ride = refreshed);
+    }
   }
 
   @override
@@ -1418,6 +1440,24 @@ class _FreeRideSummaryRow extends StatelessWidget {
                     ),
                   ),
                 ),
+            ],
+          ),
+        ],
+        if (ride.expectedDuration != null && duration != null) ...[
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                '${l.routeExpectedTimeLabel}: '
+                '${Formatters.duration(ride.expectedDuration!, dotSeparator: settingsController?.timeFormatDot ?? true)}',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(width: 8),
+              TimeDeltaIndicator(
+                expected: ride.expectedDuration!,
+                actual: duration,
+              ),
             ],
           ),
         ],
