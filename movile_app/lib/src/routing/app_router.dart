@@ -67,6 +67,9 @@ class AppRouter {
           geocodingService: config.hasMapbox
               ? ReverseGeocodingService(accessToken: config.mapboxToken!)
               : null,
+          routingService: config.hasMapbox
+              ? RoutingService(mapboxToken: config.mapboxToken!)
+              : null,
         ) {
     if (syncService != null) this.syncService = syncService;
     if (profileService != null) this.profileService = profileService;
