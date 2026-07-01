@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/logging/app_logger.dart';
 import '../../services/logging/http_logging.dart';
 import '../../services/official_routes/official_routes_service.dart';
+import '../../services/sync/sync_remote.dart';
 import '../services/route_thumbnail_service.dart';
 
 /// Remote repository backed by Supabase Postgres + RLS.
@@ -16,7 +17,7 @@ import '../services/route_thumbnail_service.dart';
 /// - Pulling remote data that may have been created on another device.
 /// - Last-write-wins conflict resolution via `updated_at`.
 /// - Implements [OfficialRoutesRemote] so [OfficialRoutesService] can use it.
-class SupabaseRepository implements OfficialRoutesRemote {
+class SupabaseRepository implements OfficialRoutesRemote, SyncRemote {
   SupabaseRepository(this._client, {this.thumbnailService});
 
   final SupabaseClient _client;
@@ -30,6 +31,7 @@ class SupabaseRepository implements OfficialRoutesRemote {
   /// If [thumbnailUrl] is null and [thumbnailService] is configured,
   /// generates a thumbnail before upserting. Returns the (possibly updated)
   /// route.
+  @override
   Future<RouteTemplate> upsertRoute(RouteTemplate route) async {
     // Generate thumbnail if missing and service is available
     if (route.thumbnailUrl == null && thumbnailService != null) {
@@ -82,6 +84,7 @@ class SupabaseRepository implements OfficialRoutesRemote {
   }
 
   /// Fetches all routes belonging to the current user.
+  @override
   Future<List<RouteTemplate>> fetchAllRoutes() async {
     final rows = await logSupabase(
       'fetchAllRoutes',
@@ -136,6 +139,7 @@ class SupabaseRepository implements OfficialRoutesRemote {
   }
 
   /// Deletes a route from the cloud and its thumbnail from storage.
+  @override
   Future<void> deleteRoute(String id) async {
     try {
       await _client.storage.from('route-thumbnails').remove(['$_uid/$id.png']);
@@ -154,6 +158,7 @@ class SupabaseRepository implements OfficialRoutesRemote {
   // ---------- Sessions ----------
 
   /// Upserts a session run (metadata + telemetry) to Supabase atomically.
+  @override
   Future<void> upsertSession(SessionRun session) async {
     await logSupabase(
         'upsertSession',
@@ -217,6 +222,7 @@ class SupabaseRepository implements OfficialRoutesRemote {
   }
 
   /// Fetches a single session by [id], optionally with telemetry points.
+  @override
   Future<SessionRun?> fetchSession(
     String id, {
     bool includePoints = false,
@@ -242,6 +248,7 @@ class SupabaseRepository implements OfficialRoutesRemote {
   }
 
   /// Deletes a session from the cloud.
+  @override
   Future<void> deleteSession(String id) async {
     await logSupabase('deleteSession',
         () => _client.from('session_runs').delete().eq('id', id));
@@ -250,6 +257,7 @@ class SupabaseRepository implements OfficialRoutesRemote {
   // ---------- Free rides ----------
 
   /// Upserts a free ride run (metadata + telemetry) to Supabase atomically.
+  @override
   Future<void> upsertFreeRide(FreeRideRun ride) async {
     await logSupabase(
         'upsertFreeRide',
@@ -282,6 +290,7 @@ class SupabaseRepository implements OfficialRoutesRemote {
   }
 
   /// Deletes a free ride from the cloud.
+  @override
   Future<void> deleteFreeRide(String id) async {
     await logSupabase('deleteFreeRide',
         () => _client.from('free_rides').delete().eq('id', id));
@@ -300,6 +309,7 @@ class SupabaseRepository implements OfficialRoutesRemote {
   }
 
   /// Fetches a single free ride by [id], optionally with telemetry points.
+  @override
   Future<FreeRideRun?> fetchFreeRide(
     String id, {
     bool includePoints = false,
@@ -325,6 +335,7 @@ class SupabaseRepository implements OfficialRoutesRemote {
   }
 
   /// Returns remote free ride IDs with their `updated_at` timestamps.
+  @override
   Future<Map<String, DateTime>> fetchFreeRideTimestamps() async {
     final rows = await logSupabase(
       'fetchFreeRideTimestamps',
@@ -340,6 +351,7 @@ class SupabaseRepository implements OfficialRoutesRemote {
 
   /// Returns remote route IDs with their `updated_at` timestamps for
   /// diffing against local state.
+  @override
   Future<Map<String, DateTime>> fetchRouteTimestamps() async {
     final rows = await logSupabase(
       'fetchRouteTimestamps',
@@ -352,6 +364,7 @@ class SupabaseRepository implements OfficialRoutesRemote {
   }
 
   /// Returns remote session IDs with their `updated_at` timestamps.
+  @override
   Future<Map<String, DateTime>> fetchSessionTimestamps() async {
     final rows = await logSupabase(
       'fetchSessionTimestamps',

@@ -9,6 +9,7 @@ import '../../data/repositories/speed_repository.dart';
 import '../../data/repositories/supabase_repository.dart';
 import '../logging/app_logger.dart';
 import 'sync_planner.dart';
+import 'sync_remote.dart';
 
 /// Bidirectional sync between [LocalDraftRepository] (SQLite) and
 /// [SupabaseRepository] (Postgres + RLS).
@@ -34,7 +35,7 @@ class SyncService extends ChangeNotifier {
   }
 
   final LocalDraftRepository local;
-  final SupabaseRepository remote;
+  final SyncRemote remote;
   final SpeedRepository? speedRepository;
   final String? userId;
   final Duration syncInterval;
