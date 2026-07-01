@@ -29,9 +29,13 @@ class SyncService extends ChangeNotifier {
     this.speedRepository,
     this.userId,
     this.syncInterval = const Duration(minutes: 5),
+    this.autoSyncDebounce = const Duration(minutes: 1),
+    Stream<List<ConnectivityResult>>? connectivityStream,
   }) {
     _connectivitySubscription =
-        Connectivity().onConnectivityChanged.listen(_onConnectivityChanged);
+        (connectivityStream ?? Connectivity().onConnectivityChanged)
+            .listen(_onConnectivityChanged);
+    _changesSubscription = local.changes.listen((_) => _onLocalChange());
   }
 
   final LocalDraftRepository local;
@@ -39,14 +43,20 @@ class SyncService extends ChangeNotifier {
   final SpeedRepository? speedRepository;
   final String? userId;
   final Duration syncInterval;
+  final Duration autoSyncDebounce;
 
   Timer? _periodicTimer;
+  Timer? _autoSyncTimer;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  StreamSubscription<void>? _changesSubscription;
   bool _isConnected = true;
   bool _disposed = false;
 
   SyncStatus _status = SyncStatus.idle;
   SyncStatus get status => _status;
+
+  bool _hasPendingChanges = false;
+  bool get hasPendingChanges => _hasPendingChanges;
 
   String? _lastError;
   String? get lastError => _lastError;
@@ -121,6 +131,29 @@ class SyncService extends ChangeNotifier {
     }
   }
 
+  /// Reacts to a local write. Writes that occur *while a sync is running* are
+  /// typically the sync's own pull/thumbnail writes (they flow through the same
+  /// [LocalDraftRepository.changes] stream), so they are ignored — this both
+  /// avoids marking a false "pending" state and prevents a pull->re-sync loop.
+  /// Any other write flags pending and (re)arms the debounce; the timer resets
+  /// on each change so a burst of edits is uploaded together.
+  ///
+  /// Note: the "it's the sync's own write" assumption is a heuristic — a
+  /// genuine user write that happens to land during an in-flight sync is
+  /// dropped here too and won't be retried until the next periodic sync,
+  /// connectivity change, or subsequent local change. Accepted as a rare,
+  /// low-cost tradeoff.
+  void _onLocalChange() {
+    if (_status == SyncStatus.syncing) return;
+    _hasPendingChanges = true;
+    notifyListeners();
+    _autoSyncTimer?.cancel();
+    _autoSyncTimer = Timer(autoSyncDebounce, () {
+      _autoSyncTimer = null;
+      if (_isConnected) sync();
+    });
+  }
+
   void _onConnectivityChanged(List<ConnectivityResult> results) {
     final wasConnected = _isConnected;
     _isConnected = results.any((r) => r != ConnectivityResult.none);
@@ -156,6 +189,7 @@ class SyncService extends ChangeNotifier {
       final transferred = await _doSync();
       _status = SyncStatus.success;
       _lastSyncedAt = DateTime.now();
+      _hasPendingChanges = false;
       notifyListeners();
       return transferred;
     } catch (e, st) {
@@ -382,7 +416,9 @@ class SyncService extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     _periodicTimer?.cancel();
+    _autoSyncTimer?.cancel();
     _connectivitySubscription?.cancel();
+    _changesSubscription?.cancel();
     super.dispose();
   }
 }
