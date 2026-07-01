@@ -13,6 +13,7 @@ import '../../services/auth/auth_service.dart';
 import '../../services/garage/garage_service.dart';
 import '../../services/garage/vehicle.dart';
 import '../../services/profile/profile_service.dart';
+import '../../services/routing/routing_profile.dart';
 import '../../services/sensors/device_heading_service.dart';
 import '../../services/settings/app_settings_controller.dart';
 import '../../services/tracking/location_service.dart';
@@ -191,6 +192,16 @@ class _FreeRideScreenState extends State<FreeRideScreen>
       if (v.id == id) return v.type.isMotorized;
     }
     return false;
+  }
+
+  /// Mapbox profile for the currently selected vehicle (null id = on foot).
+  String get _selectedRoutingProfile {
+    final id = widget.controller.selectedVehicleId;
+    if (id == null) return routingProfileForVehicle(null);
+    for (final v in widget.garageService?.vehicles ?? const <Vehicle>[]) {
+      if (v.id == id) return routingProfileForVehicle(v.type);
+    }
+    return routingProfileForVehicle(null);
   }
 
   void _centerOnUser() {
@@ -481,7 +492,9 @@ class _FreeRideScreenState extends State<FreeRideScreen>
                         onFinish: () async {
                           final savedText = l.freeRideSavedSnackBar;
                           final messenger = ScaffoldMessenger.of(context);
-                          await ctrl.finishRecording();
+                          await ctrl.finishRecording(
+                            routingProfile: _selectedRoutingProfile,
+                          );
                           if (!mounted) return;
                           messenger.showSnackBar(
                             SnackBar(content: Text(savedText)),
