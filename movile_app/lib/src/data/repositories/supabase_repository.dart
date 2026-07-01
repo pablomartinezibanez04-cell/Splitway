@@ -266,6 +266,7 @@ class SupabaseRepository implements OfficialRoutesRemote {
               'p_location_label': ride.locationLabel,
               'p_updated_at': DateTime.now().toUtc().toIso8601String(),
               'p_vehicle_id': ride.vehicleId,
+              'p_expected_duration_ms': ride.expectedDuration?.inMilliseconds,
               'p_points': ride.points
                   .map((p) => {
                         'ts': p.timestamp.toUtc().toIso8601String(),
@@ -464,6 +465,9 @@ class SupabaseRepository implements OfficialRoutesRemote {
       description: row['description'] as String?,
       locationLabel: row['location_label'] as String?,
       vehicleId: row['vehicle_id'] as String?,
+      expectedDuration: row['expected_duration_ms'] == null
+          ? null
+          : Duration(milliseconds: (row['expected_duration_ms'] as num).toInt()),
     );
   }
 
