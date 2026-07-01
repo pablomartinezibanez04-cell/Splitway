@@ -108,9 +108,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get drawerSyncPending => 'CAMBIOS PENDIENTES';
 
   @override
-  String get drawerSyncNow => 'Sincronizar ahora';
-
-  @override
   String get drawerProfile => 'Perfil';
 
   @override
