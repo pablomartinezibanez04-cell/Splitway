@@ -69,6 +69,7 @@ class HistoryScreen extends StatefulWidget {
     this.garageService,
     this.speedRepository,
     this.syncService,
+    this.routingService,
     this.initialTab,
   });
 
@@ -80,6 +81,7 @@ class HistoryScreen extends StatefulWidget {
   final GarageService? garageService;
   final SpeedRepository? speedRepository;
   final SyncService? syncService;
+  final RoutingService? routingService;
 
   /// When set to `'speed'`, the screen opens directly on the Velocidad tab.
   /// Defaults to the combined "all" view.
@@ -681,6 +683,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               garageService: widget.garageService,
               settingsController: widget.settingsController,
               syncService: widget.syncService,
+              routingService: widget.routingService,
             ),
         };
       },
@@ -1068,6 +1071,7 @@ class _FreeRideTile extends StatelessWidget {
     required this.settingsController,
     this.garageService,
     this.syncService,
+    this.routingService,
   });
 
   final FreeRideRun ride;
@@ -1076,6 +1080,16 @@ class _FreeRideTile extends StatelessWidget {
   final AppSettingsController settingsController;
   final GarageService? garageService;
   final SyncService? syncService;
+  final RoutingService? routingService;
+
+  /// Mapbox profile for this ride's vehicle, used for the lazy recompute on the
+  /// detail screen (null vehicle id = on foot → walking).
+  String get _routingProfile {
+    final id = ride.vehicleId;
+    if (id == null) return routingProfileForVehicle(null);
+    final v = garageService?.vehicles.where((v) => v.id == id).firstOrNull;
+    return routingProfileForVehicle(v?.type);
+  }
 
   Vehicle? get _vehicle {
     final vid = ride.vehicleId;
@@ -1156,6 +1170,28 @@ class _FreeRideTile extends StatelessWidget {
                   ],
                 ),
               ),
+            Builder(builder: (context) {
+              final expected = ride.expectedDuration;
+              final actual = ride.totalDuration;
+              if (expected == null || actual == null) {
+                return const SizedBox.shrink();
+              }
+              return Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${l.routeExpectedTimeLabel}: '
+                      '${Formatters.duration(expected, dotSeparator: settingsController.timeFormatDot)}',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    const SizedBox(width: 8),
+                    TimeDeltaIndicator(expected: expected, actual: actual),
+                  ],
+                ),
+              );
+            }),
           ],
         ),
         trailing: const Icon(Icons.chevron_right),
@@ -1166,6 +1202,8 @@ class _FreeRideTile extends StatelessWidget {
                 config: config,
                 settingsController: settingsController,
                 syncService: syncService,
+                routingService: routingService,
+                routingProfile: _routingProfile,
               ),
             )),
       ),

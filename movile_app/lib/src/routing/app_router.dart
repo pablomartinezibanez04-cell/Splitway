@@ -350,6 +350,9 @@ class AppRouter {
                   speedRepository: speedRepository,
                   syncService: syncService,
                   settingsController: settingsController,
+                  routingService: config.hasMapbox
+                      ? RoutingService(mapboxToken: config.mapboxToken!)
+                      : null,
                   initialTab: state.uri.queryParameters['tab'] == 'speed'
                       ? 'speed'
                       : null,
